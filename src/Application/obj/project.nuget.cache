@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Yw0m66lIdBs=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\9.0.7\\microsoft.extensions.dependencyinjection.abstractions.9.0.7.nupkg.sha512"
+  ],
+  "logs": []
+}
