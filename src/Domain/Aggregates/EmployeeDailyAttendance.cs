@@ -1,7 +1,7 @@
-using Domain.Common;
+using Domain.Errors.EmployeeAttendance;
 using Domain.Events;
-using Domain.Exceptions;
 using Domain.ValueObjects;
+using FluentResults;
 
 namespace Domain.Aggregates;
 
@@ -9,10 +9,9 @@ public class EmployeeDailyAttendance : AggregateRoot<Guid>
 {
     public Guid EmployeeId { get; private set; }
     public DateTime Date { get; private set; }
-
     public TimeSpan? CheckInTime { get; private set; }
     public TimeSpan? CheckOutTime { get; private set; }
-    public List<EmployeeBreakPeriod> Breaks { get; private set; } = [];
+    public List<EmployeeBreakPeriod> Breaks { get; private set; }
 
     public EmployeeAttendanceStatus Status { get; private set; }
 
@@ -25,11 +24,11 @@ public class EmployeeDailyAttendance : AggregateRoot<Guid>
         Status = EmployeeAttendanceStatus.Absent;
     }
 
-    public void CheckIn(DateTime timestamp)
+    public Result CheckIn(DateTime timestamp)
     {
         if (CheckInTime.HasValue)
         {
-            throw new AlreadyCheckedInException();
+            return Result.Fail(new AlreadyCheckedInError());
         }
 
         var checkInTime = timestamp.TimeOfDay;
@@ -45,27 +44,28 @@ public class EmployeeDailyAttendance : AggregateRoot<Guid>
 
         CheckInTime = checkInTime;
         AddDomainEvent(new EmployeeCheckedInEvent(this.EmployeeId));
+
+        return Result.Ok();
     }
 
-    public void CheckOut(DateTime timestamp)
+    public Result CheckOut(DateTime timestamp)
     {
         if (!CheckInTime.HasValue)
         {
-            throw new MustCheckInFirstException();
+            return Result.Fail(new MustCheckInFirstError());
         }
         if (CheckOutTime.HasValue)
         {
-            throw new AlreadyCheckedOutException();
+            return Result.Fail(new AlreadyCheckedOutError());
         }
 
         var checkedOutTime = timestamp.TimeOfDay;
 
         if (checkedOutTime < TimeSpan.FromHours(17))
         {
-            // check if it is withen the break period
             if (!IsWithinBreakPeriod(checkedOutTime))
             {
-                throw new NotWithinBreakCheckOutException();
+                return Result.Fail(new NotWithinBreakCheckOutError());
             }
 
             Breaks.Add(new EmployeeBreakPeriod(checkedOutTime, null));
@@ -73,26 +73,30 @@ public class EmployeeDailyAttendance : AggregateRoot<Guid>
 
         CheckOutTime = checkedOutTime;
         AddDomainEvent(new EmployeeCheckedOutEvent(this.EmployeeId));
+
+        return Result.Ok();
     }
 
-    public void ReturnFromBreak(DateTime timestamp)
+    public Result ReturnFromBreak(DateTime timestamp)
     {
         var returnTime = timestamp.TimeOfDay;
 
         if (!IsWithinBreakPeriod(returnTime))
         {
-            throw new NotWithinBreakCheckOutException();
+            return Result.Fail(new NotWithinBreakCheckOutError());
         }
 
         var lastBreak = Breaks.LastOrDefault();
 
         if (lastBreak == null || lastBreak.EndTime.HasValue)
         {
-            throw new NoActiveBreakException();
+            return Result.Fail(new NoActiveBreakException());
         }
 
         lastBreak.SetEndTime(returnTime);
         AddDomainEvent(new EmployeeReturnFromBreakEvent(this.EmployeeId));
+
+        return Result.Ok();
     }
 
     private static bool IsWithinBreakPeriod(TimeSpan time)

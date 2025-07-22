@@ -1,41 +1,31 @@
-using System;
-using Domain.Exceptions;
-
+using Domain.Enums.Employee;
 namespace Domain.ValueObjects;
 
-public enum EmployeePosition
-{
-    Staff,
-    SeniorStaff,
-    Supervisor,
-    Manager
-
-}
 
 public static class EmployeePositionExtension
 {
-    private static readonly (EmployeePosition Position, string PositionStr)[] Mapping =
+    private static readonly (EmployeePositionEnum Position, string PositionStr)[] Mapping =
     {
-            (EmployeePosition.Staff, "Staff"),
-            (EmployeePosition.SeniorStaff, "Senior Staff"),
-            (EmployeePosition.Supervisor, "Supervisor"),
-            (EmployeePosition.Manager, "Manager")
-        };
+        (EmployeePositionEnum.Staff, "Staff"),
+        (EmployeePositionEnum.SeniorStaff, "Senior Staff"),
+        (EmployeePositionEnum.Supervisor, "Supervisor"),
+        (EmployeePositionEnum.Manager, "Manager")
+    };
 
-    public static string ToStringValue(this EmployeePosition position)
+    public static string ToStringValue(this EmployeePositionEnum position)
     {
         return Mapping.First(m => m.Position == position).PositionStr;
     }
 
-    public static EmployeePosition ToEmployeePosition(this string position)
+    public static EmployeePositionEnum ToEmployeePosition(this string position)
     {
         return position.ToLower() switch
         {
-            "staff" => EmployeePosition.Staff,
-            "senior staff" => EmployeePosition.SeniorStaff,
-            "supervisor" => EmployeePosition.Supervisor,
-            "manager" => EmployeePosition.Manager,
-            _ => throw new InvalidEmployeePositionException(position)
+            "staff" => EmployeePositionEnum.Staff,
+            "senior staff" => EmployeePositionEnum.SeniorStaff,
+            "supervisor" => EmployeePositionEnum.Supervisor,
+            "manager" => EmployeePositionEnum.Manager,
+            _ => EmployeePositionEnum.Invalid
         };
     }
 }

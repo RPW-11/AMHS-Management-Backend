@@ -1,5 +1,3 @@
-using System;
-
 namespace Domain.ValueObjects;
 
 public record EmployeeBreakPeriod

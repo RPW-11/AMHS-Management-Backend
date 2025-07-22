@@ -1,7 +1,8 @@
+using Application.Common.Errors;
 using Application.Services.Authentication;
-using Contract;
-using Contract.Authentication;
+using Application.DTOs.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using API.Contracts.Authentication;
 
 namespace API.Controllers
 {
@@ -16,39 +17,50 @@ namespace API.Controllers
             _authenticationService = authenticationService;
         }
 
-
         [HttpPost("register")]
-        public IActionResult Register(RegisterRequest request)
+        public ActionResult<AuthenticationDto> Register(RegisterRequest request)
         {
-            var authResult = _authenticationService.Register(request.FirstName, request.LastName, request.Email, request.Password);
+            FluentResults.Result<AuthenticationDto> authResult = _authenticationService.Register(request.FirstName, request.LastName, request.Email, request.Password);
 
-            var response = new AuthenticationResponse(
-                authResult.Employee.Id,
-                authResult.Employee.FirstName,
-                authResult.Employee.LastName,
-                authResult.Employee.Email.Value,
-                authResult.Employee.ImgUrl,
-                authResult.Token
-            );
+            if (authResult.IsSuccess)
+            {
+                return Ok(authResult.Value);
+            }
 
-            return Ok(response);
+            var firstError = authResult.Errors[0];
+
+            if (firstError is ApplicationError)
+            {
+                return Problem(
+                    statusCode: (int)firstError.Metadata["statusCode"],
+                    title: firstError.Message,
+                    detail: (string)firstError.Metadata["detail"]
+                );
+            }
+            return Problem(statusCode: 500);
         }
- 
+
         [HttpPost("login")]
-        public IActionResult Login(LoginRequest request)
+        public ActionResult<AuthenticationDto> Login(LoginRequest request)
         {
-            var authResult = _authenticationService.Login( request.Email, request.Password);
+            FluentResults.Result<AuthenticationDto> authResult = _authenticationService.Login(request.Email, request.Password);
 
-            var response = new AuthenticationResponse(
-                authResult.Employee.Id,
-                authResult.Employee.FirstName,
-                authResult.Employee.LastName,
-                authResult.Employee.Email.Value,
-                authResult.Employee.ImgUrl,
-                authResult.Token
-            );
+            if (authResult.IsSuccess)
+            {
+                return Ok(authResult.Value);
+            }
 
-            return Ok(response);
+            var firstError = authResult.Errors[0];
+
+            if (firstError is ApplicationError)
+            {
+                return Problem(
+                    statusCode: (int)firstError.Metadata["statusCode"],
+                    title: firstError.Message,
+                    detail: (string)firstError.Metadata["detail"]
+                );
+            }
+            return Problem(statusCode: 500);
         }
     }
 }
