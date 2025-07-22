@@ -1,24 +1,32 @@
 using Application.Common.Interfaces.Persistence;
 using Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
 
 public class EmployeeRepository : IEmployeeRepository
 {
-    private static readonly List<Employee> _employees = [];
+    private readonly AppDbContext _dbContext;
 
-    public void AddEmployee(Employee employee)
+    public EmployeeRepository(AppDbContext dbContext)
     {
-        _employees.Add(employee);
+        _dbContext = dbContext;
     }
 
-    public Employee? GetEmployeeByEmail(string email)
+    public async Task AddEmployeeAsync(Employee employee)
     {
-        return _employees.SingleOrDefault(e => e.Email == email);
+        await _dbContext.Employees.AddAsync(employee);
     }
 
-    public Employee? GetEmployeeById(Guid id)
+    public async Task<Employee?> GetEmployeeByEmailAsync(string email)
     {
-        return _employees.SingleOrDefault(e => e.Id == id);
+        Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Email == email);
+        return employee;
+    }
+
+    public async  Task<Employee?> GetEmployeeByIdAsync(Guid id)
+    {
+        Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
+        return employee;
     }
 }

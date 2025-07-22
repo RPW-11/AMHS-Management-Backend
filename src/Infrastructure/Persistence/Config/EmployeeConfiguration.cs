@@ -34,6 +34,9 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.Property(e => e.Status)
         .HasMaxLength(DataSchemaConstants.STATUS_LENGTH)
-        .IsRequired();;
+        .IsRequired();
+
+        builder.Property(e => e.DateOfBirth)
+        .HasColumnType("timestamp without time zone");
     }
 }

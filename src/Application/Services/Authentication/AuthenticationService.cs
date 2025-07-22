@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Application.Common.Errors;
 using Application.Common.Interfaces.Authentication;
 using Application.Common.Interfaces.Persistence;
@@ -20,9 +21,9 @@ public class AuthenticationService : IAuthenticationService
         _employeeRepository = employeeRepository;
     }
 
-    public Result<AuthenticationDto> Login(string email, string password)
+    public async Task<Result<AuthenticationDto>> Login(string email, string password)
     {
-        Employee? employee = _employeeRepository.GetEmployeeByEmail(email);
+        Employee? employee = await _employeeRepository.GetEmployeeByEmailAsync(email);
 
         if (employee is null || employee.HashedPassword != password)
         {
@@ -34,9 +35,9 @@ public class AuthenticationService : IAuthenticationService
         return MapToDto(employee, token);
     }
 
-    public Result<AuthenticationDto> Register(string firstName, string lastName, string email, string password)
+    public async Task<Result<AuthenticationDto>> Register(string firstName, string lastName, string email, string password)
     {
-        if (_employeeRepository.GetEmployeeByEmail(email) is not null)
+        if (await _employeeRepository.GetEmployeeByEmailAsync(email) is not null)
         {
             return Result.Fail<AuthenticationDto>(new ApplicationError("The email already exists", 409));
         }
@@ -63,7 +64,7 @@ public class AuthenticationService : IAuthenticationService
 
         Employee newEmployee = domainResult.Value;
 
-        _employeeRepository.AddEmployee(newEmployee);
+        await _employeeRepository.AddEmployeeAsync(newEmployee);
 
         string token = _jwtTokenGenerator.GenerateToken(newEmployee);
         return MapToDto(newEmployee, token);
