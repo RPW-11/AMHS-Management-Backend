@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "YChdTjsXv5I=",
+  "dgSpecHash": "8/+65JY+qj0=",
   "success": true,
   "projectFilePath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\user\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\fluentresults\\4.0.0\\fluentresults.4.0.0.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\user\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.6\\microsoft.aspnetcore.openapi.9.0.6.nupkg.sha512",

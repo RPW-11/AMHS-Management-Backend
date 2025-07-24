@@ -1,9 +1,9 @@
 using Application.Common.Errors;
-using Application.Services.Authentication;
 using Application.DTOs.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using API.Contracts.Authentication;
 using Application.Common.Interfaces;
+using Application.Services.AuthenticationService;
 
 namespace API.Controllers
 {
@@ -18,30 +18,6 @@ namespace API.Controllers
         {
             _authenticationService = authenticationService;
             _unitOfWork = unitOfWork;
-        }
-
-        [HttpPost("register")]
-        public async Task<ActionResult<AuthenticationDto>> Register(RegisterRequest request)
-        {
-            FluentResults.Result<AuthenticationDto> authResult = await _authenticationService.Register(request.FirstName, request.LastName, request.Email, request.Password);
-
-            if (authResult.IsSuccess)
-            {
-                await _unitOfWork.SaveChangesAsync();
-                return Ok(authResult.Value);
-            }
-
-            var firstError = authResult.Errors[0];
-
-            if (firstError is ApplicationError)
-            {
-                return Problem(
-                    statusCode: (int)firstError.Metadata["statusCode"],
-                    title: firstError.Message,
-                    detail: (string)firstError.Metadata["detail"]
-                );
-            }
-            return Problem(statusCode: 500);
         }
 
         [HttpPost("login")]

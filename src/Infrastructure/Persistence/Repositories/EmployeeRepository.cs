@@ -18,6 +18,12 @@ public class EmployeeRepository : IEmployeeRepository
         await _dbContext.Employees.AddAsync(employee);
     }
 
+    public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
+    {
+        IEnumerable<Employee> employees = await _dbContext.Employees.ToListAsync();
+        return employees;
+    }
+
     public async Task<Employee?> GetEmployeeByEmailAsync(string email)
     {
         Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Email == email);

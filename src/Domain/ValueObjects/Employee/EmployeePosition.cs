@@ -1,15 +1,15 @@
 using Domain.Enums.Employee;
-namespace Domain.ValueObjects;
 
+namespace Domain.ValueObjects.Employee;
 
 public static class EmployeePositionExtension
 {
     private static readonly (EmployeePositionEnum Position, string PositionStr)[] Mapping =
     {
-        (EmployeePositionEnum.Staff, "Staff"),
-        (EmployeePositionEnum.SeniorStaff, "Senior Staff"),
-        (EmployeePositionEnum.Supervisor, "Supervisor"),
-        (EmployeePositionEnum.Manager, "Manager")
+        (EmployeePositionEnum.Staff, "staff"),
+        (EmployeePositionEnum.SeniorStaff, "senior staff"),
+        (EmployeePositionEnum.Supervisor, "supervisor"),
+        (EmployeePositionEnum.Manager, "manager")
     };
 
     public static string ToStringValue(this EmployeePositionEnum position)
