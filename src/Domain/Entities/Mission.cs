@@ -1,34 +1,35 @@
-using Domain.ValueObjects.Task;
+using Domain.ValueObjects.Mission;
 using FluentResults;
-using TaskStatus = Domain.ValueObjects.Task.TaskStatus; // conflicting with system threading task
 
 namespace Domain.Entities;
 
-public class Task
+public class Mission
 {
     public Guid Id { get; }
     public string Name { get; private set; }
     public string Description { get; private set; }
-    public TaskCategory Category { get; private set; }
-    public TaskStatus Status { get; private set; }
+    public MissionCategory Category { get; private set; }
+    public MissionStatus Status { get; private set; }
     public DateTime? FinishedAt { get; private set; }
     public string? ResourceLink { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
-    private Task(Guid id, string name, string description, TaskCategory category, TaskStatus status)
+    private Mission(Guid id, string name, string description, MissionCategory category, MissionStatus status)
     {
         Id = id;
         Name = name;
         Description = description;
         Category = category;
         Status = status;
+        CreatedAt = new DateTime();
+        UpdatedAt = new DateTime();
     }
 
-    public static Result<Task> Create(Guid id, string name, string category, string status, string description = "")
+    public static Result<Mission> Create(Guid id, string name, string category, string status, string description = "")
     {
-        var statusResult = TaskStatus.FromString(status);
-        var categoryResult = TaskCategory.FromString(category);
+        var statusResult = MissionStatus.FromString(status);
+        var categoryResult = MissionCategory.FromString(category);
 
         if (statusResult.IsFailed)
         {
@@ -39,7 +40,6 @@ public class Task
             return Result.Fail(categoryResult.Errors[0]);
         }
 
-
-        return new Task(id, name, description, categoryResult.Value, statusResult.Value);
+        return new Mission(id, name, description, categoryResult.Value, statusResult.Value);
     }
 }

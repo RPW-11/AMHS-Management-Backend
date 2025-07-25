@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Domain.Enums.Employee;
 using Domain.Errors.Employee;
 using Domain.ValueObjects.Employee;
 using FluentResults;
@@ -13,10 +12,10 @@ public class Employee
     public string LastName { get; private set; }
     public string Email { get; private set; }
     public string HashedPassword { get; private set; }
-    public EmployeePositionEnum Position { get; private set; }
+    public EmployeePosition Position { get; private set; }
     public DateTime DateOfBirth { get; private set; }
     public DateTime JoinDate { get; private set; }
-    public string Status { get; private set; }
+    public EmployeeStatus Status { get; private set; }
     public string PhoneNumber { get; private set; }
     public string? ImgUrl { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -27,9 +26,9 @@ public class Employee
         string lastName,
         string email,
         string hashedPassword,
-        EmployeePositionEnum position,
+        EmployeePosition position,
         DateTime dateOfBirth,
-        string status,
+        EmployeeStatus status,
         string phoneNumber
         )
     {
@@ -55,7 +54,6 @@ public class Employee
         string hashedPassword,
         string position,
         string dateOfBirth,
-        string status,
         string phoneNumber)
     {
         if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
@@ -68,11 +66,11 @@ public class Employee
             return Result.Fail<Employee>(new InvalidEmployeeEmailFormatError(email));
         }
 
-        var employeePosition = EmployeePositionExtension.ToEmployeePosition(position);
+        var positionResult = EmployeePosition.FromString(position);
 
-        if (employeePosition == EmployeePositionEnum.Invalid)
+        if (positionResult.IsFailed)
         {
-            return Result.Fail<Employee>(new InvalidEmployeePositionError(position));
+            return Result.Fail<Employee>(positionResult.Errors[0]);
         }
 
         // validate the date input
@@ -86,7 +84,7 @@ public class Employee
             return Result.Fail<Employee>(new InvalidEmployeePhoneNumberError());
         }
 
-        return new Employee(firstName, lastName, email, hashedPassword, employeePosition, dateOfBirthParsed, status, phoneNumber);
+        return new Employee(firstName, lastName, email, hashedPassword, positionResult.Value, dateOfBirthParsed, EmployeeStatus.Active, phoneNumber);
     }
 
     private static bool IsValidEmail(string email)

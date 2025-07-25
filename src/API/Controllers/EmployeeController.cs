@@ -78,7 +78,7 @@ namespace API.Controllers
         /// Add an employee
         /// </summary>
         /// <remarks>
-        /// Position options: "staff", "senior staff", "supervisor", "manager"
+        /// Position options: "Staff", "SeniorStaff", "Supervisor", "Manager"
         /// 
         /// Sample request:
         ///

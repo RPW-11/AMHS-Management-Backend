@@ -26,13 +26,17 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(e => e.Position)
         .HasColumnName("Position")
         .HasConversion(
-            e => e.ToStringValue(),
-            e => e.ToEmployeePosition()
+            e => e.ToString(),
+            e => EmployeePosition.FromString(e).Value
         )
         .HasMaxLength(DataSchemaConstants.POSITION_LENGTH)
         .IsRequired();
 
         builder.Property(e => e.Status)
+        .HasConversion(
+            s => s.ToString(),
+            s => EmployeeStatus.FromString(s).Value
+        )
         .HasMaxLength(DataSchemaConstants.STATUS_LENGTH)
         .IsRequired();
 

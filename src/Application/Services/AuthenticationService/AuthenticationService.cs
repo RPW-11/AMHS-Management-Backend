@@ -5,7 +5,6 @@ using Application.DTOs.Authentication;
 using Domain.Entities;
 using FluentResults;
 using Application.Common.Interfaces.Security;
-using Domain.ValueObjects.Employee;
 
 namespace Application.Services.AuthenticationService;
 
@@ -43,10 +42,10 @@ public class AuthenticationService : IAuthenticationService
             employee.FirstName,
             employee.LastName,
             employee.Email,
-            employee.Position.ToStringValue(),
+            employee.Position.ToString(),
             employee.DateOfBirth,
             employee.JoinDate,
-            employee.Status,
+            employee.Status.ToString(),
             employee.ImgUrl,
             token
         );

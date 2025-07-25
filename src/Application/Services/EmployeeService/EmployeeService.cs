@@ -4,7 +4,6 @@ using Application.Common.Interfaces.Security;
 using Application.DTOs.Employee;
 using Domain.Entities;
 using Domain.Errors;
-using Domain.ValueObjects.Employee;
 using FluentResults;
 
 namespace Application.Services.EmployeeService;
@@ -36,8 +35,7 @@ public class EmployeeService : IEmployeeService
             hashedPassword: hashedPassword,
             position: position.ToLower(),
             dateOfBirth: dateOfBirth,
-            phoneNumber: phoneNumber,
-            status: "active"
+            phoneNumber: phoneNumber
         );
 
         if (domainResult.IsFailed)
@@ -100,12 +98,12 @@ public class EmployeeService : IEmployeeService
             employee.FirstName,
             employee.LastName,
             employee.Email,
-            employee.Position.ToStringValue(),
+            employee.Position.ToString(),
             employeeAge.ToString(),
             employee.PhoneNumber,
             employee.DateOfBirth,
             employee.JoinDate,
-            employee.Status,
+            employee.Status.ToString(),
             employee.ImgUrl
         );
     }
