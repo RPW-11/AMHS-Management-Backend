@@ -13,3 +13,4 @@ C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Application\obj\Debug\net9.0
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Application\obj\Debug\net9.0\refint\Application.dll
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Application\obj\Debug\net9.0\Application.pdb
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Application\obj\Debug\net9.0\ref\Application.dll
+C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Application\obj\Debug\net9.0\Application.sourcelink.json

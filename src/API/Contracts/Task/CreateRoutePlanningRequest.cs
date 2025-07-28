@@ -10,7 +10,7 @@ public record CreateRoutePlanningRequest(
 
 public record Point(
     string Name,
-    string Type,
+    string Category,
     double Time,
     Position Position);
 

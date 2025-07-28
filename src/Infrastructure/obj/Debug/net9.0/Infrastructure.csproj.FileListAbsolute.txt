@@ -17,3 +17,4 @@ C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Infrastructure\obj\Debug\net
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Infrastructure\obj\Debug\net9.0\ref\Infrastructure.dll
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Infrastructure\bin\Debug\net9.0\Infrastructure.runtimeconfig.json
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Infrastructure\obj\Debug\net9.0\Infrastructure.genruntimeconfig.cache
+C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\Infrastructure\obj\Debug\net9.0\Infrastructure.sourcelink.json

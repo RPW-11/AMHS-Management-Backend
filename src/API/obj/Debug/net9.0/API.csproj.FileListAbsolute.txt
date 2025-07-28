@@ -149,3 +149,4 @@ C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\API\bin\Debug\net9.0\zh-Hant
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\API\bin\Debug\net9.0\API.xml
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\API\obj\Debug\net9.0\API.xml
 C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\API\bin\Debug\net9.0\BCrypt.Net-Next.dll
+C:\Users\user\Rai-Projects\AMHSDashboardBackEnd\src\API\obj\Debug\net9.0\API.sourcelink.json
