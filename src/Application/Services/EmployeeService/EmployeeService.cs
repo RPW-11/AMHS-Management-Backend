@@ -24,7 +24,7 @@ public class EmployeeService : BaseService, IEmployeeService
     {
         if (await _employeeRepository.GetEmployeeByEmailAsync(email) is not null)
         {
-            return Result.Fail(new ApplicationError("The email already exists", "AddEmployee.DuplicatedEmail"));
+            return Result.Fail(ApplicationError.Duplicated("Thi email already exists"));
         }
 
         string hashedPassword = _passwordHasher.HashPassword(password);
@@ -41,7 +41,8 @@ public class EmployeeService : BaseService, IEmployeeService
 
         if (domainResult.IsFailed)
         {
-            return domainResult.ToResult();
+            var error = domainResult.Errors[0];
+            return Result.Fail(ApplicationError.Validation(error.Message));
         }
 
         Employee newEmployee = domainResult.Value;
@@ -56,14 +57,14 @@ public class EmployeeService : BaseService, IEmployeeService
     {
         if (!Guid.TryParse(employeeId, out var employeeGuid))
         {
-            return Result.Fail<EmployeeDto>(new ApplicationError("Invalid employee Id", "GetEmployee.InvalidEmployee"));
+            return Result.Fail<EmployeeDto>(ApplicationError.Validation("Invalid employee id"));
         }
 
         Employee? employee = await _employeeRepository.GetEmployeeByIdAsync(employeeGuid);
 
         if (employee == null)
         {
-            return Result.Fail<EmployeeDto>(new ApplicationError("Employee is not found", "GetEmployee.NotFound"));
+            return Result.Fail<EmployeeDto>(ApplicationError.NotFound("The employee is not found"));
         }
 
         await _unitOfWork.SaveChangesAsync();

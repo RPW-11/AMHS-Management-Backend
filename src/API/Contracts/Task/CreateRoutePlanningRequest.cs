@@ -1,7 +1,7 @@
 namespace API.Contracts.Task;
 
 public record CreateRoutePlanningRequest(
-    string Image,
+    IFormFile Image,
     int RowDim,
     int ColDim,
     string Algorithm,

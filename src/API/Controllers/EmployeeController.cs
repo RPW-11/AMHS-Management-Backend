@@ -9,7 +9,7 @@ namespace API.Controllers
 {
     [Route("api/employees")]
     [ApiController]
-    public class EmployeeController : ControllerBase
+    public class EmployeeController : ApiBaseController
     {
         private readonly IEmployeeService _employeeService;
 
@@ -26,22 +26,7 @@ namespace API.Controllers
         {
             FluentResults.Result<IEnumerable<EmployeeDto>> employeesResult = await _employeeService.GetAllEmployees();
 
-            if (employeesResult.IsSuccess)
-            {
-                return Ok(employeesResult.Value);
-            }
-
-            var firstError = employeesResult.Errors[0];
-
-            if (firstError is ApplicationError)
-            {
-                return Problem(
-                    statusCode: (int)HttpStatusCode.BadRequest,
-                    title: firstError.Message,
-                    detail: (string)firstError.Metadata["detail"]
-                );
-            }
-            return Problem(statusCode: 500);
+            return HandleResult(employeesResult);
         }
 
         /// <summary>
@@ -52,22 +37,7 @@ namespace API.Controllers
         {
             FluentResults.Result<EmployeeDto> employeeResult = await _employeeService.GetEmployee(id);
 
-            if (employeeResult.IsSuccess)
-            {
-                return Ok(employeeResult.Value);
-            }
-
-            var firstError = employeeResult.Errors[0];
-
-            if (firstError is ApplicationError)
-            {
-                return Problem(
-                    statusCode: (int)HttpStatusCode.BadRequest,
-                    title: firstError.Message,
-                    detail: (string)firstError.Metadata["detail"]
-                );
-            }
-            return Problem(statusCode: 500);
+            return HandleResult(employeeResult);
         }
 
         /// <summary>
@@ -92,9 +62,9 @@ namespace API.Controllers
         /// </remarks>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult> AddEmploye(AddEmployeeRequest addEmployeeRequest)
+        public async Task<ActionResult<object>> AddEmploye(AddEmployeeRequest addEmployeeRequest)
         {
-            FluentResults.Result addEmployeeResult = await _employeeService.AddEmployee(
+            FluentResults.Result<object> addEmployeeResult = await _employeeService.AddEmployee(
                 addEmployeeRequest.FirstName,
                 addEmployeeRequest.LastName,
                 addEmployeeRequest.Email,
@@ -104,23 +74,7 @@ namespace API.Controllers
                 addEmployeeRequest.DateOfBirth
             );
 
-            if (addEmployeeResult.IsSuccess)
-            {
-                return Created();
-            }
-
-            var firstError = addEmployeeResult.Errors[0];
-
-            if (firstError is ApplicationError)
-            {
-                return Problem(
-                    statusCode: (int)HttpStatusCode.BadRequest,
-                    title: firstError.Message,
-                    detail: (string)firstError.Metadata["detail"]
-                );
-            }
-
-            return Problem(statusCode: 500);
+            return HandleResult(addEmployeeResult);
         }
     }
 }

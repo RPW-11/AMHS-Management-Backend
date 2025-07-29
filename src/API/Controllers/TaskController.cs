@@ -143,45 +143,48 @@ namespace API.Controllers
         ///          ]
         ///          }
         /// </remarks>
-        [HttpPost("route-planning")]
-        public ActionResult CreateRoutePlanningTask(CreateRoutePlanningRequest createRoutePlanningRequest)
-        {
-            List<PathPointDto> points = [];
-            List<PointPositionDto> stations = [];
-
-            foreach (var point in createRoutePlanningRequest.Points)
+            [HttpPost("route-planning")]
+            public ActionResult CreateRoutePlanningTask([FromForm]CreateRoutePlanningRequest createRoutePlanningRequest)
             {
-                points.Add(new(
-                    Name: point.Name,
-                    Category: point.Category,
-                    Position: new (point.Position.RowPos, point.Position.ColPos),
-                    Time: point.Time
-                ));
-            }
+                List<PathPointDto> points = [];
+                List<PointPositionDto> stations = [];
+                
+                foreach (var point in createRoutePlanningRequest.Points)
+                {
+                    points.Add(new(
+                        Name: point.Name,
+                        Category: point.Category,
+                        Position: new(point.Position.RowPos, point.Position.ColPos),
+                        Time: point.Time
+                    ));
+                }
 
-            foreach (var point in createRoutePlanningRequest.StationsOrder)
-            {
-                stations.Add(new(point.RowPos, point.ColPos));
-            }
+                foreach (var point in createRoutePlanningRequest.StationsOrder)
+                {
+                    stations.Add(new(point.RowPos, point.ColPos));
+                }
 
-            var routeResult = _routePlanningService.FindRgvBestRoute(
-                createRoutePlanningRequest.RowDim,
-                createRoutePlanningRequest.ColDim,
-                points,
-                stations
-            );
+                System.Console.WriteLine(createRoutePlanningRequest.Points.Count());
+                System.Console.WriteLine(createRoutePlanningRequest.StationsOrder.Count());
 
-            if (routeResult.IsFailed)
-            {
-                var error = routeResult.Errors[0];
-                return Problem(
-                    title: error.Message,
-                    statusCode: (int)HttpStatusCode.BadRequest,
-                    detail: (string)error.Metadata["detail"]
+                var routeResult = _routePlanningService.FindRgvBestRoute(
+                    createRoutePlanningRequest.RowDim,
+                    createRoutePlanningRequest.ColDim,
+                    points,
+                    stations
                 );
-            }
 
-            return Created();
-        }
+                if (routeResult.IsFailed)
+                {
+                    var error = routeResult.Errors[0];
+                    return Problem(
+                        title: error.Message,
+                        statusCode: (int)HttpStatusCode.BadRequest,
+                        detail: (string)error.Metadata["detail"]
+                    );
+                }
+
+                return Created();
+            }
     }
 }

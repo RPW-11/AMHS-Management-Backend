@@ -31,7 +31,7 @@ public class AuthenticationService : BaseService, IAuthenticationService
 
         if (employee is null || !_passwordHasher.VerifyPassword(password, employee.HashedPassword))
         {
-            return Result.Fail<AuthenticationDto>(new ApplicationError("Incorrect email or password", "Login.InvalidEmailPassword"));
+            return Result.Fail<AuthenticationDto>(ApplicationError.Validation("Incorrect email or password"));
         }
 
         string token = _jwtTokenGenerator.GenerateToken(employee);
