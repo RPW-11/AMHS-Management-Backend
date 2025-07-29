@@ -1,19 +1,20 @@
 using Application.Common.Errors;
+using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.Security;
 using Application.DTOs.Employee;
 using Domain.Entities;
-using Domain.Errors;
 using FluentResults;
 
 namespace Application.Services.EmployeeService;
 
-public class EmployeeService : IEmployeeService
+public class EmployeeService : BaseService, IEmployeeService
 {
     private readonly IEmployeeRepository _employeeRepository;
     private readonly IPasswordHasher _passwordHasher;
 
-    public EmployeeService(IEmployeeRepository employeeRepository, IPasswordHasher passwordHasher)
+    public EmployeeService(IEmployeeRepository employeeRepository, IPasswordHasher passwordHasher, IUnitOfWork unitOfWork)
+    : base(unitOfWork)
     {
         _employeeRepository = employeeRepository;
         _passwordHasher = passwordHasher;
@@ -23,7 +24,7 @@ public class EmployeeService : IEmployeeService
     {
         if (await _employeeRepository.GetEmployeeByEmailAsync(email) is not null)
         {
-            return Result.Fail(new ApplicationError("The email already exists", 409));
+            return Result.Fail(new ApplicationError("The email already exists", "AddEmployee.DuplicatedEmail"));
         }
 
         string hashedPassword = _passwordHasher.HashPassword(password);
@@ -40,17 +41,13 @@ public class EmployeeService : IEmployeeService
 
         if (domainResult.IsFailed)
         {
-            var error = domainResult.Errors[0];
-            if (error is DomainError)
-            {
-                return Result.Fail(new ApplicationError(error.Message, 409));
-            }
-            return Result.Fail(new ApplicationError("Server error", 500));
+            return domainResult.ToResult();
         }
 
         Employee newEmployee = domainResult.Value;
 
         await _employeeRepository.AddEmployeeAsync(newEmployee);
+        await _unitOfWork.SaveChangesAsync();
 
         return Result.Ok();
     }
@@ -59,15 +56,18 @@ public class EmployeeService : IEmployeeService
     {
         if (!Guid.TryParse(employeeId, out var employeeGuid))
         {
-            return Result.Fail<EmployeeDto>(new ApplicationError("Invalid employee Id", 400));
+            return Result.Fail<EmployeeDto>(new ApplicationError("Invalid employee Id", "GetEmployee.InvalidEmployee"));
         }
 
         Employee? employee = await _employeeRepository.GetEmployeeByIdAsync(employeeGuid);
 
         if (employee == null)
         {
-            return Result.Fail<EmployeeDto>(new ApplicationError("Employee is not found", 404));
+            return Result.Fail<EmployeeDto>(new ApplicationError("Employee is not found", "GetEmployee.NotFound"));
         }
+
+        await _unitOfWork.SaveChangesAsync();
+
         return MapToEmployeeDto(employee);
     }
 
@@ -80,6 +80,9 @@ public class EmployeeService : IEmployeeService
         {
             employeeDtos.Add(MapToEmployeeDto(employee));
         }
+
+        await _unitOfWork.SaveChangesAsync();
+
         return employeeDtos;
     }
 

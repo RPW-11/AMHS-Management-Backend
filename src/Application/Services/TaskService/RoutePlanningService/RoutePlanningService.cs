@@ -29,7 +29,7 @@ public class RoutePlanningService : IRoutePlanningService
             );
 
             if (pathPointResult.IsFailed) {
-                return Result.Fail(new ApplicationError(pathPointResult.Errors[0].Message, 400, ""));
+                return Result.Fail(new ApplicationError(pathPointResult.Errors[0].Message, "FindRgvBestRoute.InvalidPoint"));
             }
 
             pathPoints.Add(pathPointResult.Value);
@@ -54,7 +54,7 @@ public class RoutePlanningService : IRoutePlanningService
         }
         catch (Exception error)
         {
-            return Result.Fail(new ApplicationError(error.Message, 400, ""));
+            return Result.Fail(new ApplicationError(error.Message, "FindRgvBestRoute.ServerError"));
         }
     }
 }

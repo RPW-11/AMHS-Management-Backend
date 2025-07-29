@@ -5,16 +5,18 @@ using Application.DTOs.Authentication;
 using Domain.Entities;
 using FluentResults;
 using Application.Common.Interfaces.Security;
+using Application.Common.Interfaces;
 
 namespace Application.Services.AuthenticationService;
 
-public class AuthenticationService : IAuthenticationService
+public class AuthenticationService : BaseService, IAuthenticationService
 {
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmployeeRepository _employeeRepository;
 
-    public AuthenticationService(IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher passwordHasher, IEmployeeRepository employeeRepository)
+    public AuthenticationService(IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher passwordHasher, IEmployeeRepository employeeRepository, IUnitOfWork unitOfWork):
+    base(unitOfWork)
     {
         _jwtTokenGenerator = jwtTokenGenerator;
         _employeeRepository = employeeRepository;
@@ -25,9 +27,11 @@ public class AuthenticationService : IAuthenticationService
     {
         Employee? employee = await _employeeRepository.GetEmployeeByEmailAsync(email);
 
+        await _unitOfWork.SaveChangesAsync();
+
         if (employee is null || !_passwordHasher.VerifyPassword(password, employee.HashedPassword))
         {
-            return Result.Fail<AuthenticationDto>(new ApplicationError("Incorrect email or password", 400));
+            return Result.Fail<AuthenticationDto>(new ApplicationError("Incorrect email or password", "Login.InvalidEmailPassword"));
         }
 
         string token = _jwtTokenGenerator.GenerateToken(employee);

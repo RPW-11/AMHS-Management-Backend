@@ -1,6 +1,6 @@
+using System.Net;
 using API.Contracts.Employee;
 using Application.Common.Errors;
-using Application.Common.Interfaces;
 using Application.DTOs.Employee;
 using Application.Services.EmployeeService;
 using Microsoft.AspNetCore.Mvc;
@@ -12,12 +12,10 @@ namespace API.Controllers
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeService _employeeService;
-        private readonly IUnitOfWork _unitOfWork;
 
-        public EmployeeController(IEmployeeService employeeService, IUnitOfWork unitOfWork)
+        public EmployeeController(IEmployeeService employeeService)
         {
             _employeeService = employeeService;
-            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -30,7 +28,6 @@ namespace API.Controllers
 
             if (employeesResult.IsSuccess)
             {
-                await _unitOfWork.SaveChangesAsync();
                 return Ok(employeesResult.Value);
             }
 
@@ -39,7 +36,7 @@ namespace API.Controllers
             if (firstError is ApplicationError)
             {
                 return Problem(
-                    statusCode: (int)firstError.Metadata["statusCode"],
+                    statusCode: (int)HttpStatusCode.BadRequest,
                     title: firstError.Message,
                     detail: (string)firstError.Metadata["detail"]
                 );
@@ -57,7 +54,6 @@ namespace API.Controllers
 
             if (employeeResult.IsSuccess)
             {
-                await _unitOfWork.SaveChangesAsync();
                 return Ok(employeeResult.Value);
             }
 
@@ -66,7 +62,7 @@ namespace API.Controllers
             if (firstError is ApplicationError)
             {
                 return Problem(
-                    statusCode: (int)firstError.Metadata["statusCode"],
+                    statusCode: (int)HttpStatusCode.BadRequest,
                     title: firstError.Message,
                     detail: (string)firstError.Metadata["detail"]
                 );
@@ -110,7 +106,6 @@ namespace API.Controllers
 
             if (addEmployeeResult.IsSuccess)
             {
-                await _unitOfWork.SaveChangesAsync();
                 return Created();
             }
 
@@ -119,11 +114,12 @@ namespace API.Controllers
             if (firstError is ApplicationError)
             {
                 return Problem(
-                    statusCode: (int)firstError.Metadata["statusCode"],
+                    statusCode: (int)HttpStatusCode.BadRequest,
                     title: firstError.Message,
                     detail: (string)firstError.Metadata["detail"]
                 );
             }
+
             return Problem(statusCode: 500);
         }
     }

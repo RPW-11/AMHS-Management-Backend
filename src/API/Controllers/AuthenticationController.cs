@@ -2,8 +2,8 @@ using Application.Common.Errors;
 using Application.DTOs.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using API.Contracts.Authentication;
-using Application.Common.Interfaces;
 using Application.Services.AuthenticationService;
+using System.Net;
 
 namespace API.Controllers
 {
@@ -12,12 +12,10 @@ namespace API.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
-        private readonly IUnitOfWork _unitOfWork;
 
-        public AuthenticationController(IAuthenticationService authenticationService, IUnitOfWork unitOfWork)
+        public AuthenticationController(IAuthenticationService authenticationService)
         {
             _authenticationService = authenticationService;
-            _unitOfWork = unitOfWork;
         }
 
         [HttpPost("login")]
@@ -27,7 +25,6 @@ namespace API.Controllers
 
             if (authResult.IsSuccess)
             {
-                await _unitOfWork.SaveChangesAsync();
                 return Ok(authResult.Value);
             }
 
@@ -36,7 +33,7 @@ namespace API.Controllers
             if (firstError is ApplicationError)
             {
                 return Problem(
-                    statusCode: (int)firstError.Metadata["statusCode"],
+                    statusCode: (int)HttpStatusCode.BadRequest,
                     title: firstError.Message,
                     detail: (string)firstError.Metadata["detail"]
                 );

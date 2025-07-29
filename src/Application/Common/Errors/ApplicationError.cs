@@ -1,3 +1,4 @@
+using System.Net;
 using FluentResults;
 
 namespace Application.Common.Errors;
@@ -8,7 +9,7 @@ public sealed class ApplicationError : IError
     public string Message { get; }
     public Dictionary<string, object> Metadata { get; }
 
-    public ApplicationError(string message, int statusCode, string detail = "", List<IError>? domainErrors = null)
+    public ApplicationError(string message, string statusCode, string detail = "", List<IError>? domainErrors = null)
     {
         if (domainErrors == null)
         {

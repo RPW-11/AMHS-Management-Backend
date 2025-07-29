@@ -1,3 +1,4 @@
+using System.Net;
 using API.Contracts.Task;
 using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.TaskService.RoutePlanningService;
@@ -173,7 +174,11 @@ namespace API.Controllers
             if (routeResult.IsFailed)
             {
                 var error = routeResult.Errors[0];
-                return Problem(title: error.Message, statusCode: (int)error.Metadata["statusCode"], detail: (string)error.Metadata["detail"]);
+                return Problem(
+                    title: error.Message,
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    detail: (string)error.Metadata["detail"]
+                );
             }
 
             return Created();
