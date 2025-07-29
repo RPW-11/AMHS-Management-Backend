@@ -15,7 +15,7 @@ public class RoutePlanningService : IRoutePlanningService
         _rgvRoutePlanning = rgvRoutePlanning;
     }
 
-    public Result FindRgvBestRoute(int rowDim, int colDim, IEnumerable<PathPointDto> points, IEnumerable<PointPositionDto> stationsOrder)
+    public Result FindRgvBestRoute(MemoryStream imageStream, int rowDim, int colDim, IEnumerable<PathPointDto> points, IEnumerable<PointPositionDto> stationsOrder)
     {
         List<PathPoint> pathPoints = [];
 
@@ -48,6 +48,21 @@ public class RoutePlanningService : IRoutePlanningService
                 colDim,
                 pathPoints,
                 stationOrderPoints
+            );
+
+            List<(int, int)> coordinates = [];
+
+            foreach (var route in routes)
+            {
+                coordinates.Add((route.RowPos, route.ColPos));
+            }
+
+            // draw next
+            _rgvRoutePlanning.DrawImage(
+                imageStream,
+                coordinates,
+                rowDim,
+                colDim
             );
 
             return Result.Ok();

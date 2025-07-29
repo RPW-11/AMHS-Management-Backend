@@ -46,7 +46,6 @@
             
                 POST /tasks/route-planning
                 {
-                     "image": "string",
                      "rowDim": 6,
                      "colDim": 6,
                      "algorithm": "string",

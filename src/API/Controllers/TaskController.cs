@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using API.Contracts.Task;
 using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.TaskService.RoutePlanningService;
@@ -11,10 +12,11 @@ namespace API.Controllers
     public class TaskController : ControllerBase
     {
         private readonly IRoutePlanningService _routePlanningService;
-
+        private readonly JsonSerializerOptions _jsonSerializerOptions;
         public TaskController(IRoutePlanningService routePlanningService)
         {
             _routePlanningService = routePlanningService;
+            _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
         /// <summary>
@@ -26,7 +28,6 @@ namespace API.Controllers
         /// 
         ///     POST /tasks/route-planning
         ///     {
-        ///          "image": "string",
         ///          "rowDim": 6,
         ///          "colDim": 6,
         ///          "algorithm": "string",
@@ -143,37 +144,49 @@ namespace API.Controllers
         ///          ]
         ///          }
         /// </remarks>
-            [HttpPost("route-planning")]
-            public ActionResult CreateRoutePlanningTask([FromForm]CreateRoutePlanningRequest createRoutePlanningRequest)
+        [HttpPost("route-planning")]
+        public ActionResult CreateRoutePlanningTask(
+            [FromForm] CreateRoutePlanningRequest createRoutePlanningRequest
+        )
+        {
+            RouteMetadata? routeMetadata = JsonSerializer.Deserialize<RouteMetadata>(createRoutePlanningRequest.RouteMetadata, _jsonSerializerOptions);
+
+            if (routeMetadata == null)
             {
-                List<PathPointDto> points = [];
-                List<PointPositionDto> stations = [];
-                
-                foreach (var point in createRoutePlanningRequest.Points)
-                {
-                    points.Add(new(
-                        Name: point.Name,
-                        Category: point.Category,
-                        Position: new(point.Position.RowPos, point.Position.ColPos),
-                        Time: point.Time
-                    ));
-                }
+                return BadRequest();
+            }
 
-                foreach (var point in createRoutePlanningRequest.StationsOrder)
-                {
-                    stations.Add(new(point.RowPos, point.ColPos));
-                }
+            List<PathPointDto> points = [];
+            List<PointPositionDto> stations = [];
+            
+            foreach (var point in routeMetadata.Points)
+            {
+                points.Add(new(
+                    Name: point.Name,
+                    Category: point.Category,
+                    Position: new(point.Position.RowPos, point.Position.ColPos),
+                    Time: point.Time
+                ));
+            }
 
-                System.Console.WriteLine(createRoutePlanningRequest.Points.Count());
-                System.Console.WriteLine(createRoutePlanningRequest.StationsOrder.Count());
+            foreach (var point in routeMetadata.StationsOrder)
+            {
+                stations.Add(new(point.RowPos, point.ColPos));
+            }
+
+            using (var imageStream = new MemoryStream())
+            {
+                createRoutePlanningRequest.Image.CopyTo(imageStream);
+                imageStream.Seek(0, SeekOrigin.Begin);
 
                 var routeResult = _routePlanningService.FindRgvBestRoute(
-                    createRoutePlanningRequest.RowDim,
-                    createRoutePlanningRequest.ColDim,
+                    imageStream,
+                    routeMetadata.RowDim,
+                    routeMetadata.ColDim,
                     points,
                     stations
                 );
-
+                
                 if (routeResult.IsFailed)
                 {
                     var error = routeResult.Errors[0];
@@ -183,8 +196,9 @@ namespace API.Controllers
                         detail: (string)error.Metadata["detail"]
                     );
                 }
-
-                return Created();
             }
+
+            return Created();
+        }
     }
 }

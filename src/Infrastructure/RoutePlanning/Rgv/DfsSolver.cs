@@ -67,7 +67,6 @@ internal class DfsSolver
 
             rowPos = startPoint.RowPos;
             colPos = startPoint.ColPos;
-
             foreach (var route in finalRoutes)
             {
                 // update visited pos
