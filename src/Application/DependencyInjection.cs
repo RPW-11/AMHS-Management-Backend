@@ -1,5 +1,6 @@
 using Application.Services.AuthenticationService;
 using Application.Services.EmployeeService;
+using Application.Services.MissionService;
 using Application.Services.MissionService.RoutePlanningService;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IRoutePlanningService, RoutePlanningService>();
+        services.AddScoped<IMissionService, MissionService>();
 
         return services;
     }

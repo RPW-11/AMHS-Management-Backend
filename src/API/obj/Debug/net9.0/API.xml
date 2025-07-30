@@ -11,7 +11,7 @@
         </member>
         <member name="M:API.Controllers.EmployeeController.GetEmployeeById(System.String)">
             <summary>
-            Get all employee by id
+            Get an employee by id
             </summary>
         </member>
         <member name="M:API.Controllers.EmployeeController.AddEmploye(API.Contracts.Employee.AddEmployeeRequest)">
@@ -36,7 +36,22 @@
             
              </remarks>
         </member>
-        <member name="M:API.Controllers.TaskController.CreateRoutePlanningTask(API.Contracts.Task.CreateRoutePlanningRequest)">
+        <member name="M:API.Controllers.MissionController.GetAllMissions">
+            <summary>
+            Get all missions
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.GetMission(System.String)">
+            <summary>
+            Get a mission by id
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.AddMission(API.Contracts.Mission.AddMissionRequest)">
+            <summary>
+            Add a mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
             Create route planning task
             </summary>

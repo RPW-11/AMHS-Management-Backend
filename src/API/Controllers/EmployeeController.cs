@@ -30,7 +30,7 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Get all employee by id
+        /// Get an employee by id
         /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<EmployeeDto>> GetEmployeeById(string id)
@@ -74,7 +74,12 @@ namespace API.Controllers
                 addEmployeeRequest.DateOfBirth
             );
 
-            return HandleResult(addEmployeeResult);
+            if (addEmployeeResult.IsFailed)
+            {
+                return HandleResult(addEmployeeResult);
+            }
+
+            return Created();
         }
     }
 }

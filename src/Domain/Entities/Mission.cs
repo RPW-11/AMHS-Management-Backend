@@ -26,20 +26,15 @@ public class Mission
         UpdatedAt = new DateTime();
     }
 
-    public static Result<Mission> Create(Guid id, string name, string category, string status, string description = "")
+    public static Result<Mission> Create(string name, string category, string description = "")
     {
-        var statusResult = MissionStatus.FromString(status);
         var categoryResult = MissionCategory.FromString(category);
 
-        if (statusResult.IsFailed)
-        {
-            return Result.Fail(statusResult.Errors[0]);
-        }
         if (categoryResult.IsFailed)
         {
             return Result.Fail(categoryResult.Errors[0]);
         }
 
-        return new Mission(id, name, description, categoryResult.Value, statusResult.Value);
+        return new Mission(Guid.NewGuid(), name, description, categoryResult.Value, MissionStatus.Active);
     }
 }

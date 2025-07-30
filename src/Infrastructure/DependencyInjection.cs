@@ -44,7 +44,7 @@ public static class DependencyInjection
         services.AddSingleton<IRgvRoutePlanning, RgvRoutePlanning>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
-
+        services.AddScoped<IMissionRepository, MissionRepository>();
         return services;
     }
 }

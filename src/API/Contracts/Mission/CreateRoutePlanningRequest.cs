@@ -1,4 +1,4 @@
-namespace API.Contracts.Task;
+namespace API.Contracts.Mission;
 
 public record CreateRoutePlanningRequest (
     IFormFile Image,

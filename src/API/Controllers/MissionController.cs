@@ -1,22 +1,68 @@
 using System.Net;
 using System.Text.Json;
-using API.Contracts.Task;
+using API.Contracts.Mission;
 using Application.DTOs.Mission.RoutePlanning;
+using Application.Services.MissionService;
 using Application.Services.MissionService.RoutePlanningService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Route("api/tasks")]
+    [Route("api/missions")]
     [ApiController]
-    public class TaskController : ControllerBase
+    public class MissionController : ApiBaseController
     {
+        private readonly IMissionService _missionService;
         private readonly IRoutePlanningService _routePlanningService;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
-        public TaskController(IRoutePlanningService routePlanningService)
+        public MissionController(IRoutePlanningService routePlanningService, IMissionService missionService)
         {
+            _missionService = missionService;
             _routePlanningService = routePlanningService;
             _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        }
+
+        /// <summary>
+        /// Get all missions
+        /// </summary>
+        [HttpGet]
+        public async Task<ActionResult> GetAllMissions()
+        {
+            var missionsResult = await _missionService.GetAllMission();
+
+            return HandleResult(missionsResult); 
+        }
+
+        /// <summary>
+        /// Get a mission by id
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<ActionResult> GetMission(string id)
+        {
+            var missionResult = await _missionService.GetMission(id);
+
+            return HandleResult(missionResult); 
+        }
+
+        /// <summary>
+        /// Add a mission
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        public async Task<ActionResult<object>> AddMission(AddMissionRequest addMissionRequest)
+        {
+            FluentResults.Result<object> addMissionResult = await _missionService.AddMission(
+                addMissionRequest.Name,
+                addMissionRequest.Category,
+                addMissionRequest.Description
+            );
+
+            if (addMissionResult.IsFailed)
+            {
+                return HandleResult(addMissionResult);
+            }
+
+            return Created();
         }
 
         /// <summary>
