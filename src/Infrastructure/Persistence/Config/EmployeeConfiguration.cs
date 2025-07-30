@@ -12,11 +12,11 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasKey(e => e.Id);
 
         builder.Property(e => e.FirstName)
-        .HasMaxLength(DataSchemaConstants.NAME_LENGTH)
+        .HasMaxLength(DataSchemaConstants.Employee.NAME_LENGTH)
         .IsRequired();
 
         builder.Property(e => e.LastName)
-        .HasMaxLength(DataSchemaConstants.NAME_LENGTH)
+        .HasMaxLength(DataSchemaConstants.Employee.NAME_LENGTH)
         .IsRequired();
 
         builder.Property(e => e.HashedPassword)
@@ -29,7 +29,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             e => e.ToString(),
             e => EmployeePosition.FromString(e).Value
         )
-        .HasMaxLength(DataSchemaConstants.POSITION_LENGTH)
+        .HasMaxLength(DataSchemaConstants.Employee.POSITION_LENGTH)
         .IsRequired();
 
         builder.Property(e => e.Status)
@@ -37,7 +37,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             s => s.ToString(),
             s => EmployeeStatus.FromString(s).Value
         )
-        .HasMaxLength(DataSchemaConstants.STATUS_LENGTH)
+        .HasMaxLength(DataSchemaConstants.Employee.STATUS_LENGTH)
         .IsRequired();
 
         builder.Property(e => e.DateOfBirth)
