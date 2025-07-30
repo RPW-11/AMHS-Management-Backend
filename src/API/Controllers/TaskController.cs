@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using API.Contracts.Task;
 using Application.DTOs.Mission.RoutePlanning;
-using Application.Services.TaskService.RoutePlanningService;
+using Application.Services.MissionService.RoutePlanningService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers

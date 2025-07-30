@@ -25,6 +25,8 @@ public class PathPoint
         Time = time;
     }
 
+    public static PathPoint Path(int rowPos, int colPos) => new("Path", PointCategory.Path, rowPos, colPos, 0);
+
     public static Result<PathPoint> Create(string name, string category, int rowPos, int colPos, double time)
     {
         return new PathPoint(

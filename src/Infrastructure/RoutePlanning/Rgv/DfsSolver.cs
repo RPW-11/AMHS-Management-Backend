@@ -1,3 +1,4 @@
+using Domain.Entities;
 using Domain.ValueObjects.Mission.RoutePlanning;
 
 namespace Infrastructure.RoutePlanning.Rgv;
@@ -7,36 +8,9 @@ internal class DfsSolver
     public static List<PathPoint> FindBestRoute(RgvMap map)
     {
         List<List<PathPoint>> possibleRoutes = FindAllPossibleRoutes(map);
-        List<double> routesQ = []; // product per hour
-        List<int> routesMaxRgvs = []; // max Rgvs
-        List<double> routesTrackLength = []; // routes length
+        List<PathPoint> bestRoute = RouteEvaluator.GetBestRoute(possibleRoutes, map.StationsOrder);
 
-        foreach (var route in possibleRoutes)
-        {
-            double trackLength = route.Count * RgvConstants.PerSquareLength;
-            double timePerLoop = (trackLength / RgvConstants.RgvSpeed) + map.StationsOrder.Count * RgvConstants.StationTime;
-            double perRgvQ = 3600 / timePerLoop;
-
-            double rgvAvgSpeed = trackLength / timePerLoop;
-
-            double intermedSpace = map.StationsOrder.Count * RgvConstants.StationTime * rgvAvgSpeed;
-
-            int maxRgvs = (int)Math.Floor(trackLength / intermedSpace);
-
-            double totalQ = maxRgvs * perRgvQ; // N product per hour
-
-            routesQ.Add(totalQ);
-            routesMaxRgvs.Add(maxRgvs);
-            routesTrackLength.Add(trackLength);
-        }
-
-        var bestRouteIdx = Enumerable.Range(0, routesQ.Count)
-                           .OrderByDescending(i => routesQ[i])
-                           .ThenBy(i => routesMaxRgvs[i])
-                           .ThenBy(i => routesTrackLength[i])
-                           .Take(1).ToArray()[0];
-
-        return possibleRoutes[bestRouteIdx];
+        return bestRoute;
     }
     
     private static List<List<PathPoint>> FindAllPossibleRoutes(RgvMap map, int? limit = null)
@@ -121,7 +95,7 @@ internal class DfsSolver
         }
         else
         {
-            foreach (var direction in MapTrajectory.AllDirections)
+            foreach (var direction in RgvMap.MapTrajectory.AllDirections)
             {
                 SolveHelper(limit, routes, currRoute, visitedPos, map, currRowPos + direction[0], currColPos + direction[1], goalPoint);
             }

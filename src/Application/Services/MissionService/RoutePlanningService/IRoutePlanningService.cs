@@ -1,7 +1,7 @@
 using Application.DTOs.Mission.RoutePlanning;
 using FluentResults;
 
-namespace Application.Services.TaskService.RoutePlanningService;
+namespace Application.Services.MissionService.RoutePlanningService;
 
 public interface IRoutePlanningService
 {

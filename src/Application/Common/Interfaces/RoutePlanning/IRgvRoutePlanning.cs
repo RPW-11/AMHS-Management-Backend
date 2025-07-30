@@ -1,9 +1,10 @@
+using Domain.Entities;
 using Domain.ValueObjects.Mission.RoutePlanning;
 
 namespace Application.Common.Interfaces.RoutePlanning;
 
 public interface IRgvRoutePlanning
 {
-    IEnumerable<PathPoint> Solve(int rowDim, int colDim, IEnumerable<PathPoint> points, IEnumerable<(int rowPos, int colPos)> stationsOrder);
-    void DrawImage(MemoryStream imageStream, IEnumerable<(int rowPos, int colPos)> coordinates, int rowDim, int colDim);
+    IEnumerable<PathPoint> Solve(RgvMap rgvMap);
+    void DrawImage(MemoryStream imageStream, RgvMap rgvMap);
 }
