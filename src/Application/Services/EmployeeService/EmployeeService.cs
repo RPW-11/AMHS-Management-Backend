@@ -22,7 +22,12 @@ public class EmployeeService : BaseService, IEmployeeService
 
     public async Task<Result> AddEmployee(string firstName, string lastName, string email, string password, string position, string phoneNumber, string dateOfBirth)
     {
-        if (await _employeeRepository.GetEmployeeByEmailAsync(email) is not null)
+        var existingEmployeeResult = await _employeeRepository.GetEmployeeByEmailAsync(email);
+        if (existingEmployeeResult.IsFailed) {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (existingEmployeeResult.Value is not null)
         {
             return Result.Fail(ApplicationError.Duplicated("Thi email already exists"));
         }
@@ -47,7 +52,13 @@ public class EmployeeService : BaseService, IEmployeeService
 
         Employee newEmployee = domainResult.Value;
 
-        await _employeeRepository.AddEmployeeAsync(newEmployee);
+        var addResult = await _employeeRepository.AddEmployeeAsync(newEmployee);
+
+        if (addResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
         await _unitOfWork.SaveChangesAsync();
 
         return Result.Ok();
@@ -60,24 +71,32 @@ public class EmployeeService : BaseService, IEmployeeService
             return Result.Fail<EmployeeDto>(ApplicationError.Validation("Invalid employee id"));
         }
 
-        Employee? employee = await _employeeRepository.GetEmployeeByIdAsync(employeeGuid);
+        var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeGuid);
+        if (employeeResult.IsFailed)
+        {
+            return Result.Fail<EmployeeDto>(ApplicationError.Internal);
+        }
 
-        if (employee == null)
+        if (employeeResult.Value == null)
         {
             return Result.Fail<EmployeeDto>(ApplicationError.NotFound("The employee is not found"));
         }
 
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToEmployeeDto(employee);
+        return MapToEmployeeDto(employeeResult.Value);
     }
 
     public async Task<Result<IEnumerable<EmployeeDto>>> GetAllEmployees()
     {
-        IEnumerable<Employee> employees = await _employeeRepository.GetAllEmployeesAsync();
+        var employeesResult = await _employeeRepository.GetAllEmployeesAsync();
+        if (employeesResult.IsFailed)
+        {
+            return Result.Fail<IEnumerable<EmployeeDto>>(ApplicationError.Internal);
+        }
 
         List<EmployeeDto> employeeDtos = [];
-        foreach (Employee employee in employees)
+        foreach (Employee employee in employeesResult.Value)
         {
             employeeDtos.Add(MapToEmployeeDto(employee));
         }

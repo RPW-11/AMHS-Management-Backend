@@ -36,6 +36,7 @@ public class RgvRoutePlanning : IRgvRoutePlanning
             }
 
             // Save the result
+            mapImage.Save("C:\\Users\\user\\Downloads\\resultt.png", ImageFormat.Png); // saved locally for now
         }
     }
 

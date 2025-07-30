@@ -25,7 +25,13 @@ public class AuthenticationService : BaseService, IAuthenticationService
 
     public async Task<Result<AuthenticationDto>> Login(string email, string password)
     {
-        Employee? employee = await _employeeRepository.GetEmployeeByEmailAsync(email);
+        var employeeResult = await _employeeRepository.GetEmployeeByEmailAsync(email);
+        if (employeeResult.IsFailed)
+        {
+            return Result.Fail<AuthenticationDto>(ApplicationError.Internal);
+        }
+
+        Employee? employee = employeeResult.Value;
 
         await _unitOfWork.SaveChangesAsync();
 

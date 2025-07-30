@@ -29,5 +29,5 @@ public sealed class ApplicationError : IError
     public static ApplicationError Duplicated(string message) => new(message, "Duplicated");
     public static ApplicationError Validation(string message) => new(message, "Validation");
     public static ApplicationError Forbidden(string message) => new(message, "Forbidden");    
-
+    public static ApplicationError Internal => new("Infrastructure error", "Internal"); 
 }

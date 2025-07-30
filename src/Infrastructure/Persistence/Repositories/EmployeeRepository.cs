@@ -1,5 +1,6 @@
 using Application.Common.Interfaces.Persistence;
 using Domain.Entities;
+using FluentResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
@@ -13,26 +14,55 @@ public class EmployeeRepository : IEmployeeRepository
         _dbContext = dbContext;
     }
 
-    public async Task AddEmployeeAsync(Employee employee)
+    public async Task<Result> AddEmployeeAsync(Employee employee)
     {
-        await _dbContext.Employees.AddAsync(employee);
+        try
+        {
+            await _dbContext.Employees.AddAsync(employee);
+            return Result.Ok();
+        }
+        catch (Exception error)
+        {
+            return Result.Fail(new Error("Fail to insert the employee to the database").CausedBy(error));
+        }
     }
 
-    public async Task<IEnumerable<Employee>> GetAllEmployeesAsync()
+    public async Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync()
     {
-        IEnumerable<Employee> employees = await _dbContext.Employees.ToListAsync();
-        return employees;
+        try
+        {
+            IEnumerable<Employee> employees = await _dbContext.Employees.ToListAsync();
+            return Result.Ok(employees);
+        }
+        catch (Exception error)
+        {
+            return Result.Fail(new Error("Fail to get employees from the database").CausedBy(error));
+        }
     }
 
-    public async Task<Employee?> GetEmployeeByEmailAsync(string email)
+    public async Task<Result<Employee?>> GetEmployeeByEmailAsync(string email)
     {
-        Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Email == email);
-        return employee;
+        try
+        {
+            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Email == email);
+            return employee;
+        }
+        catch (Exception error)
+        {
+            return Result.Fail(new Error("Fail to get the employee by email from the database").CausedBy(error));
+        }
     }
 
-    public async  Task<Employee?> GetEmployeeByIdAsync(Guid id)
+    public async  Task<Result<Employee?>> GetEmployeeByIdAsync(Guid id)
     {
-        Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
-        return employee;
+        try
+        {
+            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
+            return employee;
+        }
+        catch (Exception error)
+        {
+            return Result.Fail(new Error("Fail to get the employee by id from the database").CausedBy(error));
+        }
     }
 }

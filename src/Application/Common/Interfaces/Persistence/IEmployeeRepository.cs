@@ -1,11 +1,12 @@
 using Domain.Entities;
+using FluentResults;
 
 namespace Application.Common.Interfaces.Persistence;
 
 public interface IEmployeeRepository
 {
-    Task<Employee?> GetEmployeeByEmailAsync(string email);
-    Task<Employee?> GetEmployeeByIdAsync(Guid id);
-    Task AddEmployeeAsync(Employee employee);
-    Task<IEnumerable<Employee>> GetAllEmployeesAsync();
+    Task<Result<Employee?>> GetEmployeeByEmailAsync(string email);
+    Task<Result<Employee?>> GetEmployeeByIdAsync(Guid id);
+    Task<Result> AddEmployeeAsync(Employee employee);
+    Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync();
 }
