@@ -56,6 +56,9 @@ public class RoutePlanningService : IRoutePlanningService
 
         RgvMap rgvMap = mapResult.Value;
 
+        // Write the map file to json.
+        _rgvRoutePlanning.WriteToJson(rgvMap);
+
         var routes = _rgvRoutePlanning.Solve(rgvMap);
 
         if (!routes.Any())
@@ -65,6 +68,7 @@ public class RoutePlanningService : IRoutePlanningService
 
         rgvMap.SetMapSolution([.. routes]);
 
+        _rgvRoutePlanning.WriteToJson(rgvMap);
         
         // draw next
         _rgvRoutePlanning.DrawImage(

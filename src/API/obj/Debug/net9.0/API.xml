@@ -51,7 +51,7 @@
             Add a mission
             </summary>
         </member>
-        <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(API.Contracts.Mission.CreateRoutePlanningRequest)">
+        <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
             Create route planning task
             </summary>

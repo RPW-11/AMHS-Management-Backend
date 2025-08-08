@@ -193,8 +193,9 @@ namespace API.Controllers
         ///          ]
         ///          }
         /// </remarks>
-        [HttpPost("route-planning")]
+        [HttpPost("{id}/route-planning")]
         public ActionResult CreateRoutePlanningTask(
+            string id,
             [FromForm] CreateRoutePlanningRequest createRoutePlanningRequest
         )
         {

@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Text.Json;
 using Application.Common.Interfaces.RoutePlanning;
 using Domain.Mission.ValueObjects;
 
@@ -7,6 +8,7 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public class RgvRoutePlanning : IRgvRoutePlanning
 {
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented=true };
     public void DrawImage(MemoryStream imageStream, RgvMap rgvMap)
     {
         Image mapImage = Image.FromStream(imageStream);
@@ -108,5 +110,18 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         Console.WriteLine("");
 
         return route;
+    }
+
+    public void WriteToJson(RgvMap rgvMap)
+    {
+        try
+        {
+            string stringJson = JsonSerializer.Serialize(rgvMap, _jsonSerializerOptions);
+            File.WriteAllText("C:\\Users\\user\\Downloads\\rgv_map.json", stringJson);
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+        }
     }
 }
