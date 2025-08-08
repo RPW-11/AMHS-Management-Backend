@@ -2,7 +2,7 @@ namespace Application.DTOs.Authentication;
 
 public record AuthenticationDto
 (
-    Guid Id,
+    string Id,
     string FirstName,
     string LastName,
     string Email,

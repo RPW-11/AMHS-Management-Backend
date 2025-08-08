@@ -1,5 +1,4 @@
-using Domain.Entities;
-using Domain.ValueObjects.Mission.RoutePlanning;
+using Domain.Mission.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
@@ -8,6 +7,11 @@ internal class DfsSolver
     public static List<PathPoint> FindBestRoute(RgvMap map)
     {
         List<List<PathPoint>> possibleRoutes = FindAllPossibleRoutes(map);
+        if (possibleRoutes.Count == 0)
+        {
+            return [];
+        }
+        
         List<PathPoint> bestRoute = RouteEvaluator.GetBestRoute(possibleRoutes, map.StationsOrder);
 
         return bestRoute;
@@ -77,7 +81,7 @@ internal class DfsSolver
         PathPoint? currPoint = map.GetPointAt(currRowPos, currColPos);
         if (
             (limit != null && limit == routes.Count) ||
-            currPoint == null ||
+            currPoint is null ||
             currPoint.Category == PathPoint.PointCategory.Obstacle ||
             visitedPos.Contains(currPoint)
         )

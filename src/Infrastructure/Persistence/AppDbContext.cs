@@ -1,4 +1,6 @@
-using Domain.Entities;
+using Domain.Employee;
+using Domain.Mission;
+using Domain.Mission.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;
@@ -12,7 +14,8 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Employee> Employees { get; set; }
-    public DbSet<Mission> Missions { get; set; }
+    public DbSet<MissionBase> Missions { get; set; }
+    public DbSet<AssignedEmployee> AssignedEmployees { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

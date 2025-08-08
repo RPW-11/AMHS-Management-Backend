@@ -1,5 +1,6 @@
 using Application.Common.Interfaces.Persistence;
-using Domain.Entities;
+using Domain.Mission;
+using Domain.Mission.ValueObjects;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,7 @@ public class MissionRepository : IMissionRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Result> AddMissionAsync(Mission mission)
+    public async Task<Result> AddMissionAsync(MissionBase mission)
     {
         try
         {
@@ -27,7 +28,7 @@ public class MissionRepository : IMissionRepository
         }
     }
 
-    public async Task<Result<IEnumerable<Mission>>> GetAllMissionsAsync()
+    public async Task<Result<IEnumerable<MissionBase>>> GetAllMissionsAsync()
     {
         try
         {
@@ -41,11 +42,13 @@ public class MissionRepository : IMissionRepository
         }
     }
 
-    public async Task<Result<Mission?>> GetMissionByIdAsync(Guid id)
+    public async Task<Result<MissionBase?>> GetMissionByIdAsync(MissionId id)
     {
         try
         {
-            var missionResult = await _dbContext.Missions.FirstOrDefaultAsync(m => m.Id == id);
+            var missionResult = await _dbContext.Missions
+                                        .Include(m => m.AssignedEmployees)
+                                        .FirstOrDefaultAsync(m => m.Id == id);
 
             return missionResult;
         }

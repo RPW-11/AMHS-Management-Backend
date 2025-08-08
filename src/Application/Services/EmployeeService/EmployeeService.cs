@@ -3,7 +3,7 @@ using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.Security;
 using Application.DTOs.Employee;
-using Domain.Entities;
+using Domain.Employee;
 using FluentResults;
 
 namespace Application.Services.EmployeeService;
@@ -77,7 +77,7 @@ public class EmployeeService : BaseService, IEmployeeService
             return Result.Fail<EmployeeDto>(ApplicationError.Internal);
         }
 
-        if (employeeResult.Value == null)
+        if (employeeResult.Value is null)
         {
             return Result.Fail<EmployeeDto>(ApplicationError.NotFound("The employee is not found"));
         }
@@ -117,7 +117,7 @@ public class EmployeeService : BaseService, IEmployeeService
         }
 
         return new EmployeeDto(
-            employee.Id,
+            employee.Id.ToString(),
             employee.FirstName,
             employee.LastName,
             employee.Email,

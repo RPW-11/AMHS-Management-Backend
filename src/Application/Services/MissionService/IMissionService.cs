@@ -5,7 +5,11 @@ namespace Application.Services.MissionService;
 
 public interface IMissionService
 {
-    Task<Result> AddMission(string name, string category, string description);
+    Task<Result> AddMission(string employeeId,
+                            string name,
+                            string category,
+                            string description,
+                            DateTime finishedAt);
     Task<Result<MissionDto>> GetMission(string id);
     Task<Result<IEnumerable<MissionDto>>> GetAllMission();
 }

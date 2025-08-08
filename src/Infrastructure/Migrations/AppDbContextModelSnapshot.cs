@@ -22,11 +22,10 @@ namespace Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Domain.Entities.Employee", b =>
+            modelBuilder.Entity("Domain.Employee.Employee", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -82,11 +81,29 @@ namespace Infrastructure.Migrations
                     b.ToTable("Employees");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Mission", b =>
+            modelBuilder.Entity("Domain.Mission.Entities.AssignedEmployee", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("MissionId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmployeeId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MissionRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("MissionId", "EmployeeId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("AssignedEmployees");
+                });
+
+            modelBuilder.Entity("Domain.Mission.MissionBase", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -103,7 +120,7 @@ namespace Infrastructure.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasDefaultValue("");
 
-                    b.Property<DateTime?>("FinishedAt")
+                    b.Property<DateTime>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
@@ -125,6 +142,26 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Missions");
+                });
+
+            modelBuilder.Entity("Domain.Mission.Entities.AssignedEmployee", b =>
+                {
+                    b.HasOne("Domain.Employee.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Mission.MissionBase", null)
+                        .WithMany("AssignedEmployees")
+                        .HasForeignKey("MissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Mission.MissionBase", b =>
+                {
+                    b.Navigation("AssignedEmployees");
                 });
 #pragma warning restore 612, 618
         }

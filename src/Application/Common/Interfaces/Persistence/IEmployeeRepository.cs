@@ -1,4 +1,4 @@
-using Domain.Entities;
+using Domain.Employee;
 using FluentResults;
 
 namespace Application.Common.Interfaces.Persistence;

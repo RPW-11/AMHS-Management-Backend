@@ -1,5 +1,4 @@
-using System;
-using Domain.Entities;
+using Domain.Employee;
 
 namespace Application.Common.Interfaces.Authentication;
 

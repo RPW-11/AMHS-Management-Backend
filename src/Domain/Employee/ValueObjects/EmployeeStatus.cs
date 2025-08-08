@@ -1,9 +1,10 @@
+using Domain.Common.Models;
 using Domain.Errors.Employee;
 using FluentResults;
 
-namespace Domain.ValueObjects.Employee;
+namespace Domain.Employee.ValueObjects;
 
-public class EmployeeStatus
+public class EmployeeStatus : ValueObject
 {
     private enum StatusValue
     {
@@ -40,16 +41,9 @@ public class EmployeeStatus
     }
 
     public override string ToString() => _value.ToString();
-
-    public override bool Equals(object? obj) => 
-        obj is EmployeeStatus other && _value == other._value;
-
-    public override int GetHashCode() => _value.GetHashCode();
-
-    public static bool operator ==(EmployeeStatus left, EmployeeStatus right) => 
-        left?.Equals(right) ?? right is null;
-
-    public static bool operator !=(EmployeeStatus left, EmployeeStatus right) => 
-        !(left == right);
-
+    
+    public override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return _value;
+    }
 }

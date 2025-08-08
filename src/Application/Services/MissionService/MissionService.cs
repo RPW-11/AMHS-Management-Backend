@@ -2,7 +2,8 @@ using Application.Common.Errors;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.DTOs.Mission;
-using Domain.Entities;
+using Domain.Mission;
+using Domain.Mission.ValueObjects;
 using FluentResults;
 
 namespace Application.Services.MissionService;
@@ -17,9 +18,17 @@ public class MissionService : BaseService, IMissionService
         _missionRepository = missionRepository;
     }
 
-    public async Task<Result> AddMission(string name, string category, string description)
+    public async Task<Result> AddMission(string employeeId,
+                                         string name,
+                                         string category,
+                                         string description,
+                                         DateTime finishedAt)
     {
-        var missionDomainResult = Mission.Create(name, category, description);
+        var missionDomainResult = MissionFactory.CreateMission(employeeId,
+                                                               name,
+                                                               category,
+                                                               description,
+                                                               finishedAt);
 
         if (missionDomainResult.IsFailed)
         {
@@ -60,18 +69,20 @@ public class MissionService : BaseService, IMissionService
 
     public async Task<Result<MissionDto>> GetMission(string id)
     {
-        if (!Guid.TryParse(id, out var missionGuid))
+        var missionIdResult = MissionId.FromString(id);
+        if (missionIdResult.IsFailed)
         {
-            return Result.Fail<MissionDto>(ApplicationError.Validation("Invalid mission id"));
+            return Result.Fail<MissionDto>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
         }
-        var getMissionResult = await _missionRepository.GetMissionByIdAsync(missionGuid);
+
+        var getMissionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
 
         if (getMissionResult.IsFailed)
         {
             return Result.Fail<MissionDto>(ApplicationError.Internal);
         }
 
-        if (getMissionResult.Value == null)
+        if (getMissionResult.Value is null)
         {
             return Result.Fail<MissionDto>(ApplicationError.NotFound("The mission is not found"));
         }
@@ -81,10 +92,12 @@ public class MissionService : BaseService, IMissionService
         return MapToMissionDto(getMissionResult.Value);
     }
 
-    private static MissionDto MapToMissionDto(Mission mission)
+    private static MissionDto MapToMissionDto(MissionBase mission)
     {
+        var assginedEmployees = mission.AssignedEmployees.Count == 0 ? null : mission.AssignedEmployees.Select(x => new AssignedEmployeeDto(x.EmployeeId.ToString(), x.MissionRole.ToString()));
+        
         return new MissionDto(
-                        mission.Id,
+                        mission.Id.ToString(),
                         mission.Name,
                         mission.Description,
                         mission.Category.ToString(),
@@ -92,7 +105,8 @@ public class MissionService : BaseService, IMissionService
                         mission.FinishedAt,
                         mission.ResourceLink,
                         mission.CreatedAt,
-                        mission.UpdatedAt
+                        mission.UpdatedAt,
+                        assginedEmployees
                     );
     }
 }

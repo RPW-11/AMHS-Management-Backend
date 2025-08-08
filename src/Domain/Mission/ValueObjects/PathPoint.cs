@@ -1,8 +1,9 @@
+using Domain.Common.Models;
 using FluentResults;
 
-namespace Domain.ValueObjects.Mission.RoutePlanning;
+namespace Domain.Mission.ValueObjects;
 
-public class PathPoint
+public sealed class PathPoint : ValueObject
 {
     public enum PointCategory
     {
@@ -46,5 +47,15 @@ public class PathPoint
             "st" => PointCategory.Station,
             _ => PointCategory.Path
         };
+    }
+    public override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return RowPos;
+        yield return ColPos;
+    }
+
+    public override string ToString()
+    {
+        return $"({RowPos}, {ColPos})";
     }
 }

@@ -1,8 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using Application.Common.Interfaces.RoutePlanning;
-using Domain.Entities;
-using Domain.ValueObjects.Mission.RoutePlanning;
+using Domain.Mission.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
@@ -13,14 +12,12 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         Image mapImage = Image.FromStream(imageStream);
         using (var graphics = Graphics.FromImage(mapImage))
         {
-            // Set up drawing properties
-            var pen = new Pen(Color.Red, 3); // Red line with 3px width
+            var pen = new Pen(Color.Black, 3); // 3px width
+            var arrowBrush = new SolidBrush(Color.YellowGreen);
 
-            // Calculate cell dimensions
             float cellWidth = (float)mapImage.Width / rgvMap.ColDim;
             float cellHeight = (float)mapImage.Height / rgvMap.RowDim;
 
-            // Convert matrix coordinates to pixel positions (center of each cell)
             var points = new List<PointF>();
             foreach (var point in rgvMap.Solutions)
             {
@@ -29,15 +26,75 @@ public class RgvRoutePlanning : IRgvRoutePlanning
                 points.Add(new PointF(x, y));
             }
 
-            // Draw connected lines
             if (points.Count > 1)
             {
                 graphics.DrawLines(pen, points.ToArray());
+
+                int arrowInterval = Math.Max(1, points.Count / 10);
+
+                for (int i = 0; i < points.Count - 1; i += arrowInterval)
+                {
+                    PointF currentPoint = points[i];
+                    PointF nextPoint = points[i + 1];
+
+                    float dx = nextPoint.X - currentPoint.X;
+                    float dy = nextPoint.Y - currentPoint.Y;
+
+                    float length = (float)Math.Sqrt(dx * dx + dy * dy);
+                    if (length > 0)
+                    {
+                        dx /= length;
+                        dy /= length;
+                    }
+
+                    PointF arrowPosition = new PointF(
+                        (currentPoint.X + nextPoint.X) / 2,
+                        (currentPoint.Y + nextPoint.Y) / 2);
+
+                    DrawFilledArrow(graphics, arrowBrush, arrowPosition, dx, dy, 10f);
+                }
+
+                if (points.Count > 1)
+                {
+                    PointF lastPoint = points[points.Count - 2];
+                    PointF endPoint = points[points.Count - 1];
+
+                    float dx = endPoint.X - lastPoint.X;
+                    float dy = endPoint.Y - lastPoint.Y;
+
+                    float length = (float)Math.Sqrt(dx * dx + dy * dy);
+                    if (length > 0)
+                    {
+                        dx /= length;
+                        dy /= length;
+                    }
+
+                    DrawFilledArrow(graphics, arrowBrush, endPoint, dx, dy, 10f);
+                }
             }
 
             // Save the result
             mapImage.Save("C:\\Users\\user\\Downloads\\resultt.png", ImageFormat.Png); // saved locally for now
         }
+    }
+
+    private void DrawFilledArrow(Graphics g, Brush brush, PointF position, float dx, float dy, float size)
+    {
+        float px = -dy;
+        float py = dx;
+
+        PointF arrowTip = position;
+        PointF arrowLeft = new PointF(
+            position.X - dx * size + px * size / 2,
+            position.Y - dy * size + py * size / 2);
+        PointF arrowRight = new PointF(
+            position.X - dx * size - px * size / 2,
+            position.Y - dy * size - py * size / 2);
+
+        PointF[] arrowPoints = [arrowTip, arrowLeft, arrowRight];
+
+        g.FillPolygon(brush, arrowPoints);
+        g.DrawPolygon(Pens.Black, arrowPoints);
     }
 
     public IEnumerable<PathPoint> Solve(RgvMap rgvMap)

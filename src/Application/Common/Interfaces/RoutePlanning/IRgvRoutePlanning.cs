@@ -1,5 +1,4 @@
-using Domain.Entities;
-using Domain.ValueObjects.Mission.RoutePlanning;
+using Domain.Mission.ValueObjects;
 
 namespace Application.Common.Interfaces.RoutePlanning;
 

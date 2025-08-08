@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using API.Contracts.Mission;
+using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.MissionService;
 using Application.Services.MissionService.RoutePlanningService;
@@ -26,7 +27,7 @@ namespace API.Controllers
         /// Get all missions
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult> GetAllMissions()
+        public async Task<ActionResult<IEnumerable<MissionDto>>> GetAllMissions()
         {
             var missionsResult = await _missionService.GetAllMission();
 
@@ -37,7 +38,7 @@ namespace API.Controllers
         /// Get a mission by id
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult> GetMission(string id)
+        public async Task<ActionResult<MissionDto>> GetMission(string id)
         {
             var missionResult = await _missionService.GetMission(id);
 
@@ -52,9 +53,11 @@ namespace API.Controllers
         public async Task<ActionResult<object>> AddMission(AddMissionRequest addMissionRequest)
         {
             FluentResults.Result<object> addMissionResult = await _missionService.AddMission(
+                "0090d308-f3df-4fd6-8611-103f62a3e04b",
                 addMissionRequest.Name,
                 addMissionRequest.Category,
-                addMissionRequest.Description
+                addMissionRequest.Description,
+                addMissionRequest.FinishedAt
             );
 
             if (addMissionResult.IsFailed)

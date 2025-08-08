@@ -2,13 +2,19 @@ namespace Application.DTOs.Mission;
 
 public record MissionDto
 (
-    Guid Id,
+    string Id,
     string Name, 
     string Description, 
     string Category, 
     string Status, 
-    DateTime? FinishedAt, 
+    DateTime FinishedAt, 
     string? ResourceLink, 
     DateTime CreatedAt, 
-    DateTime UpdatedAt 
+    DateTime UpdatedAt,
+    IEnumerable<AssignedEmployeeDto>? AssignedEmployees 
+);
+
+public record AssignedEmployeeDto(
+    string Id,
+    string Role
 );

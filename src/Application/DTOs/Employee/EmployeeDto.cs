@@ -2,7 +2,7 @@ namespace Application.DTOs.Employee;
 
 public record EmployeeDto
 (
-    Guid Id,
+    string Id,
     string FirstName,
     string LastName,
     string Email,

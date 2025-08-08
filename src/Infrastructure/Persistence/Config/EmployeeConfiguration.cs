@@ -1,5 +1,5 @@
-using Domain.Entities;
-using Domain.ValueObjects.Employee;
+using Domain.Employee;
+using Domain.Employee.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,6 +9,12 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 {
     public void Configure(EntityTypeBuilder<Employee> builder)
     {
+        builder.Property(e => e.Id)
+        .HasConversion(
+            e => e.ToString(),
+            e => EmployeeId.FromString(e).Value
+        );
+
         builder.HasKey(e => e.Id);
 
         builder.Property(e => e.FirstName)

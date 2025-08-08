@@ -1,0 +1,64 @@
+using Domain.Employee.ValueObjects;
+using Domain.Errors.Mission;
+using Domain.Mission.Entities;
+using Domain.Mission.ValueObjects;
+using FluentResults;
+
+namespace Domain.Mission;
+
+public static class MissionFactory
+{
+    public static Result<MissionBase> CreateMission(string employeeId,
+                                         string name,
+                                         string category,
+                                         string description,
+                                         DateTime finishedAt)
+    {
+        var missionCategoryResult = MissionCategory.FromString(category);
+        if (missionCategoryResult.IsFailed)
+        {
+            return Result.Fail<MissionBase>(missionCategoryResult.Errors[0]);
+        }
+
+        var leaderIdResult = EmployeeId.FromString(employeeId);
+        if (leaderIdResult.IsFailed)
+        {
+            return Result.Fail<MissionBase>(leaderIdResult.Errors[0]);
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Result.Fail<MissionBase>(new EmptyMissionNameError());
+        }
+
+        var missionId = MissionId.CreateUnique();
+
+        var assignedLeader = AssignedEmployee.Create(missionId,
+                                                     leaderIdResult.Value,
+                                                     MissionRole.Leader);
+
+        if (assignedLeader.IsFailed)
+        {
+            return Result.Fail(assignedLeader.Errors[0]);
+        }
+
+        if (missionCategoryResult.Value == MissionCategory.RoutePlanning)
+        {
+            var routePlanningMissionResult = RoutePlanningMission.Create(missionId, name, assignedLeader.Value, finishedAt, description);
+            if (routePlanningMissionResult.IsFailed)
+            {
+                return Result.Fail(routePlanningMissionResult.Errors[0]);
+            }
+
+            return routePlanningMissionResult.Value;
+        }
+
+        var normalMissionResult = NormalMission.Create(missionId, name, assignedLeader.Value, finishedAt, description);
+
+        if (normalMissionResult.IsFailed)
+        {
+            return Result.Fail(normalMissionResult.Errors[0]);
+        }
+        return normalMissionResult.Value;
+    }
+}

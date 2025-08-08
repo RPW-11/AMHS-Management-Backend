@@ -1,13 +1,13 @@
 using System.Text.RegularExpressions;
+using Domain.Common.Models;
+using Domain.Employee.ValueObjects;
 using Domain.Errors.Employee;
-using Domain.ValueObjects.Employee;
 using FluentResults;
 
-namespace Domain.Entities;
+namespace Domain.Employee;
 
-public class Employee
+public sealed class Employee: AggregateRoot<EmployeeId>
 {
-    public Guid Id { get; }
     public string FirstName { get; private set; }
     public string LastName { get; private set; }
     public string Email { get; private set; }
@@ -22,6 +22,7 @@ public class Employee
     public DateTime UpdatedAt { get; private set; }
 
     private Employee(
+        EmployeeId id,
         string firstName,
         string lastName,
         string email,
@@ -31,8 +32,8 @@ public class Employee
         EmployeeStatus status,
         string phoneNumber
         )
+        : base(id)
     {
-        Id = Guid.NewGuid();
         FirstName = firstName;
         LastName = lastName;
         Email = email;
@@ -84,7 +85,15 @@ public class Employee
             return Result.Fail<Employee>(new InvalidEmployeePhoneNumberError());
         }
 
-        return new Employee(firstName, lastName, email, hashedPassword, positionResult.Value, dateOfBirthParsed, EmployeeStatus.Active, phoneNumber);
+        return new Employee(EmployeeId.CreateUnique(),
+                            firstName,
+                            lastName,
+                            email,
+                            hashedPassword,
+                            positionResult.Value,
+                            dateOfBirthParsed,
+                            EmployeeStatus.Active,
+                            phoneNumber);
     }
 
     private static bool IsValidEmail(string email)

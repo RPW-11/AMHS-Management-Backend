@@ -28,7 +28,7 @@ public static class DependencyInjection
         //  Postgres config
         string? postgresConnectionStr = configuration.GetConnectionString("PostgresConnectionString");
 
-        if (postgresConnectionStr == null)
+        if (postgresConnectionStr is null)
         {
             throw new Exception("No connection string");
         }

@@ -1,9 +1,10 @@
+using Domain.Common.Models;
 using Domain.Errors.Mission;
 using FluentResults;
 
-namespace Domain.ValueObjects.Mission;
+namespace Domain.Mission.ValueObjects;
 
-public class MissionCategory
+public sealed class MissionCategory : ValueObject
 {
     private enum CategoryValue
     {
@@ -37,16 +38,9 @@ public class MissionCategory
     }
 
     public override string ToString() => _value.ToString();
-
-    public override bool Equals(object? obj) => 
-        obj is MissionCategory other && _value == other._value;
-
-    public override int GetHashCode() => _value.GetHashCode();
-
-    public static bool operator ==(MissionCategory left, MissionCategory right) => 
-        left?.Equals(right) ?? right is null;
-
-    public static bool operator !=(MissionCategory left, MissionCategory right) => 
-        !(left == right);
-
+    
+    public override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return _value;
+    }
 }

@@ -1,28 +1,24 @@
+using Domain.Common.Models;
 using Domain.Errors.Mission.RoutePlanning;
-using Domain.ValueObjects.Mission.RoutePlanning;
 using FluentResults;
 
-namespace Domain.Entities;
+namespace Domain.Mission.ValueObjects;
 
-public class RgvMap
+public sealed class RgvMap : ValueObject
 {
     private const int MinRowDim = 3;
     private const int MinColDim = 3;
     private const int MinNumberStationsOrder = 2;
+
     public static class MapTrajectory
     {
         public static readonly int[] Up = [1, 0];
         public static readonly int[] Down = [-1, 0];
         public static readonly int[] Left = [0, -1];
         public static readonly int[] Right = [0, 1];
-        public static readonly int[] UpLeft = [-1, 1];
-        public static readonly int[] UpRight = [1, 1];
-        public static readonly int[] DownLeft = [-1, -1];
-        public static readonly int[] DownRight = [1, -1];
         public static readonly int[][] AllDirections =
         [
             Up, Down, Left, Right,
-            UpLeft, UpRight, DownLeft, DownRight
         ];
     }
     public int RowDim { get; private set; }
@@ -99,5 +95,14 @@ public class RgvMap
     public void SetMapSolution(List<PathPoint> solutions)
     {
         Solutions = solutions;
+    }
+
+    public override IEnumerable<object> GetEqualityComponents()
+    {
+        yield return RowDim;
+        yield return ColDim;
+        yield return StationsOrder;
+        yield return Solutions; 
+        yield return _mapMatrix;
     }
 }

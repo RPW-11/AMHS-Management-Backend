@@ -1,5 +1,5 @@
 using Application.Common.Interfaces.Persistence;
-using Domain.Entities;
+using Domain.Employee;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,7 +57,7 @@ public class EmployeeRepository : IEmployeeRepository
     {
         try
         {
-            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
+            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id.Value == id);
             return employee;
         }
         catch (Exception error)

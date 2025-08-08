@@ -1,8 +1,7 @@
 using Application.Common.Errors;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission.RoutePlanning;
-using Domain.Entities;
-using Domain.ValueObjects.Mission.RoutePlanning;
+using Domain.Mission.ValueObjects;
 using FluentResults;
 
 namespace Application.Services.MissionService.RoutePlanningService;
@@ -30,7 +29,7 @@ public class RoutePlanningService : IRoutePlanningService
             );
 
             if (pathPointResult.IsFailed) {
-                return Result.Fail(new ApplicationError(pathPointResult.Errors[0].Message, "FindRgvBestRoute.InvalidPoint"));
+                return Result.Fail(ApplicationError.Validation(pathPointResult.Errors[0].Message));
             }
 
             pathPoints.Add(pathPointResult.Value);
@@ -52,12 +51,18 @@ public class RoutePlanningService : IRoutePlanningService
 
         if (mapResult.IsFailed)
         {
-            return Result.Fail(new ApplicationError(mapResult.Errors[0].Message, "FindRgvBestRoute.MapCreationError"));
+            return Result.Fail(ApplicationError.Validation(mapResult.Errors[0].Message));
         }
 
         RgvMap rgvMap = mapResult.Value;
 
         var routes = _rgvRoutePlanning.Solve(rgvMap);
+
+        if (!routes.Any())
+        {
+            return Result.Fail(ApplicationError.NotFound("No solution is found"));
+        }
+
         rgvMap.SetMapSolution([.. routes]);
 
         

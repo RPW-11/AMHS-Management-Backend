@@ -2,10 +2,10 @@ using Application.Common.Errors;
 using Application.Common.Interfaces.Authentication;
 using Application.Common.Interfaces.Persistence;
 using Application.DTOs.Authentication;
-using Domain.Entities;
 using FluentResults;
 using Application.Common.Interfaces.Security;
 using Application.Common.Interfaces;
+using Domain.Employee;
 
 namespace Application.Services.AuthenticationService;
 
@@ -48,7 +48,7 @@ public class AuthenticationService : BaseService, IAuthenticationService
     private static AuthenticationDto MapToDto(Employee employee, string token)
     {
         return new AuthenticationDto(
-            employee.Id,
+            employee.Id.Value.ToString(),
             employee.FirstName,
             employee.LastName,
             employee.Email,
