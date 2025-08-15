@@ -57,4 +57,17 @@ public class MissionRepository : IMissionRepository
             return Result.Fail(new Error("Fail to get the mission from the database").CausedBy(erorr));
         }
     }
+
+    public Result UpdateMission(MissionBase mission)
+    {
+        try
+        {
+            _dbContext.Update(mission);
+            return Result.Ok();
+        }
+        catch (Exception erorr)
+        {
+            return Result.Fail(new Error("Fail to update the mission").CausedBy(erorr));
+        }
+    }
 }

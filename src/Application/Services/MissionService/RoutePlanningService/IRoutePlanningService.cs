@@ -5,11 +5,14 @@ namespace Application.Services.MissionService.RoutePlanningService;
 
 public interface IRoutePlanningService
 {
-    Result FindRgvBestRoute(
+    Task<Result> FindRgvBestRoute(
+        string missionId,
         MemoryStream imageSteam,
+        string algorithm,
         int rowDim,
         int colDim,
         IEnumerable<PathPointDto> points,
-        IEnumerable<PointPositionDto> stationsOrder
+        IEnumerable<PointPositionDto> stationsOrder,
+        IEnumerable<IEnumerable<PointPositionDto>> sampleSolutions
     );
 }

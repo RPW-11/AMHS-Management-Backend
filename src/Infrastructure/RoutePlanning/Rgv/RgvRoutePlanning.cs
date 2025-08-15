@@ -2,23 +2,30 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text.Json;
 using Application.Common.Interfaces.RoutePlanning;
+using Application.DTOs.Mission.RoutePlanning;
 using Domain.Mission.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
 public class RgvRoutePlanning : IRgvRoutePlanning
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented=true };
-    public void DrawImage(MemoryStream imageStream, RgvMap rgvMap)
+    private const float ThicknessMultiplier = 0.02f;
+    private const float ArrowThicknessControl = 6f;
+    private const string LocalRoutePlanningDirectory = "C:\\Users\\user\\Downloads\\RoutePlanningResults";
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+    public string DrawImage(MemoryStream imageStream, RoutePlanningDetailDto routePlanningDetailDto)
     {
+        RgvMap rgvMap = routePlanningDetailDto.RgvMap;
         Image mapImage = Image.FromStream(imageStream);
         using (var graphics = Graphics.FromImage(mapImage))
         {
-            var pen = new Pen(Color.Black, 3); // 3px width
-            var arrowBrush = new SolidBrush(Color.YellowGreen);
-
             float cellWidth = (float)mapImage.Width / rgvMap.ColDim;
             float cellHeight = (float)mapImage.Height / rgvMap.RowDim;
+
+            var penThickness = (float)Math.Max(1, Math.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
+
+            var pen = new Pen(Color.Black, penThickness); // 3px width
+            var arrowBrush = new SolidBrush(Color.YellowGreen);
 
             var points = new List<PointF>();
             foreach (var point in rgvMap.Solutions)
@@ -53,7 +60,7 @@ public class RgvRoutePlanning : IRgvRoutePlanning
                         (currentPoint.X + nextPoint.X) / 2,
                         (currentPoint.Y + nextPoint.Y) / 2);
 
-                    DrawFilledArrow(graphics, arrowBrush, arrowPosition, dx, dy, 10f);
+                    DrawFilledArrow(graphics, arrowBrush, arrowPosition, dx, dy, ArrowThicknessControl * penThickness);
                 }
 
                 if (points.Count > 1)
@@ -71,16 +78,17 @@ public class RgvRoutePlanning : IRgvRoutePlanning
                         dy /= length;
                     }
 
-                    DrawFilledArrow(graphics, arrowBrush, endPoint, dx, dy, 10f);
+                    DrawFilledArrow(graphics, arrowBrush, endPoint, dx, dy, ArrowThicknessControl * penThickness);
                 }
             }
 
             // Save the result
-            mapImage.Save("C:\\Users\\user\\Downloads\\resultt.png", ImageFormat.Png); // saved locally for now
+            mapImage.Save($"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.png", ImageFormat.Png); // saved locally for now
+            return $"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.png";
         }
     }
-
-    private void DrawFilledArrow(Graphics g, Brush brush, PointF position, float dx, float dy, float size)
+    
+    private static void DrawFilledArrow(Graphics g, Brush brush, PointF position, float dx, float dy, float size)
     {
         float px = -dy;
         float py = dx;
@@ -98,30 +106,53 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         g.FillPolygon(brush, arrowPoints);
         g.DrawPolygon(Pens.Black, arrowPoints);
     }
-
-    public IEnumerable<PathPoint> Solve(RgvMap rgvMap)
+    public IEnumerable<PathPoint> Solve(RoutePlanningDetailDto routePlanningDetailDto,
+                                        RoutePlanningAlgorithm routePlanningAlgorithm,
+                                        List<List<PathPoint>> sampleSolutions)
     {
+        RgvMap rgvMap = routePlanningDetailDto.RgvMap;
 
-        var route = DfsSolver.FindBestRoute(rgvMap);
-        foreach (var p in route)
+        if (routePlanningAlgorithm == RoutePlanningAlgorithm.Dfs)
         {
-            Console.Write($"({p.RowPos},{p.ColPos})->");
+            return DfsSolver.FindBestRoute(rgvMap);
         }
-        Console.WriteLine("");
+        if (routePlanningAlgorithm == RoutePlanningAlgorithm.GeneticAlgorithm)
+        {
+            var gaSolver = new GeneticAlgorithmSolver(rgvMap);
+            return gaSolver.Solve(sampleSolutions);
+        }
 
-        return route;
+        throw new Exception($"Algorithm '{routePlanningAlgorithm}' is not implemented");
     }
 
-    public void WriteToJson(RgvMap rgvMap)
+    public string WriteToJson(RoutePlanningDetailDto routePlanningDetailDto)
     {
         try
         {
-            string stringJson = JsonSerializer.Serialize(rgvMap, _jsonSerializerOptions);
-            File.WriteAllText("C:\\Users\\user\\Downloads\\rgv_map.json", stringJson);
+            string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
+            File.WriteAllText($"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json", stringJson);
+            return $"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json";
         }
         catch (Exception error)
         {
             Console.WriteLine(error);
+            throw new Exception (error.Message);
+        }
+    }
+
+    public RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl)
+    {
+        try
+        {
+            string jsonString = File.ReadAllText(jsonFileUrl);
+            RoutePlanningSummaryDto? routePlanningSummaryDto = JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString) ?? throw new Exception("Error serializing the resource file");
+
+            return routePlanningSummaryDto;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            throw new Exception(error.Message);
         }
     }
 }

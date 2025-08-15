@@ -53,13 +53,13 @@
         </member>
         <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
-            Create route planning task
+            Update the created route planning task with the required data
             </summary>
             <remarks>
             
             Sample request:
             
-                POST /tasks/route-planning
+                PATCH /tasks/route-planning
                 {
                      "rowDim": 6,
                      "colDim": 6,

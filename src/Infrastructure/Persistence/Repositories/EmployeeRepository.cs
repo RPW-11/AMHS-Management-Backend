@@ -1,5 +1,6 @@
 using Application.Common.Interfaces.Persistence;
 using Domain.Employee;
+using Domain.Employee.ValueObjects;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,15 +54,16 @@ public class EmployeeRepository : IEmployeeRepository
         }
     }
 
-    public async  Task<Result<Employee?>> GetEmployeeByIdAsync(Guid id)
+    public async  Task<Result<Employee?>> GetEmployeeByIdAsync(EmployeeId id)
     {
         try
         {
-            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id.Value == id);
+            Employee? employee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
             return employee;
         }
         catch (Exception error)
         {
+            System.Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get the employee by id from the database").CausedBy(error));
         }
     }

@@ -42,23 +42,8 @@ public static class MissionFactory
             return Result.Fail(assignedLeader.Errors[0]);
         }
 
-        if (missionCategoryResult.Value == MissionCategory.RoutePlanning)
-        {
-            var routePlanningMissionResult = RoutePlanningMission.Create(missionId, name, assignedLeader.Value, finishedAt, description);
-            if (routePlanningMissionResult.IsFailed)
-            {
-                return Result.Fail(routePlanningMissionResult.Errors[0]);
-            }
+        var missionBase = MissionBase.Create(missionId, name, missionCategoryResult.Value, assignedLeader.Value, finishedAt, description);
 
-            return routePlanningMissionResult.Value;
-        }
-
-        var normalMissionResult = NormalMission.Create(missionId, name, assignedLeader.Value, finishedAt, description);
-
-        if (normalMissionResult.IsFailed)
-        {
-            return Result.Fail(normalMissionResult.Errors[0]);
-        }
-        return normalMissionResult.Value;
+        return missionBase;
     }
 }

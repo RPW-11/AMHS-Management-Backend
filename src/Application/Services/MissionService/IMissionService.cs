@@ -5,7 +5,7 @@ namespace Application.Services.MissionService;
 
 public interface IMissionService
 {
-    Task<Result> AddMission(string employeeId,
+    Task<Result<AddMissionDto>> AddMission(string employeeId,
                             string name,
                             string category,
                             string description,

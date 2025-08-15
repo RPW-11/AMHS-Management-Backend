@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Domain.Common.Models;
 using Domain.Errors.Mission.RoutePlanning;
 using FluentResults;

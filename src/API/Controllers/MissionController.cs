@@ -49,10 +49,9 @@ namespace API.Controllers
         /// Add a mission
         /// </summary>
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<object>> AddMission(AddMissionRequest addMissionRequest)
+        public async Task<ActionResult<AddMissionDto>> AddMission(AddMissionRequest addMissionRequest)
         {
-            FluentResults.Result<object> addMissionResult = await _missionService.AddMission(
+            FluentResults.Result<AddMissionDto> addMissionResult = await _missionService.AddMission(
                 "0090d308-f3df-4fd6-8611-103f62a3e04b",
                 addMissionRequest.Name,
                 addMissionRequest.Category,
@@ -65,17 +64,17 @@ namespace API.Controllers
                 return HandleResult(addMissionResult);
             }
 
-            return Created();
+            return Ok(addMissionResult.Value);
         }
 
         /// <summary>
-        /// Create route planning task
+        /// Update the created route planning task with the required data
         /// </summary>
         /// <remarks>
         /// 
         /// Sample request:
         /// 
-        ///     POST /tasks/route-planning
+        ///     PATCH /tasks/route-planning
         ///     {
         ///          "rowDim": 6,
         ///          "colDim": 6,
@@ -193,8 +192,8 @@ namespace API.Controllers
         ///          ]
         ///          }
         /// </remarks>
-        [HttpPost("{id}/route-planning")]
-        public ActionResult CreateRoutePlanningTask(
+        [HttpPatch("{id}/route-planning")]
+        public async Task<ActionResult> CreateRoutePlanningTask(
             string id,
             [FromForm] CreateRoutePlanningRequest createRoutePlanningRequest
         )
@@ -208,6 +207,7 @@ namespace API.Controllers
 
             List<PathPointDto> points = [];
             List<PointPositionDto> stations = [];
+            List<List<PointPositionDto>> sampleSolutions = [];
             
             foreach (var point in routeMetadata.Points)
             {
@@ -223,20 +223,33 @@ namespace API.Controllers
             {
                 stations.Add(new(point.RowPos, point.ColPos));
             }
+            
+            foreach (var sol in routeMetadata.SampleSolutions)
+            {
+                List<PointPositionDto> temp = [];
+                foreach (var point in sol)
+                {
+                    temp.Add(new(point.RowPos, point.ColPos));
+                }
+                sampleSolutions.Add(temp);
+            }
 
             using (var imageStream = new MemoryStream())
             {
                 createRoutePlanningRequest.Image.CopyTo(imageStream);
                 imageStream.Seek(0, SeekOrigin.Begin);
 
-                var routeResult = _routePlanningService.FindRgvBestRoute(
+                var routeResult = await _routePlanningService.FindRgvBestRoute(
+                    id,
                     imageStream,
+                    routeMetadata.Algorithm,
                     routeMetadata.RowDim,
                     routeMetadata.ColDim,
                     points,
-                    stations
+                    stations,
+                    sampleSolutions
                 );
-                
+
                 if (routeResult.IsFailed)
                 {
                     var error = routeResult.Errors[0];

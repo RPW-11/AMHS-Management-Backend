@@ -4,6 +4,7 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.Security;
 using Application.DTOs.Employee;
 using Domain.Employee;
+using Domain.Employee.ValueObjects;
 using FluentResults;
 
 namespace Application.Services.EmployeeService;
@@ -66,12 +67,13 @@ public class EmployeeService : BaseService, IEmployeeService
 
     public async Task<Result<EmployeeDto>> GetEmployee(string employeeId)
     {
-        if (!Guid.TryParse(employeeId, out var employeeGuid))
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed)
         {
             return Result.Fail<EmployeeDto>(ApplicationError.Validation("Invalid employee id"));
         }
 
-        var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeGuid);
+        var employeeResult = await _employeeRepository.GetEmployeeByIdAsync(employeeIdResult.Value);
         if (employeeResult.IsFailed)
         {
             return Result.Fail<EmployeeDto>(ApplicationError.Internal);

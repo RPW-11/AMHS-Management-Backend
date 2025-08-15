@@ -30,11 +30,11 @@ public class MissionBase : AggregateRoot<MissionId>
                           string description,
                           MissionCategory category,
                           MissionStatus status,
-                          AssignedEmployee leader,
+                          List<AssignedEmployee> assignedEmployees,
                           DateTime finishedAt)
     : base(id)
     {
-        _assignedEmployees.Add(leader);
+        _assignedEmployees = assignedEmployees;
         Name = name;
         Description = description;
         Category = category;
@@ -42,6 +42,42 @@ public class MissionBase : AggregateRoot<MissionId>
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
         FinishedAt = finishedAt;
+    }
+
+    public static MissionBase Create(MissionId missionId,
+                                     string name,
+                                     MissionCategory category,
+                                     AssignedEmployee leader,
+                                     DateTime finishedAt,
+                                     string description = "")
+    {
+        return new(
+            missionId,
+            name,
+            description,
+            category,
+            MissionStatus.Active,
+            [leader],
+            finishedAt
+        );
+    }
+
+    public void SetMissionStatus(MissionStatus status)
+    {
+        Status = status;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetMissionCategory(MissionCategory category)
+    {
+        Category = category;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetMissionResourceLink(string resourceLink)
+    {
+        ResourceLink = resourceLink;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public Result AddEmployee(EmployeeId employeeId, string missionRole)
@@ -68,6 +104,8 @@ public class MissionBase : AggregateRoot<MissionId>
 
         var assignedEmployeeResult = AssignedEmployee.Create(Id, employeeId, roleResult.Value);
         _assignedEmployees.Add(assignedEmployeeResult.Value);
+
+        UpdatedAt = DateTime.UtcNow;
 
         return Result.Ok();
     }

@@ -10,6 +10,7 @@ public record RouteMetadata(
     int ColDim,
     string Algorithm,
     IEnumerable<Position> StationsOrder,
+    IEnumerable<IEnumerable<Position>> SampleSolutions,
     IEnumerable<Point> Points);
 
 public record Point(

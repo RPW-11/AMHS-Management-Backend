@@ -1,3 +1,6 @@
+
+using Application.DTOs.Mission.RoutePlanning;
+
 namespace Application.DTOs.Mission;
 
 public record MissionDto
@@ -11,8 +14,11 @@ public record MissionDto
     string? ResourceLink, 
     DateTime CreatedAt, 
     DateTime UpdatedAt,
-    IEnumerable<AssignedEmployeeDto>? AssignedEmployees 
+    IEnumerable<AssignedEmployeeDto>? AssignedEmployees,
+    RoutePlanningSummaryDto? RoutePlanningSummary 
 );
+
+public record AddMissionDto (string Id);
 
 public record AssignedEmployeeDto(
     string Id,
