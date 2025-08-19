@@ -13,6 +13,13 @@ internal static class RouteEvaluator
 
     public static double EvaluateOptimality(List<PathPoint> solution, RgvMap map)
     {
+        var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, map);
+
+        return ThroughputWeight * totalThroughput + LengthWeight * trackLength + NumOfRgvsWeight * maxRgvs;
+    }
+
+    public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
+    {
         var totalTimeStations = map.StationsOrder.Sum(s => s.Time);
         double trackLength = solution.Count * PerSquareLength;
         double cycleTime = (trackLength / RgvSpeed) + totalTimeStations;
@@ -24,7 +31,7 @@ internal static class RouteEvaluator
         int maxRgvs = (int)Math.Floor(trackLength / intermediateSpaceLength);
         double totalThroughput = maxRgvs * throughputPerRgv;
 
-        return ThroughputWeight * totalThroughput + LengthWeight * trackLength + NumOfRgvsWeight * maxRgvs;
+        return (totalThroughput, trackLength, maxRgvs);
     }
 
     public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder)

@@ -9,10 +9,18 @@ public record RoutePlanningDetailDto(
     string Id,
     string Algorithm,
     string ImageUrl,
-    RgvMap RgvMap
+    RgvMap RgvMap,
+    RoutePlanningScoreDto? Score
 );
 
 public record RoutePlanningSummaryDto(
     string Algorithm,
-    string ImageUrl
+    string ImageUrl,
+    RoutePlanningScoreDto Score
+);
+
+public record RoutePlanningScoreDto(
+    double Throughput,
+    double TrackLength,
+    int NumOfRgvs
 );

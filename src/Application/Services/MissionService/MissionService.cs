@@ -73,27 +73,28 @@ public class MissionService : BaseService, IMissionService
         return missionsDto;
     }
 
-    public async Task<Result<MissionDto>> GetMission(string id)
+    public async Task<Result<MissionDetailDto>> GetMission(string id)
     {
         var missionIdResult = MissionId.FromString(id);
         if (missionIdResult.IsFailed)
         {
-            return Result.Fail<MissionDto>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
+            return Result.Fail<MissionDetailDto>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
         }
 
-        var getMissionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        var getMissionResult = await _missionRepository.GetMissionDetailedByIdAsync(missionIdResult.Value);
 
         if (getMissionResult.IsFailed)
         {
-            return Result.Fail<MissionDto>(ApplicationError.Internal);
+            return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
         }
 
         if (getMissionResult.Value is null)
         {
-            return Result.Fail<MissionDto>(ApplicationError.NotFound("The mission is not found"));
+            return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission is not found"));
         }
 
-        if (getMissionResult.Value.Category == MissionCategory.RoutePlanning && getMissionResult.Value.ResourceLink is not null)
+        if (getMissionResult.Value.Category == MissionCategory.RoutePlanning.ToString()
+            && getMissionResult.Value.ResourceLink is not null)
         {
             RoutePlanningSummaryDto routePlanningSummary = _rgvRoutePlanning.ReadFromJson(getMissionResult.Value.ResourceLink);
 
@@ -101,20 +102,90 @@ public class MissionService : BaseService, IMissionService
             byte[] imageBytes = File.ReadAllBytes(routePlanningSummary.ImageUrl);
             string base64String = Convert.ToBase64String(imageBytes);
 
-            routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm, base64String);
+            routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm, base64String, routePlanningSummary.Score);
 
-            return MapToMissionDto(getMissionResult.Value, routePlanningSummary);
+            getMissionResult.Value.RoutePlanningSummary = routePlanningSummary;
+
+            return getMissionResult.Value;
         }
 
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToMissionDto(getMissionResult.Value);
+        return getMissionResult.Value;
+    }
+
+    public async Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId)
+    {
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission id"));
+        }
+
+        var missionRepoResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionRepoResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (missionRepoResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("The specified mission is not found"));
+        }
+
+        var statusResult = MissionStatus.FromString(updateMissionDto.Status);
+        if (statusResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission status"));
+        }
+
+        missionRepoResult.Value.SetMissionName(updateMissionDto.Name);
+        missionRepoResult.Value.SetMissionDescription(updateMissionDto.Description);
+        missionRepoResult.Value.SetMissionStatus(statusResult.Value);
+
+        var updateMissionResult = _missionRepository.UpdateMission(missionRepoResult.Value);
+        if (updateMissionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return Result.Ok();
+    }
+
+    public async Task<Result> DeleteMission(string missionId)
+    {
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid missionId"));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (missionResult.Value is null)
+        {
+            return Result.Ok();
+        }
+
+        var deleteResult = _missionRepository.DeleteMission(missionResult.Value);
+        if (deleteResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return Result.Ok();
     }
 
     private static MissionDto MapToMissionDto(MissionBase mission)
     {
-        var assginedEmployees = mission.AssignedEmployees.Count == 0 ? null : mission.AssignedEmployees.Select(x => new AssignedEmployeeDto(x.EmployeeId.ToString(), x.MissionRole.ToString()));
-
         return new MissionDto(
                         mission.Id.ToString(),
                         mission.Name,
@@ -124,28 +195,7 @@ public class MissionService : BaseService, IMissionService
                         mission.FinishedAt,
                         mission.ResourceLink,
                         mission.CreatedAt,
-                        mission.UpdatedAt,
-                        assginedEmployees,
-                        null
-                    );
-    }
-    
-    private static MissionDto MapToMissionDto(MissionBase mission, RoutePlanningSummaryDto routePlanningSummary)
-    {
-        var assginedEmployees = mission.AssignedEmployees.Count == 0 ? null : mission.AssignedEmployees.Select(x => new AssignedEmployeeDto(x.EmployeeId.ToString(), x.MissionRole.ToString()));
-
-        return new MissionDto(
-                        mission.Id.ToString(),
-                        mission.Name,
-                        mission.Description,
-                        mission.Category.ToString(),
-                        mission.Status.ToString(),
-                        mission.FinishedAt,
-                        mission.ResourceLink,
-                        mission.CreatedAt,
-                        mission.UpdatedAt,
-                        assginedEmployees,
-                        routePlanningSummary
+                        mission.UpdatedAt
                     );
     }
 }

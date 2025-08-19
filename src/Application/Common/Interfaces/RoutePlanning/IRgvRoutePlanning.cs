@@ -11,4 +11,5 @@ public interface IRgvRoutePlanning
     string DrawImage(MemoryStream imageStream, RoutePlanningDetailDto routePlanningMission);
     string WriteToJson(RoutePlanningDetailDto routePlanningMission);
     RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl);
+    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, RgvMap rgvMap);
 }

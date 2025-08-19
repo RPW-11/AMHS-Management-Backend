@@ -155,4 +155,11 @@ public class RgvRoutePlanning : IRgvRoutePlanning
             throw new Exception(error.Message);
         }
     }
+
+    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, RgvMap rgvMap)
+    {
+        var (throughput, trackLength, numOfRgvs) = RouteEvaluator.GetSolutionScores(solution, rgvMap);
+
+        return new(throughput, trackLength, numOfRgvs);
+    }
 }

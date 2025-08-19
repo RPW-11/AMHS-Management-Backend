@@ -127,6 +127,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.NotFound("No solution is found"));
         }
 
+        // Get the route scores
+        var scores = _rgvRoutePlanning.GetRouteScore([.. routes], rgvMap);
+
         rgvMap.SetMapSolution([.. routes]);
 
         string imgResultLink = _rgvRoutePlanning.DrawImage(
@@ -135,7 +138,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         );
         routePlanningMission.SetMissionResourceLink(resourceLink);
         routePlanningMission.SetImageUrl(imgResultLink);
-        routePlanningDetail = ToRoutePlanningDto(routePlanningMission);
+        routePlanningDetail = ToRoutePlanningDto(routePlanningMission, scores);
 
         _rgvRoutePlanning.WriteToJson(routePlanningDetail);
 
@@ -154,13 +157,14 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         return Result.Ok();
     }
 
-    private static RoutePlanningDetailDto ToRoutePlanningDto(RoutePlanningMission routePlanningMission)
+    private static RoutePlanningDetailDto ToRoutePlanningDto(RoutePlanningMission routePlanningMission, RoutePlanningScoreDto? scoreDto = null)
     {
         return new(
                     routePlanningMission.Id.ToString(),
                     routePlanningMission.Algorithm.ToString(),
                     routePlanningMission.ImageUrl,
-                    routePlanningMission.RgvMap
+                    routePlanningMission.RgvMap,
+                    scoreDto
                 );
     }
 }

@@ -68,6 +68,34 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Update mission
+        /// </summary>
+        [HttpPatch("{id}")]
+        public async Task<ActionResult> UpdateMission(UpdateMissionRequest updateMissionRequest, string id)
+        {
+            var updateMissionDto = new UpdateMissionDto(
+                updateMissionRequest.Name,
+                updateMissionRequest.Description,
+                updateMissionRequest.Status
+            );
+
+            FluentResults.Result<object> updateMissionResult = await _missionService.UpdateMission(updateMissionDto, id);
+
+            return HandleResult(updateMissionResult);
+        }
+
+        /// <summary>
+        /// Delete mission
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteMission(string id)
+        {
+            FluentResults.Result<object> deleteMissionResult = await _missionService.DeleteMission(id);
+
+            return HandleResult(deleteMissionResult);
+        }
+
+        /// <summary>
         /// Update the created route planning task with the required data
         /// </summary>
         /// <remarks>

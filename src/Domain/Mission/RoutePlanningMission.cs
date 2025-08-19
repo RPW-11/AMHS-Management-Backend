@@ -1,4 +1,3 @@
-using Domain.Mission.Entities;
 using Domain.Mission.ValueObjects;
 
 namespace Domain.Mission;

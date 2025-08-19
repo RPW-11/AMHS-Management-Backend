@@ -51,6 +51,16 @@
             Add a mission
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.UpdateMission(API.Contracts.Mission.UpdateMissionRequest,System.String)">
+            <summary>
+            Update mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.DeleteMission(System.String)">
+            <summary>
+            Delete mission
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
             Update the created route planning task with the required data

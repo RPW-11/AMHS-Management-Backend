@@ -74,6 +74,16 @@ public class MissionBase : AggregateRoot<MissionId>
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SetMissionName(string name)
+    {
+        Name = name;
+    }
+
+    public void SetMissionDescription(string description)
+    {
+        Description = description;
+    }
+
     public void SetMissionResourceLink(string resourceLink)
     {
         ResourceLink = resourceLink;
