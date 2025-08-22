@@ -4,6 +4,7 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
+using Domain.Employee.ValueObjects;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
 using FluentResults;
@@ -13,23 +14,37 @@ namespace Application.Services.MissionService;
 public class MissionService : BaseService, IMissionService
 {
     private readonly IMissionRepository _missionRepository;
+    private readonly IEmployeeRepository _employeeRepository;
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
 
     public MissionService(IMissionRepository missionRepository,
+                          IEmployeeRepository employeeRepository,
                           IRgvRoutePlanning rgvRoutePlanning,
                           IUnitOfWork unitOfWork)
     : base(unitOfWork)
     {
         _missionRepository = missionRepository;
+        _employeeRepository = employeeRepository;
         _rgvRoutePlanning = rgvRoutePlanning;
     }
 
     public async Task<Result<AddMissionDto>> AddMission(string employeeId,
-                                         string name,
-                                         string category,
-                                         string description,
-                                         DateTime finishedAt)
+                                                        string name,
+                                                        string category,
+                                                        string description,
+                                                        DateTime finishedAt)
     {
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed) {
+            return Result.Fail(ApplicationError.Validation("Invalid employee id"));
+        }
+
+        var existing = await _employeeRepository.GetEmployeeByIdAsync(employeeIdResult.Value);
+        if (existing is null)
+        {
+            return Result.Fail(ApplicationError.Validation("Non employee can't create a mission"));
+        }
+        
         var missionDomainResult = MissionFactory.CreateMission(employeeId,
                                                                name,
                                                                category,
@@ -182,6 +197,98 @@ public class MissionService : BaseService, IMissionService
         await _unitOfWork.SaveChangesAsync();
 
         return Result.Ok();
+    }
+
+    public async Task<Result> AddMemberToMission(string employeeId, string missionId, string memberId)
+    {
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission Id"));
+        }
+
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid employee Id"));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+        if (missionResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("Mission is not found"));
+        }
+
+        // Check if the requester is valid
+        var isRequesterValid = false;
+
+        foreach (var member in missionResult.Value.AssignedEmployees)
+        {
+            if ((member.MissionRole == MissionRole.Leader
+                ||
+                member.MissionRole == MissionRole.CoLeader)
+                &&
+                member.EmployeeId == employeeIdResult.Value
+            )
+            {
+                isRequesterValid = true;
+                break;
+            }
+        }
+
+        if (!isRequesterValid)
+        {
+            return Result.Fail(ApplicationError.Forbidden("The employee is not a leader nor a co-leader"));
+        }
+
+        // Check if the added member exists
+        var memberIdResult = EmployeeId.FromString(memberId);
+        if (memberIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid added member id"));
+        }
+
+        var memberResult = await _employeeRepository.GetEmployeeByIdAsync(memberIdResult.Value);
+        if (memberResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (memberResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("The added member is not found"));
+        }
+
+        // Check if the added member is already part of the mission
+        foreach (var member in missionResult.Value.AssignedEmployees)
+        {
+            if (member.EmployeeId == memberIdResult.Value)
+            {
+                return Result.Fail(ApplicationError.Duplicated("This member is already in the project"));
+            }
+        }
+
+        missionResult.Value.AddEmployee(memberIdResult.Value, MissionRole.Member);
+
+        _missionRepository.UpdateMission(missionResult.Value);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return Result.Ok();
+    }
+
+    public Task<Result> DeleteMemberFromMission(string employeeId, string missionId, string memberId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole)
+    {
+        throw new NotImplementedException();
     }
 
     private static MissionDto MapToMissionDto(MissionBase mission)

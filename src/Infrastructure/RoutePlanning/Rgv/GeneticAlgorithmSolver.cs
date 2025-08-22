@@ -6,7 +6,7 @@ namespace Infrastructure.RoutePlanning.Rgv;
 public class GeneticAlgorithmSolver
 {
     private const int PopulationSize = 200;
-    private const int MaxGenerations = 500;
+    private const int MaxGenerations = 200;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
@@ -23,11 +23,11 @@ public class GeneticAlgorithmSolver
     public List<PathPoint> Solve(List<List<PathPoint>> sampleSolutions)
     {
         Console.WriteLine("Generating population...");
-        // var solutions = ModifiedAStar.GetValidSolutions(_rgvMap);
+        var solutions = ModifiedAStar.GetValidSolutions(_rgvMap);
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
                         .ToList();
-        // population.AddRange(solutions);
+        population.AddRange(solutions);
         population.AddRange(sampleSolutions);
 
         Console.WriteLine($"Population acquired: {population.Count} populations");
@@ -198,14 +198,19 @@ public class GeneticAlgorithmSolver
         // Check if the solution has the correct order, if not return 0
         if (!IsOrderCorrect(solution)
             || !IsPathConnected(solution)
-            || IsPathContainDuplicates(solution)
             || IsPathUsingObstacles(solution))
         {
             return 0;
         }
 
+        double duplicatePenalty = 0;
+        if (IsPathContainDuplicates(solution))
+        {
+            duplicatePenalty = 10;
+        }
+
         // Compute the optimality value based on throughput, track length, and num of rgvs
-        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap);
+        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - duplicatePenalty;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)

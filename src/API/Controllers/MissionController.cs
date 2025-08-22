@@ -1,16 +1,19 @@
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 using API.Contracts.Mission;
 using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.MissionService;
 using Application.Services.MissionService.RoutePlanningService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [Route("api/missions")]
     [ApiController]
+    [Authorize]
     public class MissionController : ApiBaseController
     {
         private readonly IMissionService _missionService;
@@ -31,7 +34,7 @@ namespace API.Controllers
         {
             var missionsResult = await _missionService.GetAllMission();
 
-            return HandleResult(missionsResult); 
+            return HandleResult(missionsResult);
         }
 
         /// <summary>
@@ -42,7 +45,7 @@ namespace API.Controllers
         {
             var missionResult = await _missionService.GetMission(id);
 
-            return HandleResult(missionResult); 
+            return HandleResult(missionResult);
         }
 
         /// <summary>
@@ -51,8 +54,15 @@ namespace API.Controllers
         [HttpPost]
         public async Task<ActionResult<AddMissionDto>> AddMission(AddMissionRequest addMissionRequest)
         {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                return Problem(statusCode: 404, title: "Employee not found");
+            }
+
             FluentResults.Result<AddMissionDto> addMissionResult = await _missionService.AddMission(
-                "0090d308-f3df-4fd6-8611-103f62a3e04b",
+                employeeId.ToString(),
                 addMissionRequest.Name,
                 addMissionRequest.Category,
                 addMissionRequest.Description,
@@ -94,6 +104,25 @@ namespace API.Controllers
 
             return HandleResult(deleteMissionResult);
         }
+
+        /// <summary>
+        /// Add a member to a mission
+        /// </summary>
+        [HttpPatch("{id}/members/add/{memberId}")]
+        public async Task<ActionResult> AddMemberToMissionHandler(string id, string memberId)
+        {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                return Problem(statusCode: 404, title: "Employee not found");
+            }
+
+            FluentResults.Result<object> addMemberResult = await _missionService.AddMemberToMission(employeeId, id, memberId);
+
+            return HandleResult(addMemberResult);
+        }
+
 
         /// <summary>
         /// Update the created route planning task with the required data
@@ -236,7 +265,7 @@ namespace API.Controllers
             List<PathPointDto> points = [];
             List<PointPositionDto> stations = [];
             List<List<PointPositionDto>> sampleSolutions = [];
-            
+
             foreach (var point in routeMetadata.Points)
             {
                 points.Add(new(
@@ -251,7 +280,7 @@ namespace API.Controllers
             {
                 stations.Add(new(point.RowPos, point.ColPos));
             }
-            
+
             foreach (var sol in routeMetadata.SampleSolutions)
             {
                 List<PointPositionDto> temp = [];

@@ -15,7 +15,7 @@ internal static class RouteEvaluator
     {
         var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, map);
 
-        return ThroughputWeight * totalThroughput + LengthWeight * trackLength + NumOfRgvsWeight * maxRgvs;
+        return ThroughputWeight * totalThroughput + LengthWeight * 1/trackLength + NumOfRgvsWeight * 1/maxRgvs;
     }
 
     public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)

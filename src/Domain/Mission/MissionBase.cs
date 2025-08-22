@@ -90,29 +90,23 @@ public class MissionBase : AggregateRoot<MissionId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public Result AddEmployee(EmployeeId employeeId, string missionRole)
+    public Result AddEmployee(EmployeeId employeeId, MissionRole missionRole)
     {
-        var roleResult = MissionRole.FromString(missionRole);
-        if (roleResult.IsFailed)
-        {
-            return Result.Fail(roleResult.Errors[0]);
-        }
-
         // Check invariants
-        if (roleResult.Value != MissionRole.Member)
+        if (missionRole != MissionRole.Member)
         {
-            int roleCount = _assignedEmployees.Sum(ae => ae.MissionRole == roleResult.Value ? 1 : 0) + 1;
+            int roleCount = _assignedEmployees.Sum(ae => ae.MissionRole == missionRole ? 1 : 0) + 1;
 
-            if (roleResult.Value == MissionRole.CoLeader
+            if (missionRole == MissionRole.CoLeader
                 && roleCount > MaxNumberOfCoLeader
-                || roleResult.Value == MissionRole.Leader
+                || missionRole == MissionRole.Leader
                 && roleCount > MaxNumberOfLeader)
             {
                 return Result.Fail(new MaximumMissionRoleError());
             }
         }
 
-        var assignedEmployeeResult = AssignedEmployee.Create(Id, employeeId, roleResult.Value);
+        var assignedEmployeeResult = AssignedEmployee.Create(Id, employeeId, missionRole);
         _assignedEmployees.Add(assignedEmployeeResult.Value);
 
         UpdatedAt = DateTime.UtcNow;

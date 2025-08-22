@@ -3,12 +3,14 @@ using API.Contracts.Employee;
 using Application.Common.Errors;
 using Application.DTOs.Employee;
 using Application.Services.EmployeeService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [Route("api/employees")]
     [ApiController]
+    [Authorize]
     public class EmployeeController : ApiBaseController
     {
         private readonly IEmployeeService _employeeService;
@@ -25,6 +27,17 @@ namespace API.Controllers
         public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetAllEmployees()
         {
             FluentResults.Result<IEnumerable<EmployeeDto>> employeesResult = await _employeeService.GetAllEmployees();
+
+            return HandleResult(employeesResult);
+        }
+
+        /// <summary>
+        /// Get employees by name (starts with First Name or Last Name)
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<EmployeeSearchDto>>> GetEmployeesByName(string name)
+        {
+            FluentResults.Result<IEnumerable<EmployeeSearchDto>> employeesResult = await _employeeService.GetEmployeesByName(name);
 
             return HandleResult(employeesResult);
         }

@@ -63,8 +63,26 @@ public class EmployeeRepository : IEmployeeRepository
         }
         catch (Exception error)
         {
-            System.Console.WriteLine(error);
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get the employee by id from the database").CausedBy(error));
+        }
+    }
+
+    public async Task<Result<IEnumerable<Employee>>> GetEmployeesByNameAsync(string name)
+    {
+        try
+        {
+            var pattern = $"{name.ToLower()}%";
+            var employees = await _dbContext.Employees.Where(e => EF.Functions.Like(e.FirstName.ToLower(), pattern)
+                                    ||
+                                    EF.Functions.Like(e.LastName.ToLower(), pattern))
+                                    .ToListAsync();
+            return employees;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get the employees by name from the database").CausedBy(error));
         }
     }
 }

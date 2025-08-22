@@ -108,12 +108,40 @@ public class EmployeeService : BaseService, IEmployeeService
         return employeeDtos;
     }
 
+    public async Task<Result<IEnumerable<EmployeeSearchDto>>> GetEmployeesByName(string name)
+    {
+        var employeesResult = await _employeeRepository.GetEmployeesByNameAsync(name);
+        if (employeesResult.IsFailed)
+        {
+            return Result.Fail<IEnumerable<EmployeeSearchDto>>(ApplicationError.Internal);
+        }
+
+        List<EmployeeSearchDto> employeesSearchDto = [];
+        foreach (Employee emp in employeesResult.Value)
+        {
+            employeesSearchDto.Add(MapToEmployeeSearchDto(emp));
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return employeesSearchDto;
+    }
+
+    private static EmployeeSearchDto MapToEmployeeSearchDto(Employee emp)
+    {
+        return new EmployeeSearchDto(emp.Id.ToString(),
+                                     emp.FirstName,
+                                     emp.LastName,
+                                     emp.Email,
+                                     emp.ImgUrl);
+    }
+
     private static EmployeeDto MapToEmployeeDto(Employee employee)
-    {   
+    {
         var today = DateTime.Today;
         var employeeAge = today.Year - employee.DateOfBirth.Year;
-        
-        if (employee.DateOfBirth.Date > today.AddYears(-employeeAge)) 
+
+        if (employee.DateOfBirth.Date > today.AddYears(-employeeAge))
         {
             employeeAge--;
         }

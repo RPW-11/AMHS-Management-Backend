@@ -9,6 +9,11 @@
             Get all employees
             </summary>
         </member>
+        <member name="M:API.Controllers.EmployeeController.GetEmployeesByName(System.String)">
+            <summary>
+            Get employees by name (starts with First Name or Last Name)
+            </summary>
+        </member>
         <member name="M:API.Controllers.EmployeeController.GetEmployeeById(System.String)">
             <summary>
             Get an employee by id
@@ -59,6 +64,11 @@
         <member name="M:API.Controllers.MissionController.DeleteMission(System.String)">
             <summary>
             Delete mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.AddMemberToMissionHandler(System.String,System.String)">
+            <summary>
+            Add a member to a mission
             </summary>
         </member>
         <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
