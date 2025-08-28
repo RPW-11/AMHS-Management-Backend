@@ -299,9 +299,70 @@ public class MissionService : BaseService, IMissionService
         return Result.Ok();
     }
 
-    public Task<Result> DeleteMemberFromMission(string employeeId, string missionId, string memberId)
+    public async Task<Result> DeleteMemberFromMission(string employeeId, string missionId, string memberId)
     {
-        throw new NotImplementedException();
+        if (employeeId == memberId)
+        {
+            return Result.Fail(ApplicationError.Validation("You cannot delete yourself"));    
+        }
+
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission Id"));
+        }
+
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid employee Id"));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+        if (missionResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("Mission is not found"));
+        }
+
+        // Check if the requester is valid
+        var isRequesterValid = false;
+
+        foreach (var member in missionResult.Value.AssignedEmployees)
+        {
+            if ((member.MissionRole == MissionRole.Leader
+                ||
+                member.MissionRole == MissionRole.CoLeader)
+                &&
+                member.EmployeeId == employeeIdResult.Value
+            )
+            {
+                isRequesterValid = true;
+                break;
+            }
+        }
+
+        if (!isRequesterValid)
+        {
+            return Result.Fail(ApplicationError.Forbidden("The employee is not a leader nor a co-leader"));
+        }
+
+        var memberIdResult = EmployeeId.FromString(memberId);
+        if (memberIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid member Id"));
+        }
+
+        missionResult.Value.DeleteEmployee(memberIdResult.Value);
+
+        _missionRepository.UpdateMission(missionResult.Value);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return Result.Ok();
     }
 
     public Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole)

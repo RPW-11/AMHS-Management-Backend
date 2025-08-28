@@ -134,6 +134,24 @@ namespace API.Controllers
             return HandleResult(addMemberResult);
         }
 
+        /// <summary>
+        /// Delete a member to a mission
+        /// </summary>
+        [HttpPatch("{id}/members/delete/{memberId}")]
+        public async Task<ActionResult> DeleteMemberToMissionHandler(string id, string memberId)
+        {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                return Problem(statusCode: 404, title: "Employee not found");
+            }
+
+            FluentResults.Result<object> deleteMemberResult = await _missionService.DeleteMemberFromMission(employeeId, id, memberId);
+
+            return HandleResult(deleteMemberResult);
+        }
+
 
         /// <summary>
         /// Update the created route planning task with the required data

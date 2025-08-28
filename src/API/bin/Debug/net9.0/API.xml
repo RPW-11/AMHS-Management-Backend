@@ -76,6 +76,11 @@
             Add a member to a mission
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.DeleteMemberToMissionHandler(System.String,System.String)">
+            <summary>
+            Delete a member to a mission
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
             Update the created route planning task with the required data

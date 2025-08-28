@@ -23,7 +23,7 @@ public class MissionBase : AggregateRoot<MissionId>
     public DateTime UpdatedAt { get; private set; }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
-    private MissionBase(MissionId id): base(id){}
+    private MissionBase(MissionId id) : base(id) { }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     protected MissionBase(MissionId id,
                           string name,
@@ -111,6 +111,12 @@ public class MissionBase : AggregateRoot<MissionId>
 
         UpdatedAt = DateTime.UtcNow;
 
+        return Result.Ok();
+    }
+
+    public Result DeleteEmployee(EmployeeId employeeId)
+    {
+        _assignedEmployees.RemoveAll(ae => ae.EmployeeId == employeeId);
         return Result.Ok();
     }
 }
