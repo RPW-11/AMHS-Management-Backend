@@ -10,6 +10,7 @@ public class GeneticAlgorithmSolver
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
+    private const double DuplicateRoutePenaltyRate = 0.5;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;
@@ -203,14 +204,10 @@ public class GeneticAlgorithmSolver
             return 0;
         }
 
-        double duplicatePenalty = 0;
-        if (IsPathContainDuplicates(solution))
-        {
-            duplicatePenalty = 10;
-        }
+        int numOfDuplicates = CountDuplicates(solution);
 
         // Compute the optimality value based on throughput, track length, and num of rgvs
-        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - duplicatePenalty;
+        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
@@ -270,9 +267,9 @@ public class GeneticAlgorithmSolver
         return false;
     }
 
-    private static bool IsPathContainDuplicates(List<PathPoint> solution)
+    private static int CountDuplicates(List<PathPoint> solution)
     {
         var hashset = solution.ToHashSet();
-        return hashset.Count != solution.Count - 1; // excluding the start which is visited twice (cycle)
+        return solution.Count - 1 - hashset.Count; // excluding the start which is visited twice (cycle)
     }
 }

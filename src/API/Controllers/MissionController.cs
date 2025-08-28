@@ -49,6 +49,17 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Get the mission members
+        /// </summary>
+        [HttpGet("{id}/members")]
+        public async Task<ActionResult<IEnumerable<MissionDto>>> GetMissionMembers(string id)
+        {
+            var missionMembersResult = await _missionService.GetMissionMembers(id);
+
+            return HandleResult(missionMembersResult);
+        }
+
+        /// <summary>
         /// Add a mission
         /// </summary>
         [HttpPost]

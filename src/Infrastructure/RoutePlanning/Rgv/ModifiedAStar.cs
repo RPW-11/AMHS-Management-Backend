@@ -43,7 +43,6 @@ public static class ModifiedAStar
 
         for (int i = 1; i < rgvMap.StationsOrder.Count; i++)
         {
-            System.Console.WriteLine($"Concatenating path {i}");
             List<List<PathPoint>> tempAllPaths = [];
             List<PathPoint> completePath;
             foreach (var path in allPaths)

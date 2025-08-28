@@ -1,5 +1,4 @@
 using Application.Common.Interfaces.Persistence;
-using Application.DTOs.Mission;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
 using FluentResults;
@@ -23,9 +22,10 @@ public class MissionRepository : IMissionRepository
             await _dbContext.AddAsync(mission);
             return Result.Ok();
         }
-        catch (Exception erorr)
+        catch (Exception error)
         {
-            return Result.Fail(new Error("Fail to add a mission to the database").CausedBy(erorr));
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to add a mission to the database").CausedBy(error));
         }
     }
 
@@ -33,13 +33,16 @@ public class MissionRepository : IMissionRepository
     {
         try
         {
-            var missionsResult = await _dbContext.Missions.ToListAsync();
+            var missionsResult = await _dbContext.Missions
+                                    .OrderByDescending(m => m.UpdatedAt)
+                                    .ToListAsync();
 
             return missionsResult;
         }
-        catch (Exception erorr)
+        catch (Exception error)
         {
-            return Result.Fail(new Error("Fail to get all missions from the database").CausedBy(erorr));
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get all missions from the database").CausedBy(error));
         }
     }
 
@@ -54,49 +57,9 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get the mission from the database").CausedBy(error));
 
-        }
-    }
-
-    public async Task<Result<MissionDetailDto?>> GetMissionDetailedByIdAsync(MissionId id)
-    {
-        try
-        {
-            var missionResult = await _dbContext.Missions
-                                .Where(m => m.Id == id)
-                                .Select(m => new MissionDetailDto(
-                                    m.Id.ToString(),
-                                    m.Name,
-                                    m.Description,
-                                    m.Category.ToString(),
-                                    m.Status.ToString(),
-                                    m.FinishedAt,
-                                    m.ResourceLink,
-                                    m.CreatedAt,
-                                    m.UpdatedAt,
-                                    _dbContext.AssignedEmployees
-                                        .Where(ae => ae.MissionId == m.Id)
-                                        .Join(_dbContext.Employees,
-                                            ae => ae.EmployeeId,
-                                            e => e.Id,
-                                            (ae, e) => new AssignedEmployeeDto(
-                                                e.Id.ToString(),
-                                                e.FirstName,
-                                                e.LastName,
-                                                e.ImgUrl,
-                                                ae.MissionRole.ToString()
-                                            ))
-                                        .ToList(),
-                                    null
-                                ))
-                                .FirstOrDefaultAsync();
-
-            return missionResult;
-        }
-        catch (Exception error)
-        {
-            return Result.Fail(new Error("Fail to get the mission from the database").CausedBy(error));
         }
     }
 
@@ -109,6 +72,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to update the mission").CausedBy(error));
         }
     }
@@ -124,6 +88,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to update the mission").CausedBy(error));
         }
     }

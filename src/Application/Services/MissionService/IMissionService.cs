@@ -17,4 +17,5 @@ public interface IMissionService
     Task<Result> AddMemberToMission(string employeeId, string missionId, string memberId);
     Task<Result> DeleteMemberFromMission(string employeeId, string missionId, string memberId);
     Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole);
+    Task<Result<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string missionId);
 }

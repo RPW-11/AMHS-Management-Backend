@@ -4,6 +4,7 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
+using Domain.Employee;
 using Domain.Employee.ValueObjects;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
@@ -35,7 +36,8 @@ public class MissionService : BaseService, IMissionService
                                                         DateTime finishedAt)
     {
         var employeeIdResult = EmployeeId.FromString(employeeId);
-        if (employeeIdResult.IsFailed) {
+        if (employeeIdResult.IsFailed)
+        {
             return Result.Fail(ApplicationError.Validation("Invalid employee id"));
         }
 
@@ -44,7 +46,7 @@ public class MissionService : BaseService, IMissionService
         {
             return Result.Fail(ApplicationError.Validation("Non employee can't create a mission"));
         }
-        
+
         var missionDomainResult = MissionFactory.CreateMission(employeeId,
                                                                name,
                                                                category,
@@ -96,7 +98,7 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail<MissionDetailDto>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
         }
 
-        var getMissionResult = await _missionRepository.GetMissionDetailedByIdAsync(missionIdResult.Value);
+        var getMissionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
 
         if (getMissionResult.IsFailed)
         {
@@ -108,7 +110,23 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission is not found"));
         }
 
-        if (getMissionResult.Value.Category == MissionCategory.RoutePlanning.ToString()
+        // get the leader info
+        var leader = getMissionResult.Value.AssignedEmployees.FirstOrDefault(ae => ae.MissionRole == MissionRole.Leader);
+        if (leader is null) {
+            return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission has no leader"));
+        }
+
+        var leaderResult = await _employeeRepository.GetEmployeeByIdAsync(leader.EmployeeId);
+        if (leaderResult.IsFailed)
+        {
+            return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
+        }
+        if (leaderResult.Value is null)
+        {
+            return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The leader of this mission does not exist"));
+        }
+
+        if (getMissionResult.Value.Category == MissionCategory.RoutePlanning
             && getMissionResult.Value.ResourceLink is not null)
         {
             RoutePlanningSummaryDto routePlanningSummary = _rgvRoutePlanning.ReadFromJson(getMissionResult.Value.ResourceLink);
@@ -117,16 +135,16 @@ public class MissionService : BaseService, IMissionService
             byte[] imageBytes = File.ReadAllBytes(routePlanningSummary.ImageUrl);
             string base64String = Convert.ToBase64String(imageBytes);
 
-            routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm, base64String, routePlanningSummary.Score);
-
-            getMissionResult.Value.RoutePlanningSummary = routePlanningSummary;
-
-            return getMissionResult.Value;
+            routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
+                                                               base64String,
+                                                               routePlanningSummary.RgvMap,
+                                                               routePlanningSummary.Score);
+            return MapToMissionDetailDto(getMissionResult.Value, leaderResult.Value, routePlanningSummary);
         }
 
         await _unitOfWork.SaveChangesAsync();
 
-        return getMissionResult.Value;
+        return MapToMissionDetailDto(getMissionResult.Value, leaderResult.Value);
     }
 
     public async Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId)
@@ -291,6 +309,56 @@ public class MissionService : BaseService, IMissionService
         throw new NotImplementedException();
     }
 
+    public async Task<Result<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string missionId)
+    {
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission Id"));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+        if (missionResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("The mission does not exist"));
+        }
+
+        // temporary method
+        Dictionary<EmployeeId, MissionRole> employeeRoleDict = [];
+        foreach (var assignedEmployee in missionResult.Value.AssignedEmployees)
+        {
+            employeeRoleDict.Add(assignedEmployee.EmployeeId, assignedEmployee.MissionRole);
+        }
+
+        var employeesResult = await _employeeRepository.GetEmployeesByIdsAsync(missionResult.Value.AssignedEmployees.Select(emp => emp.EmployeeId));
+        if (employeesResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        List<AssignedEmployeeDto> assignedEmployees = [];
+        foreach (var employee in employeesResult.Value)
+        {
+            var missionRole = employeeRoleDict[employee.Id];
+            assignedEmployees.Add(EmployeeToAssignedEmployeeDto(employee, missionRole));
+        }
+
+        return assignedEmployees;
+    }
+
+    private static AssignedEmployeeDto EmployeeToAssignedEmployeeDto(Employee employee, MissionRole missionRole)
+    {
+        return new AssignedEmployeeDto(employee.Id.ToString(),
+                                        employee.FirstName,
+                                        employee.LastName,
+                                        employee.ImgUrl,
+                                        missionRole.ToString());
+    }
+
     private static MissionDto MapToMissionDto(MissionBase mission)
     {
         return new MissionDto(
@@ -304,5 +372,25 @@ public class MissionService : BaseService, IMissionService
                         mission.CreatedAt,
                         mission.UpdatedAt
                     );
+    }
+    
+    private static Result<MissionDetailDto> MapToMissionDetailDto(MissionBase mission, Employee leader, RoutePlanningSummaryDto? routePlanningSummary = null)
+    {
+        return new MissionDetailDto(mission.Id.ToString(),
+                                    mission.Name,
+                                    mission.Description,
+                                    mission.Category.ToString(),
+                                    mission.Status.ToString(),
+                                    new(leader.Id.ToString(),
+                                        leader.FirstName,
+                                        leader.LastName,
+                                        leader.ImgUrl,
+                                        MissionRole.Leader.ToString()),
+                                    mission.FinishedAt,
+                                    mission.ResourceLink,
+                                    mission.CreatedAt,
+                                    mission.UpdatedAt,
+                                    mission.AssignedEmployees.Count,
+                                    routePlanningSummary);
     }
 }

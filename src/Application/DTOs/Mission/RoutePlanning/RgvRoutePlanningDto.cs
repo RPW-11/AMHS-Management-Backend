@@ -16,6 +16,7 @@ public record RoutePlanningDetailDto(
 public record RoutePlanningSummaryDto(
     string Algorithm,
     string ImageUrl,
+    RgvMapSummaryDto RgvMap,
     RoutePlanningScoreDto Score
 );
 
@@ -23,4 +24,9 @@ public record RoutePlanningScoreDto(
     double Throughput,
     double TrackLength,
     int NumOfRgvs
+);
+
+public record RgvMapSummaryDto(
+    int RowDim,
+    int ColDim
 );

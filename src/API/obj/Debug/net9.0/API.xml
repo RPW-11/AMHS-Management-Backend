@@ -51,6 +51,11 @@
             Get a mission by id
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.GetMissionMembers(System.String)">
+            <summary>
+            Get the mission members
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.AddMission(API.Contracts.Mission.AddMissionRequest)">
             <summary>
             Add a mission

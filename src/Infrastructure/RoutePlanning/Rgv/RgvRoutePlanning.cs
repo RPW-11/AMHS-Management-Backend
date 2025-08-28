@@ -145,9 +145,9 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         try
         {
             string jsonString = File.ReadAllText(jsonFileUrl);
-            RoutePlanningSummaryDto? routePlanningSummaryDto = JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString) ?? throw new Exception("Error serializing the resource file");
+            RoutePlanningSummaryDto? routePlanningDetail = JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString) ?? throw new Exception("Error serializing the resource file");
 
-            return routePlanningSummaryDto;
+            return routePlanningDetail;
         }
         catch (Exception error)
         {

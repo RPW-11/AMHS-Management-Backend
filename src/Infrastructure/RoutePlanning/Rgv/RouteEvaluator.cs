@@ -4,8 +4,8 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 internal static class RouteEvaluator
 {
-    private const double PerSquareLength = 10;
-    private const double RgvSpeed = 5; //ms-1
+    private const double PerSquareLength = 1;
+    private const double RgvSpeed = 0.4; //ms-1
     private const double ThroughputWeight = 0.8;
     private const double LengthWeight = 0.1;
     private const double NumOfRgvsWeight = 0.1;
@@ -26,7 +26,7 @@ internal static class RouteEvaluator
 
         double throughputPerRgv = HourInSeconds / cycleTime;
         double rgvAvgSpeed = trackLength / cycleTime;
-        double intermediateSpaceLength = totalTimeStations * rgvAvgSpeed;
+        double intermediateSpaceLength = map.StationsOrder.Max(s => s.Time) * rgvAvgSpeed;
 
         int maxRgvs = (int)Math.Floor(trackLength / intermediateSpaceLength);
         double totalThroughput = maxRgvs * throughputPerRgv;

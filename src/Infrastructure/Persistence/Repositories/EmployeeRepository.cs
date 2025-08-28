@@ -24,6 +24,7 @@ public class EmployeeRepository : IEmployeeRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to insert the employee to the database").CausedBy(error));
         }
     }
@@ -37,6 +38,7 @@ public class EmployeeRepository : IEmployeeRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get employees from the database").CausedBy(error));
         }
     }
@@ -50,6 +52,7 @@ public class EmployeeRepository : IEmployeeRepository
         }
         catch (Exception error)
         {
+            Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get the employee by email from the database").CausedBy(error));
         }
     }
@@ -65,6 +68,20 @@ public class EmployeeRepository : IEmployeeRepository
         {
             Console.WriteLine(error);
             return Result.Fail(new Error("Fail to get the employee by id from the database").CausedBy(error));
+        }
+    }
+
+    public async Task<Result<IEnumerable<Employee>>> GetEmployeesByIdsAsync(IEnumerable<EmployeeId> employeeIds)
+    {
+        try
+        {
+            var employees = await _dbContext.Employees.Where(e => employeeIds.Contains(e.Id)).ToListAsync();
+            return employees;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get the employees by ids from the database").CausedBy(error));
         }
     }
 
