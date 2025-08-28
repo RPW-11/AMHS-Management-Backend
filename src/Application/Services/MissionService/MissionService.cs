@@ -290,9 +290,17 @@ public class MissionService : BaseService, IMissionService
             }
         }
 
-        missionResult.Value.AddEmployee(memberIdResult.Value, MissionRole.Member);
+        var result = missionResult.Value.AddMember(memberIdResult.Value, MissionRole.Member);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation(result.Errors[0].Message));    
+        }
 
-        _missionRepository.UpdateMission(missionResult.Value);
+        result = _missionRepository.UpdateMission(missionResult.Value);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);    
+        }
 
         await _unitOfWork.SaveChangesAsync();
 
@@ -356,18 +364,99 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.Validation("Invalid member Id"));
         }
 
-        missionResult.Value.DeleteEmployee(memberIdResult.Value);
+        var result = missionResult.Value.DeleteMember(memberIdResult.Value);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation(result.Errors[0].Message));    
+        }
 
-        _missionRepository.UpdateMission(missionResult.Value);
+        result = _missionRepository.UpdateMission(missionResult.Value);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
 
         await _unitOfWork.SaveChangesAsync();
 
         return Result.Ok();
     }
 
-    public Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole)
+    public async Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole)
     {
-        throw new NotImplementedException();
+        if (employeeId == memberId)
+        {
+            return Result.Fail(ApplicationError.Validation("You cannot change your own role yourself"));    
+        }
+
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission Id"));
+        }
+
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid employee Id"));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+        if (missionResult.Value is null)
+        {
+            return Result.Fail(ApplicationError.NotFound("Mission is not found"));
+        }
+
+        // Check if the requester is valid
+        var isRequesterValid = false;
+
+        foreach (var member in missionResult.Value.AssignedEmployees)
+        {
+            if (member.MissionRole == MissionRole.Leader
+                &&
+                member.EmployeeId == employeeIdResult.Value
+            )
+            {
+                isRequesterValid = true;
+                break;
+            }
+        }
+
+        if (!isRequesterValid)
+        {
+            return Result.Fail(ApplicationError.Forbidden("The employee is not a leader"));
+        }
+
+        var memberIdResult = EmployeeId.FromString(memberId);
+        if (memberIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid member Id"));
+        }
+
+        var targetRoleResult = MissionRole.FromString(missionRole);
+        if (targetRoleResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid mission role"));
+        }
+
+        var result = missionResult.Value.ChangeMemberRole(memberIdResult.Value, targetRoleResult.Value);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation(result.Errors[0].Message));
+        }
+
+        result = _missionRepository.UpdateMission(missionResult.Value);
+        if (result.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return Result.Ok();
     }
 
     public async Task<Result<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string missionId)

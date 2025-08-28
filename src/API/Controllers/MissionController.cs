@@ -152,6 +152,24 @@ namespace API.Controllers
             return HandleResult(deleteMemberResult);
         }
 
+        /// <summary>
+        /// Change the role of a member in a mission
+        /// </summary>
+        [HttpPatch("{id}/members/changeRole/{memberId}")]
+        public async Task<ActionResult> ChangeRoleMemberHandler(string id, string memberId, ChangeMemberRoleRequest changeMemberRoleRequest)
+        {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                return Problem(statusCode: 404, title: "Employee not found");
+            }
+
+            FluentResults.Result<object> changeMemberRoleResult = await _missionService.ChangeMemberRole(employeeId, id, memberId, changeMemberRoleRequest.Role);
+
+            return HandleResult(changeMemberRoleResult);
+        }
+
 
         /// <summary>
         /// Update the created route planning task with the required data

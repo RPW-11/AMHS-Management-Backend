@@ -81,6 +81,11 @@
             Delete a member to a mission
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.ChangeRoleMemberHandler(System.String,System.String,API.Contracts.Mission.ChangeMemberRoleRequest)">
+            <summary>
+            Change the role of a member in a mission
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
             <summary>
             Update the created route planning task with the required data

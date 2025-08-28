@@ -11,7 +11,7 @@ public class MissionBase : AggregateRoot<MissionId>
 {
     private const int MaxNumberOfLeader = 1;
     private const int MaxNumberOfCoLeader = 3;
-    private readonly List<AssignedEmployee> _assignedEmployees = [];
+    private List<AssignedEmployee> _assignedEmployees = [];
     public IReadOnlyList<AssignedEmployee> AssignedEmployees => _assignedEmployees.AsReadOnly();
     public string Name { get; private set; }
     public string Description { get; private set; }
@@ -90,7 +90,7 @@ public class MissionBase : AggregateRoot<MissionId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public Result AddEmployee(EmployeeId employeeId, MissionRole missionRole)
+    public Result AddMember(EmployeeId employeeId, MissionRole missionRole)
     {
         // Check invariants
         if (missionRole != MissionRole.Member)
@@ -114,9 +114,56 @@ public class MissionBase : AggregateRoot<MissionId>
         return Result.Ok();
     }
 
-    public Result DeleteEmployee(EmployeeId employeeId)
+    public Result DeleteMember(EmployeeId memberId)
     {
-        _assignedEmployees.RemoveAll(ae => ae.EmployeeId == employeeId);
+        _assignedEmployees.RemoveAll(ae => ae.EmployeeId == memberId);
+        return Result.Ok();
+    }
+
+    public Result ChangeMemberRole(EmployeeId employeeId, MissionRole missionRole)
+    {
+        // get the member
+        var member = _assignedEmployees.FirstOrDefault(ae => ae.EmployeeId == employeeId);
+        if (member is null)
+        {
+            return Result.Fail(new NotFoundMemberError());
+        }
+
+        if (member.MissionRole == missionRole)
+        {
+            return Result.Ok();
+        }
+
+        var leader = _assignedEmployees.First(ae => ae.MissionRole == MissionRole.Leader);
+
+        // leader promotion
+        if (missionRole == MissionRole.Leader)
+        {
+            if (member.MissionRole == MissionRole.Member)
+            {
+                return Result.Fail(new InvalidMemberSwitchError(member.MissionRole.ToString(), missionRole.ToString()));
+            }
+
+            leader.ChangeRole(MissionRole.CoLeader);
+            member.ChangeRole(MissionRole.Leader);
+        }
+        // co-leader promotion
+        else if (missionRole == MissionRole.CoLeader)
+        {
+            var coleaderCount = _assignedEmployees.Count(ae => ae.MissionRole == MissionRole.CoLeader);
+            if (coleaderCount == MaxNumberOfCoLeader)
+            {
+                return Result.Fail(new MaximumMissionRoleError());
+            }
+
+            member.ChangeRole(missionRole);
+        }
+        // member demotion
+        else
+        {
+            member.ChangeRole(missionRole);
+        }
+
         return Result.Ok();
     }
 }

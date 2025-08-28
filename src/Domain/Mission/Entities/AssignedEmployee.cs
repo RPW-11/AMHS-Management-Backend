@@ -26,5 +26,10 @@ public sealed class AssignedEmployee : Entity<AssignedEmployeeId>
         AssignedEmployeeId id = AssignedEmployeeId.CreateUnique(missionId.ToString(), employeeId.ToString());
 
         return new AssignedEmployee(missionId, employeeId, missionRole);
+    }
+
+    public void ChangeRole(MissionRole missionRole)
+    {
+        MissionRole = missionRole;
     }   
 }
