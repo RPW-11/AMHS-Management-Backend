@@ -102,7 +102,7 @@ public static class ModifiedAStar
 
         if (totalSolutions > MaxSolutions)
         {
-            return [.. possiblePaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+            return [.. possiblePaths.Take(MaxSolutions)];
         }
 
         return possiblePaths;
