@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>API</name>
+    </assembly>
+    <members>
+        <member name="M:API.Controllers.EmployeeController.GetAllEmployees">
+            <summary>
+            Get all employees
+            </summary>
+        </member>
+        <member name="M:API.Controllers.EmployeeController.GetEmployeesByName(System.String)">
+            <summary>
+            Get employees by name (starts with First Name or Last Name)
+            </summary>
+        </member>
+        <member name="M:API.Controllers.EmployeeController.GetEmployeeById(System.String)">
+            <summary>
+            Get an employee by id
+            </summary>
+        </member>
+        <member name="M:API.Controllers.EmployeeController.AddEmploye(API.Contracts.Employee.AddEmployeeRequest)">
+             <summary>
+             Add an employee
+             </summary>
+             <remarks>
+             Position options: "Staff", "SeniorStaff", "Supervisor", "Manager"
+             
+             Sample request:
+            
+                 POST /employees
+                 {
+                     "firstName": "John",
+                     "lastName": "Doe",
+                     "email": "john.doe@example.com",
+                     "password": "securePassword123",
+                     "position": "staff",
+                     "phoneNumber": "+1234567890",
+                     "dateOfBirth": "1990-01-01"
+                 }
+            
+             </remarks>
+        </member>
+        <member name="M:API.Controllers.MissionController.GetAllMissions">
+            <summary>
+            Get all missions
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.GetMission(System.String)">
+            <summary>
+            Get a mission by id
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.GetMissionMembers(System.String)">
+            <summary>
+            Get the mission members
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.AddMission(API.Contracts.Mission.AddMissionRequest)">
+            <summary>
+            Add a mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.UpdateMission(API.Contracts.Mission.UpdateMissionRequest,System.String)">
+            <summary>
+            Update mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.DeleteMission(System.String)">
+            <summary>
+            Delete mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.AddMemberToMissionHandler(System.String,System.String)">
+            <summary>
+            Add a member to a mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.DeleteMemberToMissionHandler(System.String,System.String)">
+            <summary>
+            Delete a member to a mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.ChangeRoleMemberHandler(System.String,System.String,API.Contracts.Mission.ChangeMemberRoleRequest)">
+            <summary>
+            Change the role of a member in a mission
+            </summary>
+        </member>
+        <member name="M:API.Controllers.MissionController.CreateRoutePlanningTask(System.String,API.Contracts.Mission.CreateRoutePlanningRequest)">
+            <summary>
+            Update the created route planning task with the required data
+            </summary>
+            <remarks>
+            
+            Sample request:
+            
+                PATCH /tasks/route-planning
+                {
+                     "rowDim": 6,
+                     "colDim": 6,
+                     "algorithm": "string",
+                     "stationsOrder": [
+                         {
+                         "rowPos": 5,
+                         "colPos": 0
+                         },
+                         {
+                         "rowPos": 0,
+                         "colPos": 4
+                         }
+                     ],
+                     "points": [
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 0,
+                             "colPos": 0
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 1,
+                             "colPos": 1
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 1,
+                             "colPos": 2
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 0,
+                             "colPos": 3
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 0,
+                             "colPos": 5
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 1,
+                             "colPos": 5
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 2,
+                             "colPos": 4
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 3,
+                             "colPos": 4
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 4,
+                             "colPos": 1
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 4,
+                             "colPos": 2
+                         }
+                         },
+                         {
+                         "name": "string",
+                         "category": "OBS",
+                         "time": 0,
+                         "position": {
+                             "rowPos": 5,
+                             "colPos": 4
+                         }
+                         }
+                     ]
+                     }
+            </remarks>
+        </member>
+    </members>
+</doc>
