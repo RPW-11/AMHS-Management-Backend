@@ -9,42 +9,38 @@ public static class ModifiedAStar
     private const int MaxSolutions = 200;
     private const int MaxSolutionsPerSegment = 3;
     private const double PerStepCost = 1;
-    private const double PertubationRate = 0;
+    private const double PertubationRate = 1;
 
     public static List<List<PathPoint>> GetValidSolutions(RgvMap rgvMap)
     {
         var intersectSolutions = GetValidSolutionsIntersect(rgvMap);
         var nonIntersectSolutions = GetValidSolutionsNoIntersect(rgvMap);
+        Console.WriteLine(intersectSolutions);
+        Console.WriteLine(nonIntersectSolutions);
+
 
         return [.. intersectSolutions, .. nonIntersectSolutions];
     }
 
     private static List<List<PathPoint>> GetValidSolutionsIntersect(RgvMap rgvMap)
     {
-        Random random = new();
-
-        Console.WriteLine("Running Modified A* to find solutions...");
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count; i++)
+        for (int i = 0; i < rgvMap.StationsOrder.Count; i++) // O(n)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
-
-            Console.WriteLine($"Finding solution for {startPoint} --- {goalPoint}...");
-
             var solutions = Solve(rgvMap, startPoint, goalPoint, []);
             segmentPaths.Add(solutions);
         }
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        System.Console.WriteLine("Concatenating path...");
-
-        for (int i = 1; i < rgvMap.StationsOrder.Count; i++)
+        for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempAllPaths = [];
             List<PathPoint> completePath;
+
             foreach (var path in allPaths)
             {
                 foreach (var nextPath in segmentPaths[i])
@@ -57,10 +53,11 @@ public static class ModifiedAStar
         }
 
         int totalSolutions = allPaths.Count;
-        Console.WriteLine($"Obtained: {totalSolutions} solutions");
 
         if (totalSolutions > MaxSolutions)
         {
+            Random random = new();
+
             return [.. allPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
         }
 
@@ -69,40 +66,35 @@ public static class ModifiedAStar
 
     private static List<List<PathPoint>> GetValidSolutionsNoIntersect(RgvMap rgvMap)
     {
-        Random random = new();
-        Console.WriteLine("Running Modified A* with No Intersect to find solutions...");
-
         // Initial search
-        List<List<PathPoint>> possiblePaths = Solve(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);;
+        List<List<PathPoint>> possiblePaths = Solve(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count; i++)
+        for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O (n * m * k)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
             List<List<PathPoint>> tempPaths = [];
-
-            Console.WriteLine($"Finding solution for {startPoint} --- {goalPoint}...");
 
             foreach (var path in possiblePaths)
             {
                 var occupiedPoints = new HashSet<PathPoint>();
                 UpdateOccupiedPoints(occupiedPoints, path);
                 var solutions = Solve(rgvMap, startPoint, goalPoint, occupiedPoints);
+
                 foreach (var sol in solutions)
                 {
                     tempPaths.Add([.. path, .. sol.Skip(1)]);
                 }
+
+                if (tempPaths.Count > MaxSolutions)
+                {
+                    Random random = new();
+
+                    tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+                }
             }
 
             possiblePaths = tempPaths;
-        }
-
-        int totalSolutions = possiblePaths.Count;
-        Console.WriteLine($"Obtained: {totalSolutions} solutions");
-
-        if (totalSolutions > MaxSolutions)
-        {
-            return [.. possiblePaths.Take(MaxSolutions)];
         }
 
         return possiblePaths;
@@ -116,74 +108,69 @@ public static class ModifiedAStar
         }
     }
 
-    private static bool IsPathIntersect(HashSet<PathPoint> occupiedPoints, List<PathPoint> newPath)
+    private static List<List<PathPoint>> Solve(
+        RgvMap rgvMap, 
+        PathPoint startPoint, 
+        PathPoint goalPoint, 
+        HashSet<PathPoint> occupiedPoints,
+        double maxCostFactor = 2.5
+    )
     {
-        foreach (var point in newPath)
-        {
-            if (occupiedPoints.Contains(point))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    private static List<List<PathPoint>> Solve(RgvMap rgvMap, PathPoint startPoint, PathPoint goalPoint, HashSet<PathPoint> occupiedPoints)
-    {
-        var openSet = new PriorityQueue<(PathPoint point, PathPoint parent, double gCost), double>();
-        var gCosts = new Dictionary<PathPoint, double>(); // Track best gCost
-        var parents = new Dictionary<PathPoint, PathPoint>(); // Track parent for path reconstruction
         var solutions = new List<List<PathPoint>>();
         var random = new Random();
-        double bestSolutionCost = double.MaxValue; // Track best solution cost for pruning
 
-        openSet.Enqueue((startPoint, null, 0), 0);
+        var openSet = new PriorityQueue<(PathPoint point, double gCost), double>();
+        var gCosts = new Dictionary<PathPoint, double>();
+        var parents = new Dictionary<PathPoint, PathPoint?>();
+        double bestSolutionCost = double.MaxValue;
+
+        openSet.Enqueue((startPoint, 0), 0);
         gCosts[startPoint] = 0;
         parents[startPoint] = null;
 
         while (openSet.Count > 0 && solutions.Count < MaxSolutionsPerSegment)
         {
-            var (current, parent, gCost) = openSet.Dequeue();
-
-            // if (gCosts.ContainsKey(current) && gCost > gCosts[current])
-            //     continue;
+            var (current, gCost) = openSet.Dequeue();
 
             if (current == goalPoint)
             {
                 var path = ReconstructPath(current, parents);
                 solutions.Add(path);
                 bestSolutionCost = Math.Min(bestSolutionCost, gCost);
+
                 continue;
             }
-
-            occupiedPoints.Add(current);
             
             foreach (var direction in MapTrajectory.AllDirections)
             {
                 var neighbor = rgvMap.GetPointAt(current.RowPos + direction[0], current.ColPos + direction[1]);
 
-                if (neighbor == null || neighbor.Category == PointCategory.Obstacle)
-                    continue;
-
-                if (occupiedPoints.Contains(neighbor) && neighbor != goalPoint)
-                    continue;
-
-                double tentativeGCost = gCost + PerStepCost;
-
-                if (tentativeGCost > bestSolutionCost * 30)
+                if (neighbor is null || neighbor.Category == PointCategory.Obstacle)
                 {
                     continue;
                 }
 
+                if (occupiedPoints.Contains(neighbor) && neighbor != goalPoint)
+                {
+                    continue;   
+                }
+
+                double tentativeGCost = gCost + PerStepCost;
+
+                if (tentativeGCost > bestSolutionCost * maxCostFactor)
+                {
+                    continue;
+                }
 
                 double heuristicScore = ManhattanDistanceHeuristic(neighbor, goalPoint);
                 double fCost = tentativeGCost + heuristicScore + (random.NextDouble() * PertubationRate);
 
-                // Update if this is a new node or a better path
-                if (!gCosts.ContainsKey(neighbor) || tentativeGCost < gCosts[neighbor] || neighbor == goalPoint)
+                if (!gCosts.TryGetValue(neighbor, out double value) || tentativeGCost < value || neighbor == goalPoint)
                 {
-                    gCosts[neighbor] = tentativeGCost;
+                    value = tentativeGCost;
+                    gCosts[neighbor] = value;
                     parents[neighbor] = current;
-                    openSet.Enqueue((neighbor, current, tentativeGCost), fCost);
+                    openSet.Enqueue((neighbor, tentativeGCost), fCost);
                 }
             }
         }
@@ -191,14 +178,20 @@ public static class ModifiedAStar
         return solutions;
     }
 
-    private static List<PathPoint> ReconstructPath(PathPoint current, Dictionary<PathPoint, PathPoint> parents)
+    private static List<PathPoint> ReconstructPath(PathPoint current, Dictionary<PathPoint, PathPoint?> parents)
     {
         var path = new List<PathPoint>();
-        while (current != null)
+
+        while (current is not null)
         {
             path.Add(current);
-            current = parents[current];
+            
+            if (parents[current] is not PathPoint next)
+                break;
+                
+            current = next;
         }
+        
         path.Reverse();
         return path;
     }

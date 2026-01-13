@@ -1825,6 +1825,7 @@
         "dependencies": {
           "Application": "1.0.0",
           "BCrypt.Net-Next": "4.0.3",
+          "Domain": "1.0.0",
           "Microsoft.AspNetCore.Authentication": "2.3.0",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "9.0.8",
           "Microsoft.EntityFrameworkCore": "9.0.7",
@@ -5110,19 +5111,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\user\\.nuget\\packages\\": {}
+    "/Users/rainataputra/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj",
+      "projectUniqueName": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj",
       "projectName": "API",
-      "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj",
-      "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\obj\\",
+      "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj",
+      "packagesPath": "/Users/rainataputra/.nuget/packages/",
+      "outputPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/Users/rainataputra/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net9.0"
@@ -5134,11 +5135,11 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "projectReferences": {
-            "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj": {
-              "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj"
+            "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj": {
+              "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj"
             },
-            "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj": {
-              "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj"
+            "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj": {
+              "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj"
             }
           }
         }
@@ -5193,7 +5194,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

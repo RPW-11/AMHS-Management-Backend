@@ -1,0 +1,48 @@
+{
+  "Id": "302fcbd5-c879-4f8a-a5f5-266e6819835c",
+  "Algorithm": "GeneticAlgorithm",
+  "ImageUrl": "Not Configured Yet",
+  "RgvMap": {
+    "RowDim": 20,
+    "ColDim": 20,
+    "StationsOrder": [
+      {
+        "Name": "A",
+        "Category": 2,
+        "RowPos": 0,
+        "ColPos": 0,
+        "Time": 12
+      },
+      {
+        "Name": "B",
+        "Category": 2,
+        "RowPos": 2,
+        "ColPos": 11,
+        "Time": 23
+      },
+      {
+        "Name": "C",
+        "Category": 2,
+        "RowPos": 1,
+        "ColPos": 18,
+        "Time": 12
+      },
+      {
+        "Name": "D",
+        "Category": 2,
+        "RowPos": 9,
+        "ColPos": 14,
+        "Time": 12
+      },
+      {
+        "Name": "E",
+        "Category": 2,
+        "RowPos": 15,
+        "ColPos": 1,
+        "Time": 12
+      }
+    ],
+    "Solutions": []
+  },
+  "Score": null
+}

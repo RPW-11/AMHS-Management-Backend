@@ -11,7 +11,7 @@ public class RgvRoutePlanning : IRgvRoutePlanning
 {
     private const float ThicknessMultiplier = 0.02f;
     private const float ArrowThicknessControl = 6f;
-    private const string LocalRoutePlanningDirectory = $"C:\\Users\\user\\Rai-Projects\\RoutePlanningResources\\RoutePlanningResults";
+    private const string LocalRoutePlanningDirectory = $".";
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
     public string DrawImage(MemoryStream imageStream, RoutePlanningDetailDto routePlanningDetailDto)
     {

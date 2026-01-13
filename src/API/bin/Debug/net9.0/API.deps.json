@@ -1016,6 +1016,7 @@
         "dependencies": {
           "Application": "1.0.0",
           "BCrypt.Net-Next": "4.0.3",
+          "Domain": "1.0.0",
           "Microsoft.AspNetCore.Authentication": "2.3.0",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "9.0.8",
           "Microsoft.EntityFrameworkCore": "9.0.7",

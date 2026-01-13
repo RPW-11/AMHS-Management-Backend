@@ -36,7 +36,6 @@ public class GeneticAlgorithmSolver
 
         for (int i = 0; i < MaxGenerations; i++)
         {
-            // Sort by its fitness
             var evaluated = population.Select(ind => new
             {
                 Individual = ind,
@@ -45,7 +44,6 @@ public class GeneticAlgorithmSolver
             })
             .OrderByDescending(x => x.Fitness)
             .ToList();
-
 
             var bestSolution = evaluated.First();
             Console.WriteLine($"Generation {i} best solution fitness: {bestSolution.Fitness}");

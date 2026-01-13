@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj": {}
+    "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj": {
+    "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj",
+        "projectUniqueName": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj",
         "projectName": "API",
-        "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\API.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\API\\obj\\",
+        "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/API.csproj",
+        "packagesPath": "/Users/rainataputra/.nuget/packages/",
+        "outputPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/rainataputra/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -26,11 +26,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj": {
-                "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj"
+              "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj": {
+                "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj"
               },
-              "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj": {
-                "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj"
+              "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj": {
+                "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj"
               }
             }
           }
@@ -85,21 +85,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj": {
+    "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj",
+        "projectUniqueName": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj",
         "projectName": "Application",
-        "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\obj\\",
+        "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj",
+        "packagesPath": "/Users/rainataputra/.nuget/packages/",
+        "outputPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/rainataputra/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -111,8 +111,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\Domain.csproj": {
-                "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\Domain.csproj"
+              "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj": {
+                "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj"
               }
             }
           }
@@ -158,21 +158,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\Domain.csproj": {
+    "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\Domain.csproj",
+        "projectUniqueName": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj",
         "projectName": "Domain",
-        "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\Domain.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Domain\\obj\\",
+        "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj",
+        "packagesPath": "/Users/rainataputra/.nuget/packages/",
+        "outputPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/rainataputra/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -223,21 +223,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj": {
+    "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj",
+        "projectUniqueName": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj",
         "projectName": "Infrastructure",
-        "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\Infrastructure.csproj",
-        "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Infrastructure\\obj\\",
+        "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj",
+        "packagesPath": "/Users/rainataputra/.nuget/packages/",
+        "outputPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/rainataputra/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -249,8 +249,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj": {
-                "projectPath": "C:\\Users\\user\\Rai-Projects\\AMHSDashboardBackEnd\\src\\Application\\Application.csproj"
+              "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj": {
+                "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Application/Application.csproj"
+              },
+              "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj": {
+                "projectPath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Domain/Domain.csproj"
               }
             }
           }
@@ -340,7 +343,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
