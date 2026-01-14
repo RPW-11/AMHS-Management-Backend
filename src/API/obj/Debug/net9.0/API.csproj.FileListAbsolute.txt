@@ -157,3 +157,8 @@
 /Users/rainataputra/Projects/AMHS-Management-Backend/src/API/obj/Debug/net9.0/API.pdb
 /Users/rainataputra/Projects/AMHS-Management-Backend/src/API/obj/Debug/net9.0/API.genruntimeconfig.cache
 /Users/rainataputra/Projects/AMHS-Management-Backend/src/API/obj/Debug/net9.0/ref/API.dll
+/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/bin/Debug/net9.0/SkiaSharp.dll
+/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/bin/Debug/net9.0/runtimes/osx/native/libSkiaSharp.dylib
+/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/bin/Debug/net9.0/runtimes/win-arm64/native/libSkiaSharp.dll
+/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/bin/Debug/net9.0/runtimes/win-x64/native/libSkiaSharp.dll
+/Users/rainataputra/Projects/AMHS-Management-Backend/src/API/bin/Debug/net9.0/runtimes/win-x86/native/libSkiaSharp.dll

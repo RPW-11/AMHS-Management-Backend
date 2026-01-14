@@ -11,6 +11,7 @@ public class GeneticAlgorithmSolver
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 0.5;
+    private const double TurnPenaltyRate = 0.2;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;
@@ -203,9 +204,10 @@ public class GeneticAlgorithmSolver
         }
 
         int numOfDuplicates = CountDuplicates(solution);
+        int numOfTurns = CountPathTurns(solution);
 
         // Compute the optimality value based on throughput, track length, and num of rgvs
-        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates;
+        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
@@ -269,5 +271,25 @@ public class GeneticAlgorithmSolver
     {
         var hashset = solution.ToHashSet();
         return solution.Count - 1 - hashset.Count; // excluding the start which is visited twice (cycle)
+    }
+
+    private static int CountPathTurns(List<PathPoint> solution)
+    {
+        int turns = 0;
+
+        for (int i = 2; i < solution.Count; i++)
+        {
+            var prevDirection = (solution[i - 1].RowPos - solution[i - 2].RowPos,
+                                 solution[i - 1].ColPos - solution[i - 2].ColPos);
+            var currDirection = (solution[i].RowPos - solution[i - 1].RowPos,
+                                 solution[i].ColPos - solution[i - 1].ColPos);
+
+            if (prevDirection != currDirection)
+            {
+                turns++;
+            }
+        }
+
+        return turns;
     }
 }

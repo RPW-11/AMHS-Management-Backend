@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "jGkweOCRruk=",
+  "dgSpecHash": "zFsbvsMtpiQ=",
   "success": true,
   "projectFilePath": "/Users/rainataputra/Projects/AMHS-Management-Backend/src/Infrastructure/Infrastructure.csproj",
   "expectedPackageFiles": [
@@ -67,6 +67,9 @@
     "/Users/rainataputra/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
     "/Users/rainataputra/.nuget/packages/npgsql/9.0.3/npgsql.9.0.3.nupkg.sha512",
     "/Users/rainataputra/.nuget/packages/npgsql.entityframeworkcore.postgresql/9.0.4/npgsql.entityframeworkcore.postgresql.9.0.4.nupkg.sha512",
+    "/Users/rainataputra/.nuget/packages/skiasharp/3.119.1/skiasharp.3.119.1.nupkg.sha512",
+    "/Users/rainataputra/.nuget/packages/skiasharp.nativeassets.macos/3.119.1/skiasharp.nativeassets.macos.3.119.1.nupkg.sha512",
+    "/Users/rainataputra/.nuget/packages/skiasharp.nativeassets.win32/3.119.1/skiasharp.nativeassets.win32.3.119.1.nupkg.sha512",
     "/Users/rainataputra/.nuget/packages/system.buffers/4.6.0/system.buffers.4.6.0.nupkg.sha512",
     "/Users/rainataputra/.nuget/packages/system.codedom/6.0.0/system.codedom.6.0.0.nupkg.sha512",
     "/Users/rainataputra/.nuget/packages/system.collections.immutable/7.0.0/system.collections.immutable.7.0.0.nupkg.sha512",

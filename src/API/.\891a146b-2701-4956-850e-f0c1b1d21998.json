@@ -1,0 +1,410 @@
+{
+  "Id": "891a146b-2701-4956-850e-f0c1b1d21998",
+  "Algorithm": "GeneticAlgorithm",
+  "ImageUrl": "./891a146b-2701-4956-850e-f0c1b1d21998.png",
+  "RgvMap": {
+    "RowDim": 20,
+    "ColDim": 20,
+    "StationsOrder": [
+      {
+        "Name": "A",
+        "Category": 2,
+        "RowPos": 1,
+        "ColPos": 1,
+        "Time": 0
+      },
+      {
+        "Name": "B",
+        "Category": 2,
+        "RowPos": 13,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "C",
+        "Category": 2,
+        "RowPos": 13,
+        "ColPos": 15,
+        "Time": 2
+      }
+    ],
+    "Solutions": [
+      {
+        "Name": "A",
+        "Category": 2,
+        "RowPos": 1,
+        "ColPos": 1,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 2,
+        "ColPos": 1,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 2,
+        "ColPos": 2,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 2,
+        "ColPos": 3,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 3,
+        "ColPos": 3,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 3,
+        "ColPos": 4,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 3,
+        "ColPos": 5,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 3,
+        "ColPos": 6,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 4,
+        "ColPos": 6,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 4,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 5,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 6,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 7,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 8,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 9,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 10,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 11,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 12,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "B",
+        "Category": 2,
+        "RowPos": 13,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 8,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 9,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 10,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 12,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 13,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 13,
+        "ColPos": 14,
+        "Time": 0
+      },
+      {
+        "Name": "C",
+        "Category": 2,
+        "RowPos": 13,
+        "ColPos": 15,
+        "Time": 2
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 12,
+        "ColPos": 15,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 11,
+        "ColPos": 15,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 11,
+        "ColPos": 14,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 11,
+        "ColPos": 13,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 11,
+        "ColPos": 12,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 10,
+        "ColPos": 12,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 9,
+        "ColPos": 12,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 8,
+        "ColPos": 12,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 8,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 7,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 6,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 5,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 4,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 3,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 2,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 11,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 10,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 9,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 8,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 7,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 6,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 5,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 4,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 3,
+        "Time": 0
+      },
+      {
+        "Name": "Path",
+        "Category": 1,
+        "RowPos": 1,
+        "ColPos": 2,
+        "Time": 0
+      },
+      {
+        "Name": "A",
+        "Category": 2,
+        "RowPos": 1,
+        "ColPos": 1,
+        "Time": 0
+      }
+    ]
+  },
+  "Score": {
+    "Throughput": 1793.3085501858736,
+    "TrackLength": 53,
+    "NumOfRgvs": 67
+  }
+}

@@ -6,7 +6,7 @@ public record MissionDto
     string Name, 
     string Description, 
     string Category, 
-    string Status, 
+    string Status,
     DateTime FinishedAt, 
     string? ResourceLink, 
     DateTime CreatedAt, 

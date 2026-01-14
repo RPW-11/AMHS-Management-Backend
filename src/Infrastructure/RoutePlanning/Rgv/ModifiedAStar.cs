@@ -9,15 +9,12 @@ public static class ModifiedAStar
     private const int MaxSolutions = 200;
     private const int MaxSolutionsPerSegment = 3;
     private const double PerStepCost = 1;
-    private const double PertubationRate = 1;
+    private const double PertubationRate = 0;
 
     public static List<List<PathPoint>> GetValidSolutions(RgvMap rgvMap)
     {
         var intersectSolutions = GetValidSolutionsIntersect(rgvMap);
         var nonIntersectSolutions = GetValidSolutionsNoIntersect(rgvMap);
-        Console.WriteLine(intersectSolutions);
-        Console.WriteLine(nonIntersectSolutions);
-
 
         return [.. intersectSolutions, .. nonIntersectSolutions];
     }
@@ -199,5 +196,10 @@ public static class ModifiedAStar
     private static double ManhattanDistanceHeuristic(PathPoint point1, PathPoint point2)
     {
         return Math.Abs(point1.RowPos - point2.RowPos) + Math.Abs(point1.ColPos - point2.ColPos);
+    }
+    
+    private static double EuclideanDistanceHeuristic(PathPoint point1, PathPoint point2)
+    {
+        return Math.Sqrt(Math.Pow(point1.RowPos - point2.RowPos, 2) + Math.Pow(point1.ColPos - point2.ColPos, 2));
     }
 }

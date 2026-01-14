@@ -233,6 +233,10 @@
               "target": "Package",
               "version": "[9.0.4, )"
             },
+            "SkiaSharp": {
+              "target": "Package",
+              "version": "[3.119.1, )"
+            },
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[9.0.7, )"
