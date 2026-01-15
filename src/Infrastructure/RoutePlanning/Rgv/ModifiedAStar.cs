@@ -7,9 +7,7 @@ namespace Infrastructure.RoutePlanning.Rgv;
 public static class ModifiedAStar
 {
     private const int MaxSolutions = 200;
-    private const int MaxSolutionsPerSegment = 3;
     private const double PerStepCost = 1;
-    private const double PertubationRate = 0;
 
     public static List<List<PathPoint>> GetValidSolutions(RgvMap rgvMap)
     {
@@ -27,7 +25,7 @@ public static class ModifiedAStar
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
-            var solutions = Solve(rgvMap, startPoint, goalPoint, []);
+            var solutions = SolveMultipleTimes(rgvMap, startPoint, goalPoint, []);
             segmentPaths.Add(solutions);
         }
 
@@ -35,7 +33,7 @@ public static class ModifiedAStar
 
         for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O(n * m * k)
         {
-            List<List<PathPoint>> tempAllPaths = [];
+            List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
 
             foreach (var path in allPaths)
@@ -43,19 +41,18 @@ public static class ModifiedAStar
                 foreach (var nextPath in segmentPaths[i])
                 {
                     completePath = [.. path, .. nextPath.Skip(1)];
-                    tempAllPaths.Add(completePath);
+                    tempPaths.Add(completePath);
+                }
+
+                if (tempPaths.Count > MaxSolutions)
+                {
+                    Random random = new();
+
+                    tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
                 }
             }
-            allPaths = tempAllPaths;
-        }
-
-        int totalSolutions = allPaths.Count;
-
-        if (totalSolutions > MaxSolutions)
-        {
-            Random random = new();
-
-            return [.. allPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+            
+            allPaths = tempPaths;
         }
 
         return allPaths;
@@ -64,7 +61,7 @@ public static class ModifiedAStar
     private static List<List<PathPoint>> GetValidSolutionsNoIntersect(RgvMap rgvMap)
     {
         // Initial search
-        List<List<PathPoint>> possiblePaths = Solve(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
+        List<List<PathPoint>> possiblePaths = SolveMultipleTimes(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
 
         for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O (n * m * k)
         {
@@ -76,7 +73,7 @@ public static class ModifiedAStar
             {
                 var occupiedPoints = new HashSet<PathPoint>();
                 UpdateOccupiedPoints(occupiedPoints, path);
-                var solutions = Solve(rgvMap, startPoint, goalPoint, occupiedPoints);
+                var solutions = SolveMultipleTimes(rgvMap, startPoint, goalPoint, occupiedPoints);
 
                 foreach (var sol in solutions)
                 {
@@ -105,12 +102,53 @@ public static class ModifiedAStar
         }
     }
 
+    private static List<List<PathPoint>> SolveMultipleTimes(
+        RgvMap rgvMap, 
+        PathPoint startPoint, 
+        PathPoint goalPoint, 
+        HashSet<PathPoint> occupiedPoints,
+        int desiredSolutions = 8,  
+        double maxCostFactor = 2.5)
+    {
+        var allSolutions = new List<List<PathPoint>>();
+
+        var configurations = new[]
+        {
+            new { Weight = 1.00, Perturbation = 0.15 },   // close to optimal, classic
+            new { Weight = 1.35, Perturbation = 0.20 },
+            new { Weight = 1.80, Perturbation = 0.25 },   // good diversity/speed balance
+            new { Weight = 2.50, Perturbation = 0.30 },   // greedy, very different corridors
+            new { Weight = 3.50, Perturbation = 0.40 },   // very aggressive
+        };
+
+        foreach (var config in configurations)
+        {
+            var solutionsFromThisRun = Solve(
+                rgvMap, startPoint, goalPoint, occupiedPoints,
+                config.Weight, config.Perturbation,
+                maxCostFactor, maxSolutionsPerConfig: 3);
+
+            allSolutions.AddRange(solutionsFromThisRun);
+
+            if (allSolutions.Count >= desiredSolutions)
+            {
+                var random = new Random();
+                allSolutions = [.. allSolutions.OrderBy(x => random.Next()).Take(desiredSolutions)];
+            }
+        }
+
+        return allSolutions;
+    }
+
     private static List<List<PathPoint>> Solve(
         RgvMap rgvMap, 
         PathPoint startPoint, 
         PathPoint goalPoint, 
         HashSet<PathPoint> occupiedPoints,
-        double maxCostFactor = 2.5
+        double heuristicWeight = 0.1,
+        double perturbationMax = 0.5,
+        double maxCostFactor = 2.5,
+        int maxSolutionsPerConfig = 2
     )
     {
         var solutions = new List<List<PathPoint>>();
@@ -119,13 +157,14 @@ public static class ModifiedAStar
         var openSet = new PriorityQueue<(PathPoint point, double gCost), double>();
         var gCosts = new Dictionary<PathPoint, double>();
         var parents = new Dictionary<PathPoint, PathPoint?>();
+
         double bestSolutionCost = double.MaxValue;
 
         openSet.Enqueue((startPoint, 0), 0);
         gCosts[startPoint] = 0;
         parents[startPoint] = null;
 
-        while (openSet.Count > 0 && solutions.Count < MaxSolutionsPerSegment)
+        while (openSet.Count > 0 && solutions.Count < maxSolutionsPerConfig)
         {
             var (current, gCost) = openSet.Dequeue();
 
@@ -160,7 +199,10 @@ public static class ModifiedAStar
                 }
 
                 double heuristicScore = ManhattanDistanceHeuristic(neighbor, goalPoint);
-                double fCost = tentativeGCost + heuristicScore + (random.NextDouble() * PertubationRate);
+                double weightedHeuristic = heuristicWeight * heuristicScore;
+                double randomPert = (random.NextDouble() * 2 - 1) * perturbationMax;
+
+                double fCost = tentativeGCost + weightedHeuristic + randomPert;
 
                 if (!gCosts.TryGetValue(neighbor, out double value) || tentativeGCost < value || neighbor == goalPoint)
                 {
@@ -197,9 +239,15 @@ public static class ModifiedAStar
     {
         return Math.Abs(point1.RowPos - point2.RowPos) + Math.Abs(point1.ColPos - point2.ColPos);
     }
-    
-    private static double EuclideanDistanceHeuristic(PathPoint point1, PathPoint point2)
-    {
-        return Math.Sqrt(Math.Pow(point1.RowPos - point2.RowPos, 2) + Math.Pow(point1.ColPos - point2.ColPos, 2));
-    }
+
+    // private static int CalculatePathDifference(List<PathPoint> path1, List<PathPoint> path2)
+    // {
+    //     var set1 = new HashSet<PathPoint>(path1);
+    //     var set2 = new HashSet<PathPoint>(path2);
+
+    //     int commonPoints = set1.Intersect(set2).Count();
+    //     int totalPoints = set1.Union(set2).Count();
+
+    //     return totalPoints - commonPoints;
+    // }
 }

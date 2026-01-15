@@ -40,7 +40,7 @@ public static class DependencyInjection
                 options.UseNpgsql(postgresConnectionStr,
                     b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
-        // register all of your infranstructure dependencies
+        // Register dependencies
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IRgvRoutePlanning, RgvRoutePlanning>();

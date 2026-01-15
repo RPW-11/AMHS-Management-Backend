@@ -76,7 +76,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         List<List<PathPoint>> convertedSampleSolutions = [];
-        
+
         foreach (var sol in sampleSolutions)
         {
             List<PathPoint> convertedSolution = [];
@@ -109,7 +109,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Validation(algorithmResult.Errors[0].Message));
         }
 
-        // MODIFY THE CURRENT MISSION
+        // Modify the current mission
         RoutePlanningMission routePlanningMission = RoutePlanningMission.FromBaseClass(missionResult.Value,
                                                                                        "Not Configured Yet",
                                                                                        algorithmResult.Value,

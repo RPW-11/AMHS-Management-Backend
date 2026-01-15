@@ -11,7 +11,7 @@ public class GeneticAlgorithmSolver
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 0.5;
-    private const double TurnPenaltyRate = 0.2;
+    private const double TurnPenaltyRate = 1;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;
@@ -24,16 +24,12 @@ public class GeneticAlgorithmSolver
 
     public List<PathPoint> Solve(List<List<PathPoint>> sampleSolutions)
     {
-        Console.WriteLine("Generating population...");
         var solutions = ModifiedAStar.GetValidSolutions(_rgvMap);
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
                         .ToList();
         population.AddRange(solutions);
         population.AddRange(sampleSolutions);
-
-        Console.WriteLine($"Population acquired: {population.Count} populations");
-        Console.WriteLine($"Obtaining generations...");
 
         for (int i = 0; i < MaxGenerations; i++)
         {
@@ -47,7 +43,8 @@ public class GeneticAlgorithmSolver
             .ToList();
 
             var bestSolution = evaluated.First();
-            Console.WriteLine($"Generation {i} best solution fitness: {bestSolution.Fitness}");
+
+            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness}");
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]
@@ -64,8 +61,6 @@ public class GeneticAlgorithmSolver
         })
             .OrderByDescending(x => x.Fitness)
             .First();
-
-        Console.WriteLine($"Best solution from GA has the a fitness value of: {bestIndividual.Fitness}");
 
         return bestIndividual.Individual;
     }
