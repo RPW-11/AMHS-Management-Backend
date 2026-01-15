@@ -1,3 +1,4 @@
+using Application.DTOs.Common;
 using Application.DTOs.Employee;
 using FluentResults;
 
@@ -7,6 +8,6 @@ public interface IEmployeeService
 {
     Task<Result> AddEmployee(string firstName, string lastName, string email, string password, string position, string phoneNumber, string dateOfBirth);
     Task<Result<EmployeeDto>> GetEmployee(string id);
-    Task<Result<IEnumerable<EmployeeDto>>> GetAllEmployees();
+    Task<Result<PagedResult<EmployeeDto>>> GetAllEmployees(int page, int pageSize, string? searchTerm = null);
     Task<Result<IEnumerable<EmployeeSearchDto>>> GetEmployeesByName(string name);
 }

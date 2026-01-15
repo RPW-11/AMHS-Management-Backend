@@ -11,5 +11,6 @@ public interface IEmployeeRepository
     Task<Result<IEnumerable<Employee>>> GetEmployeesByIdsAsync(IEnumerable<EmployeeId> employeeIds);
     Task<Result<IEnumerable<Employee>>> GetEmployeesByNameAsync(string name);
     Task<Result> AddEmployeeAsync(Employee employee);
-    Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync();
+    Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync(int page, int pageSize);
+    Task<Result<int>> GetEmployeesCountAsync();
 }

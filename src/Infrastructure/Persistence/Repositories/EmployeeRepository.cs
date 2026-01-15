@@ -29,11 +29,31 @@ public class EmployeeRepository : IEmployeeRepository
         }
     }
 
-    public async Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync()
+    public async Task<Result<int>> GetEmployeesCountAsync()
     {
         try
         {
-            IEnumerable<Employee> employees = await _dbContext.Employees.ToListAsync();
+            int count = await _dbContext.Employees.CountAsync();
+
+            return count;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get employees count from the database").CausedBy(error));
+        }
+    }
+
+    public async Task<Result<IEnumerable<Employee>>> GetAllEmployeesAsync(int page, int pageSize)
+    {
+        try
+        {
+            IEnumerable<Employee> employees = await _dbContext.Employees
+                .OrderByDescending(e => e.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
             return Result.Ok(employees);
         }
         catch (Exception error)

@@ -4,7 +4,7 @@
         <name>API</name>
     </assembly>
     <members>
-        <member name="M:API.Controllers.EmployeeController.GetAllEmployees">
+        <member name="M:API.Controllers.EmployeeController.GetAllEmployees(System.Int32,System.Int32,System.String)">
             <summary>
             Get all employees
             </summary>
@@ -90,128 +90,6 @@
             <summary>
             Update the created route planning task with the required data
             </summary>
-            <remarks>
-            
-            Sample request:
-            
-                PATCH /tasks/route-planning
-                {
-                     "rowDim": 6,
-                     "colDim": 6,
-                     "algorithm": "string",
-                     "stationsOrder": [
-                         {
-                         "rowPos": 5,
-                         "colPos": 0
-                         },
-                         {
-                         "rowPos": 0,
-                         "colPos": 4
-                         }
-                     ],
-                     "points": [
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 0,
-                             "colPos": 0
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 1,
-                             "colPos": 1
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 1,
-                             "colPos": 2
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 0,
-                             "colPos": 3
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 0,
-                             "colPos": 5
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 1,
-                             "colPos": 5
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 2,
-                             "colPos": 4
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 3,
-                             "colPos": 4
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 4,
-                             "colPos": 1
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 4,
-                             "colPos": 2
-                         }
-                         },
-                         {
-                         "name": "string",
-                         "category": "OBS",
-                         "time": 0,
-                         "position": {
-                             "rowPos": 5,
-                             "colPos": 4
-                         }
-                         }
-                     ]
-                     }
-            </remarks>
         </member>
     </members>
 </doc>

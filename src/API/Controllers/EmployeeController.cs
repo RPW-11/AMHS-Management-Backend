@@ -1,6 +1,7 @@
 using System.Net;
 using API.Contracts.Employee;
 using Application.Common.Errors;
+using Application.DTOs.Common;
 using Application.DTOs.Employee;
 using Application.Services.EmployeeService;
 using Microsoft.AspNetCore.Authorization;
@@ -24,9 +25,13 @@ namespace API.Controllers
         /// Get all employees
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetAllEmployees()
+        public async Task<ActionResult<PagedResult<EmployeeDto>>> GetAllEmployees(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? searchTerm = null
+        )
         {
-            FluentResults.Result<IEnumerable<EmployeeDto>> employeesResult = await _employeeService.GetAllEmployees();
+            FluentResults.Result<PagedResult<EmployeeDto>> employeesResult = await _employeeService.GetAllEmployees(page, pageSize, searchTerm);
 
             return HandleResult(employeesResult);
         }

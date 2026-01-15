@@ -2,6 +2,7 @@ using Application.Common.Errors;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.Security;
+using Application.DTOs.Common;
 using Application.DTOs.Employee;
 using Domain.Employee;
 using Domain.Employee.ValueObjects;
@@ -89,12 +90,21 @@ public class EmployeeService : BaseService, IEmployeeService
         return MapToEmployeeDto(employeeResult.Value);
     }
 
-    public async Task<Result<IEnumerable<EmployeeDto>>> GetAllEmployees()
+    public async Task<Result<PagedResult<EmployeeDto>>> GetAllEmployees(int page, int pageSize, string? searchTerm = null)
     {
-        var employeesResult = await _employeeRepository.GetAllEmployeesAsync();
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 5, 100);
+
+        var employeeCountResult = await _employeeRepository.GetEmployeesCountAsync();
+        if (employeeCountResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<EmployeeDto>>(ApplicationError.Internal);
+        }
+
+        var employeesResult = await _employeeRepository.GetAllEmployeesAsync(page, pageSize);
         if (employeesResult.IsFailed)
         {
-            return Result.Fail<IEnumerable<EmployeeDto>>(ApplicationError.Internal);
+            return Result.Fail<PagedResult<EmployeeDto>>(ApplicationError.Internal);
         }
 
         List<EmployeeDto> employeeDtos = [];
@@ -105,7 +115,13 @@ public class EmployeeService : BaseService, IEmployeeService
 
         await _unitOfWork.SaveChangesAsync();
 
-        return employeeDtos;
+        return new PagedResult<EmployeeDto>
+        {
+            Items = employeeDtos,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = employeeCountResult.Value
+        };
     }
 
     public async Task<Result<IEnumerable<EmployeeSearchDto>>> GetEmployeesByName(string name)
