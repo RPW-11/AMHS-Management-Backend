@@ -8,6 +8,7 @@ using Application.Common.Interfaces.Services;
 using Infrastructure.Authentication;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.RoutePlanning;
 using Infrastructure.RoutePlanning.Rgv;
 using Infrastructure.Security;
 using Infrastructure.Services;
@@ -22,21 +23,19 @@ namespace Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, ConfigurationManager configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
 
         // register the config
         //  Jwt config
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
+        // Route Planning config
+        services.Configure<RoutePlanningSettings>(configuration.GetSection(RoutePlanningSettings.SectionName));
+
         //  Postgres config
-        string? postgresConnectionStr = configuration.GetConnectionString("PostgresConnectionString");
-
-        if (postgresConnectionStr is null)
-        {
-            throw new Exception("No connection string");
-        }
-
+        string? postgresConnectionStr = configuration.GetConnectionString("PostgresConnectionString") ?? throw new Exception("Postgres connection string is not found");
+        
         services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(postgresConnectionStr,
                     b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
@@ -54,7 +53,7 @@ public static class DependencyInjection
 
     public static IServiceCollection AddAuth(
         this IServiceCollection services,
-        ConfigurationManager configuration
+        IConfiguration configuration
     )
     {
         var jwtSettings = new JwtSettings();

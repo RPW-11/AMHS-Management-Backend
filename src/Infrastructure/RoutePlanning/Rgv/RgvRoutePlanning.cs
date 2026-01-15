@@ -3,15 +3,17 @@ using SkiaSharp;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission.RoutePlanning;
 using Domain.Mission.ValueObjects;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
-public class RgvRoutePlanning : IRgvRoutePlanning
+public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetting) : IRgvRoutePlanning
 {
     private const float ThicknessMultiplier = 0.02f;
     private const float ArrowThicknessControl = 6f;
-    private const string LocalRoutePlanningDirectory = ".";
+    private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.LocalDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+
     public string DrawImage(MemoryStream imageStream, RoutePlanningDetailDto routePlanningDetailDto)
     {
         RgvMap rgvMap = routePlanningDetailDto.RgvMap;
@@ -92,8 +94,8 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
 
-        string outputPath = Path.Combine(LocalRoutePlanningDirectory, $"{routePlanningDetailDto.Id}.png");
-        Directory.CreateDirectory(LocalRoutePlanningDirectory);
+        string outputPath = Path.Combine(_localRoutePlanningDirectory, $"{routePlanningDetailDto.Id}.png");
+        Directory.CreateDirectory(_localRoutePlanningDirectory);
 
         File.WriteAllBytes(outputPath, data.ToArray());
 
@@ -158,8 +160,8 @@ public class RgvRoutePlanning : IRgvRoutePlanning
         try
         {
             string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
-            File.WriteAllText($"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json", stringJson);
-            return $"{LocalRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json";
+            File.WriteAllText($"{_localRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json", stringJson);
+            return $"{_localRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json";
         }
         catch (Exception error)
         {

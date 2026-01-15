@@ -76,6 +76,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         List<List<PathPoint>> convertedSampleSolutions = [];
+        
         foreach (var sol in sampleSolutions)
         {
             List<PathPoint> convertedSolution = [];
