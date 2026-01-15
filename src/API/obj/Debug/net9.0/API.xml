@@ -41,7 +41,7 @@
             
              </remarks>
         </member>
-        <member name="M:API.Controllers.MissionController.GetAllMissions">
+        <member name="M:API.Controllers.MissionController.GetAllMissions(System.Int32,System.Int32,System.String)">
             <summary>
             Get all missions
             </summary>

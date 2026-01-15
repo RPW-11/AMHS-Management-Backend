@@ -29,12 +29,14 @@ public class MissionRepository : IMissionRepository
         }
     }
 
-    public async Task<Result<IEnumerable<MissionBase>>> GetAllMissionsAsync()
+    public async Task<Result<IEnumerable<MissionBase>>> GetAllMissionsAsync(int page, int pageSize)
     {
         try
         {
             var missionsResult = await _dbContext.Missions
                                     .OrderByDescending(m => m.UpdatedAt)
+                                    .Skip((page - 1) * pageSize)
+                                    .Take(pageSize)
                                     .ToListAsync();
 
             return missionsResult;
@@ -90,6 +92,20 @@ public class MissionRepository : IMissionRepository
         {
             Console.WriteLine(error);
             return Result.Fail(new Error("Fail to update the mission").CausedBy(error));
+        }
+    }
+
+    public async Task<Result<int>> GetMissionsCountAsync()
+    {
+        try
+        {
+            var count = await _dbContext.Missions.CountAsync();
+            return count;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to count the number of missions").CausedBy(error));
         }
     }
 }

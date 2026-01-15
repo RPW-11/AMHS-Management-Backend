@@ -1,3 +1,4 @@
+using Application.DTOs.Common;
 using Application.DTOs.Mission;
 using FluentResults;
 
@@ -11,7 +12,11 @@ public interface IMissionService
                                            string description,
                                            DateTime finishedAt);
     Task<Result<MissionDetailDto>> GetMission(string id);
-    Task<Result<IEnumerable<MissionDto>>> GetAllMission();
+    Task<Result<PagedResult<MissionDto>>> GetAllMission(
+        int page,
+        int pageSize,
+        string? searchTerm = null
+    );
     Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId);
     Task<Result> DeleteMission(string missionId);
     Task<Result> AddMemberToMission(string employeeId, string missionId, string memberId);

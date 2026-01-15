@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using API.Contracts.Mission;
+using Application.DTOs.Common;
 using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.MissionService;
@@ -30,9 +31,13 @@ namespace API.Controllers
         /// Get all missions
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MissionDto>>> GetAllMissions()
+        public async Task<ActionResult<PagedResult<MissionDto>>> GetAllMissions(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? searchTerm = null
+        )
         {
-            var missionsResult = await _missionService.GetAllMission();
+            var missionsResult = await _missionService.GetAllMission(page, pageSize, searchTerm);
 
             return HandleResult(missionsResult);
         }
@@ -174,128 +179,7 @@ namespace API.Controllers
         /// <summary>
         /// Update the created route planning task with the required data
         /// </summary>
-        /// <remarks>
-        /// 
-        /// Sample request:
-        /// 
-        ///     PATCH /tasks/route-planning
-        ///     {
-        ///          "rowDim": 6,
-        ///          "colDim": 6,
-        ///          "algorithm": "string",
-        ///          "stationsOrder": [
-        ///              {
-        ///              "rowPos": 5,
-        ///              "colPos": 0
-        ///              },
-        ///              {
-        ///              "rowPos": 0,
-        ///              "colPos": 4
-        ///              }
-        ///          ],
-        ///          "points": [
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 0,
-        ///                  "colPos": 0
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 1,
-        ///                  "colPos": 1
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 1,
-        ///                  "colPos": 2
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 0,
-        ///                  "colPos": 3
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 0,
-        ///                  "colPos": 5
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 1,
-        ///                  "colPos": 5
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 2,
-        ///                  "colPos": 4
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 3,
-        ///                  "colPos": 4
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 4,
-        ///                  "colPos": 1
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 4,
-        ///                  "colPos": 2
-        ///              }
-        ///              },
-        ///              {
-        ///              "name": "string",
-        ///              "category": "OBS",
-        ///              "time": 0,
-        ///              "position": {
-        ///                  "rowPos": 5,
-        ///                  "colPos": 4
-        ///              }
-        ///              }
-        ///          ]
-        ///          }
-        /// </remarks>
+    
         [HttpPatch("{id}/route-planning")]
         public async Task<ActionResult> CreateRoutePlanningTask(
             string id,

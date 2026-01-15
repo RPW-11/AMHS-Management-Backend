@@ -2,6 +2,7 @@ using Application.Common.Errors;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
+using Application.DTOs.Common;
 using Application.DTOs.Mission;
 using Application.DTOs.Mission.RoutePlanning;
 using Domain.Employee;
@@ -70,13 +71,25 @@ public class MissionService : BaseService, IMissionService
         return new AddMissionDto(missionDomainResult.Value.Id.ToString());
     }
 
-    public async Task<Result<IEnumerable<MissionDto>>> GetAllMission()
+    public async Task<Result<PagedResult<MissionDto>>> GetAllMission(
+        int page,
+        int pageSize,
+        string? searchTerm = null
+    )
     {
-        var getMissionsResult = await _missionRepository.GetAllMissionsAsync();
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 5, 100);
 
+        var missionsCountResult = await _missionRepository.GetMissionsCountAsync();
+        if (missionsCountResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
+        }
+
+        var getMissionsResult = await _missionRepository.GetAllMissionsAsync(page, pageSize);
         if (getMissionsResult.IsFailed)
         {
-            return Result.Fail<IEnumerable<MissionDto>>(ApplicationError.Internal);
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
         }
 
         List<MissionDto> missionsDto = [];
@@ -87,7 +100,13 @@ public class MissionService : BaseService, IMissionService
 
         await _unitOfWork.SaveChangesAsync();
 
-        return missionsDto;
+        return new PagedResult<MissionDto>
+        {
+            Items = missionsDto,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = missionsCountResult.Value
+        };
     }
 
     public async Task<Result<MissionDetailDto>> GetMission(string id)
