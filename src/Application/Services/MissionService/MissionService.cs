@@ -10,6 +10,7 @@ using Domain.Employee.ValueObjects;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
 using FluentResults;
+using Microsoft.Extensions.Logging;
 
 namespace Application.Services.MissionService;
 
@@ -18,16 +19,19 @@ public class MissionService : BaseService, IMissionService
     private readonly IMissionRepository _missionRepository;
     private readonly IEmployeeRepository _employeeRepository;
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
+    private readonly ILogger<MissionService> _logger;
 
     public MissionService(IMissionRepository missionRepository,
                           IEmployeeRepository employeeRepository,
                           IRgvRoutePlanning rgvRoutePlanning,
-                          IUnitOfWork unitOfWork)
+                          IUnitOfWork unitOfWork,
+                          ILogger<MissionService> logger)
     : base(unitOfWork)
     {
         _missionRepository = missionRepository;
         _employeeRepository = employeeRepository;
         _rgvRoutePlanning = rgvRoutePlanning;
+        _logger = logger;
     }
 
     public async Task<Result<AddMissionDto>> AddMission(string employeeId,
@@ -39,12 +43,14 @@ public class MissionService : BaseService, IMissionService
         var employeeIdResult = EmployeeId.FromString(employeeId);
         if (employeeIdResult.IsFailed)
         {
+            _logger.LogWarning("{msg}", employeeIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid employee id"));
         }
 
         var existing = await _employeeRepository.GetEmployeeByIdAsync(employeeIdResult.Value);
         if (existing is null)
         {
+            _logger.LogWarning("Employee with id {employeeId} does not exist", employeeId);
             return Result.Fail(ApplicationError.Validation("Non employee can't create a mission"));
         }
 
@@ -56,6 +62,7 @@ public class MissionService : BaseService, IMissionService
 
         if (missionDomainResult.IsFailed)
         {
+            _logger.LogWarning("{msg}", missionDomainResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation(missionDomainResult.Errors[0].Message));
         }
 
@@ -63,6 +70,7 @@ public class MissionService : BaseService, IMissionService
 
         if (addMissionResult.IsFailed)
         {
+            _logger.LogError("Failed to add mission to repository: {msg}", addMissionResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 
@@ -83,12 +91,14 @@ public class MissionService : BaseService, IMissionService
         var missionsCountResult = await _missionRepository.GetMissionsCountAsync();
         if (missionsCountResult.IsFailed)
         {
+            _logger.LogError("Failed to get missions count: {msg}", missionsCountResult.Errors[0].Message);
             return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
         }
 
         var getMissionsResult = await _missionRepository.GetAllMissionsAsync(page, pageSize);
         if (getMissionsResult.IsFailed)
         {
+            _logger.LogError("Failed to get missions: {msg}", getMissionsResult.Errors[0].Message);
             return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
         }
 
@@ -114,6 +124,7 @@ public class MissionService : BaseService, IMissionService
         var missionIdResult = MissionId.FromString(id);
         if (missionIdResult.IsFailed)
         {
+            _logger.LogWarning("Invalid mission id: {msg}", missionIdResult.Errors[0].Message);
             return Result.Fail<MissionDetailDto>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
         }
 
@@ -121,27 +132,32 @@ public class MissionService : BaseService, IMissionService
 
         if (getMissionResult.IsFailed)
         {
+            _logger.LogError("Failed to get mission: {msg}", getMissionResult.Errors[0].Message);
             return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
         }
 
         if (getMissionResult.Value is null)
         {
+            _logger.LogWarning("Mission with id {missionId} does not exist", missionIdResult.Value);
             return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission is not found"));
         }
 
         // get the leader info
         var leader = getMissionResult.Value.AssignedEmployees.FirstOrDefault(ae => ae.MissionRole == MissionRole.Leader);
         if (leader is null) {
+            _logger.LogError("Leader not found for mission {missionId}", getMissionResult.Value.Id);
             return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission has no leader"));
         }
 
         var leaderResult = await _employeeRepository.GetEmployeeByIdAsync(leader.EmployeeId);
         if (leaderResult.IsFailed)
         {
+            _logger.LogError("Failed to get leader info: {msg}", leaderResult.Errors[0].Message);
             return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
         }
         if (leaderResult.Value is null)
         {
+            _logger.LogWarning("Leader with id {leaderId} does not exist", leader.EmployeeId);
             return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The leader of this mission does not exist"));
         }
 
@@ -171,23 +187,27 @@ public class MissionService : BaseService, IMissionService
         var missionIdResult = MissionId.FromString(missionId);
         if (missionIdResult.IsFailed)
         {
+            _logger.LogWarning("Invalid mission id: {msg}", missionIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid mission id"));
         }
 
         var missionRepoResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
         if (missionRepoResult.IsFailed)
         {
+            _logger.LogWarning("{msg}",missionRepoResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 
         if (missionRepoResult.Value is null)
         {
+            _logger.LogWarning("Mission with id {missionId} does not exist", missionIdResult.Value);
             return Result.Fail(ApplicationError.NotFound("The specified mission is not found"));
         }
 
         var statusResult = MissionStatus.FromString(updateMissionDto.Status);
         if (statusResult.IsFailed)
         {
+            _logger.LogWarning("Invalid mission status: {msg}", statusResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid mission status"));
         }
 
@@ -198,6 +218,7 @@ public class MissionService : BaseService, IMissionService
         var updateMissionResult = _missionRepository.UpdateMission(missionRepoResult.Value);
         if (updateMissionResult.IsFailed)
         {
+            _logger.LogError("Failed to update mission: {msg}", updateMissionResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 
@@ -211,12 +232,14 @@ public class MissionService : BaseService, IMissionService
         var missionIdResult = MissionId.FromString(missionId);
         if (missionIdResult.IsFailed)
         {
+            _logger.LogWarning("Invalid mission id: {msg}", missionIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid missionId"));
         }
 
         var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
         if (missionResult.IsFailed)
         {
+            _logger.LogError("Failed to get mission: {msg}", missionResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 
@@ -228,11 +251,13 @@ public class MissionService : BaseService, IMissionService
         var deleteResult = _missionRepository.DeleteMission(missionResult.Value);
         if (deleteResult.IsFailed)
         {
+            _logger.LogError("Failed to delete mission: {msg}", deleteResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 
         await _unitOfWork.SaveChangesAsync();
 
+        _logger.LogInformation("Mission with id {missionId} deleted successfully", missionId);
         return Result.Ok();
     }
 

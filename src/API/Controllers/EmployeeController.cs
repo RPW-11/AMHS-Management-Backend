@@ -1,6 +1,4 @@
-using System.Net;
 using API.Contracts.Employee;
-using Application.Common.Errors;
 using Application.DTOs.Common;
 using Application.DTOs.Employee;
 using Application.Services.EmployeeService;
