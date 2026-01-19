@@ -160,8 +160,9 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         try
         {
             string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
-            File.WriteAllText($"{_localRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json", stringJson);
-            return $"{_localRoutePlanningDirectory}\\{routePlanningDetailDto.Id}.json";
+            string path = Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
+            File.WriteAllText(path, stringJson);
+            return path;
         }
         catch (Exception error)
         {

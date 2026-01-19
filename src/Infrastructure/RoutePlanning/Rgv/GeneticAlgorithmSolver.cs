@@ -61,7 +61,7 @@ public class GeneticAlgorithmSolver
         })
             .OrderByDescending(x => x.Fitness)
             .First();
-
+        
         return bestIndividual.Individual;
     }
 
@@ -74,7 +74,6 @@ public class GeneticAlgorithmSolver
 
         while (newPopulation.Count < PopulationSize)
         {
-            // Tournament selection
             List<PathPoint> parent1 = TournamentSelection(sortedParents);
             List<PathPoint> parent2 = TournamentSelection(sortedParents);
 
@@ -113,13 +112,11 @@ public class GeneticAlgorithmSolver
 
     private List<PathPoint> CrossOver(List<PathPoint> parent1, List<PathPoint> parent2)
     {
-        // Find common positions
         var commonPositions = parent1.Intersect(parent2).ToList();
 
         if (commonPositions.Count == 0)
             return _random.NextDouble() < 0.5 ? parent1 : parent2;
 
-        // Select random common position
         var crossOverPoint = commonPositions[_random.Next(commonPositions.Count)];
 
         var index1 = parent1.IndexOf(crossOverPoint);
@@ -129,7 +126,6 @@ public class GeneticAlgorithmSolver
         var child = parent1.Take(index1 + 1).ToList();
         child.AddRange(parent2.Skip(index2 + 1));
 
-        // Trim if too long
         if (child.Count > ChromosomeLength)
         {
             child = [.. child.Take(ChromosomeLength)];
