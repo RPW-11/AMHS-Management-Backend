@@ -108,4 +108,18 @@ public class MissionRepository : IMissionRepository
             return Result.Fail(new Error("Fail to count the number of missions").CausedBy(error));
         }
     }
+
+    public async Task<Result<int>> DeleteMissionsAsync(IEnumerable<MissionId> missionIds)
+    {
+        try
+        {
+            var deletedRows = await _dbContext.Missions.Where(m => missionIds.Contains(m.Id)).ExecuteDeleteAsync();
+            return deletedRows;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to delete missions").CausedBy(error));
+        }
+    }
 }

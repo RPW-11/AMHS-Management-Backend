@@ -71,6 +71,11 @@
             Delete mission
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.DeleteMissions(API.Contracts.Mission.DeleteMissionsRequest)">
+            <summary>
+            Delete missions in bulk
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.AddMemberToMissionHandler(System.String,System.String)">
             <summary>
             Add a member to a mission

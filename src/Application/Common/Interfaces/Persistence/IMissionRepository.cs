@@ -12,4 +12,5 @@ public interface IMissionRepository
     Task<Result> AddMissionAsync(MissionBase mission);
     Result UpdateMission(MissionBase mission);
     Result DeleteMission(MissionBase mission);
+    Task<Result<int>> DeleteMissionsAsync(IEnumerable<MissionId> missionIds);
 }

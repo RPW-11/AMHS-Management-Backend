@@ -261,6 +261,38 @@ public class MissionService : BaseService, IMissionService
         return Result.Ok();
     }
 
+    public async Task<Result> DeleteMissions(IEnumerable<string> missionIds)
+    {
+        if (!missionIds.Any())
+        {
+            return Result.Fail(ApplicationError.NotFound("No mission ids provided"));
+        }
+
+        var missionIdsObjs = new List<MissionId>();
+        foreach (var missionId in missionIds)
+        {
+            var missionIdResult = MissionId.FromString(missionId);
+            
+            if (missionIdResult.IsFailed)
+            {
+                return Result.Fail(ApplicationError.Validation("Invalid missionId"));
+            }
+
+            missionIdsObjs.Add(missionIdResult.Value);
+        }
+
+        var deleteMissionsResult = await _missionRepository.DeleteMissionsAsync(missionIdsObjs);
+
+        if (deleteMissionsResult.IsFailed)
+        {
+            _logger.LogError("Failed to delete mission: {msg}", deleteMissionsResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        _logger.LogInformation("There are {msg} missions deleted", deleteMissionsResult.Value);
+        return Result.Ok();
+    }
+
     public async Task<Result> AddMemberToMission(string employeeId, string missionId, string memberId)
     {
         var missionIdResult = MissionId.FromString(missionId);

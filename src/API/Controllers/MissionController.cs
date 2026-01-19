@@ -122,6 +122,16 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Delete missions in bulk
+        /// </summary>
+        [HttpDelete]
+        public async Task<ActionResult> DeleteMissions(DeleteMissionsRequest deleteMissionsRequest)
+        {
+            FluentResults.Result<object> deleteMissionsResult = await _missionService.DeleteMissions(deleteMissionsRequest.MissionIds);
+            return HandleResult(deleteMissionsResult);
+        }
+
+        /// <summary>
         /// Add a member to a mission
         /// </summary>
         [HttpPatch("{id}/members/add/{memberId}")]
