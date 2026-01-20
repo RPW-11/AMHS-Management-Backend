@@ -99,7 +99,25 @@ public class GeneticAlgorithmSolver
 
     private List<PathPoint> Mutate(List<PathPoint> child)
     {
-        return child;
+        if (_random.NextDouble() > MutationRate)
+        {
+            return child;
+        }
+
+        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count-10));
+        int endIdx = (int) _random.NextInt64(Math.Min(child.Count-1, startIdx + 5), child.Count-1);
+
+        var startPoint = child[startIdx];
+        var endPoint = child[endIdx];
+
+        // Re-compute alternative path between these points
+        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1);
+        if (subPaths is null || subPaths.Count == 0)
+        {
+            return child;
+        }
+
+        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx+1)];
     }
 
     private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)

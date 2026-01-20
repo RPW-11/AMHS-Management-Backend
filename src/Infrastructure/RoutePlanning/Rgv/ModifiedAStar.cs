@@ -140,7 +140,7 @@ public static class ModifiedAStar
         return allSolutions;
     }
 
-    private static List<List<PathPoint>> Solve(
+    public static List<List<PathPoint>> Solve(
         RgvMap rgvMap, 
         PathPoint startPoint, 
         PathPoint goalPoint, 
@@ -239,15 +239,4 @@ public static class ModifiedAStar
     {
         return Math.Abs(point1.RowPos - point2.RowPos) + Math.Abs(point1.ColPos - point2.ColPos);
     }
-
-    // private static int CalculatePathDifference(List<PathPoint> path1, List<PathPoint> path2)
-    // {
-    //     var set1 = new HashSet<PathPoint>(path1);
-    //     var set2 = new HashSet<PathPoint>(path2);
-
-    //     int commonPoints = set1.Intersect(set2).Count();
-    //     int totalPoints = set1.Union(set2).Count();
-
-    //     return totalPoints - commonPoints;
-    // }
 }
