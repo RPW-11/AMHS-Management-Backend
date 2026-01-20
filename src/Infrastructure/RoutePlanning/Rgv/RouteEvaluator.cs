@@ -4,7 +4,6 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 internal static class RouteEvaluator
 {
-    private const double PerSquareLength = 1;
     private const double RgvSpeed = 0.4; //ms-1
     private const double ThroughputWeight = 0.8;
     private const double LengthWeight = 0.1;
@@ -21,7 +20,7 @@ internal static class RouteEvaluator
     public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
     {
         var totalTimeStations = map.StationsOrder.Sum(s => s.Time);
-        double trackLength = solution.Count * PerSquareLength;
+        double trackLength = solution.Count * map.GetSquareLength();
         double cycleTime = (trackLength / RgvSpeed) + totalTimeStations;
 
         double throughputPerRgv = HourInSeconds / cycleTime;
@@ -34,7 +33,7 @@ internal static class RouteEvaluator
         return (totalThroughput, trackLength, maxRgvs);
     }
 
-    public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder)
+    public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder, RgvMap map)
     {
         List<double> routesQ = []; // product per hour
         List<int> routesMaxRgvs = []; // max Rgvs
@@ -44,7 +43,7 @@ internal static class RouteEvaluator
 
         foreach (var route in possibleRoutes)
         {
-            double trackLength = route.Count * PerSquareLength;
+            double trackLength = route.Count * map.GetSquareLength();
             double timePerLoop = (trackLength / RgvSpeed) + totalStationsTime;
             double perRgvQ = 3600 / timePerLoop;
 

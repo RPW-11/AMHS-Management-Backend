@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Domain.Common.Models;
 using Domain.Errors.Mission.RoutePlanning;
 using FluentResults;
@@ -9,6 +8,8 @@ public sealed class RgvMap : ValueObject
 {
     private const int MinRowDim = 3;
     private const int MinColDim = 3;
+    private const int MinWidthLength = 1;
+    private const int MinHeightLength = 1;
     private const int MinNumberStationsOrder = 2;
 
     public static class MapTrajectory
@@ -24,25 +25,35 @@ public sealed class RgvMap : ValueObject
     }
     public int RowDim { get; private set; }
     public int ColDim { get; private set; }
+    public int WidthLength { get; private set; }
+    public int HeightLength { get; private set; }
     public List<PathPoint> StationsOrder { get; }
     public List<PathPoint> Solutions { get; private set; }
     private readonly PathPoint[,] _mapMatrix;
 
-    private RgvMap(int rowDim, int colDim, List<PathPoint> stationsOrder, PathPoint[,] mapMatrix)
+    private RgvMap(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> stationsOrder, PathPoint[,] mapMatrix)
     {
         RowDim = rowDim;
         ColDim = colDim;
+        WidthLength = widthLength;
+        HeightLength = heightLength;
         StationsOrder = stationsOrder;
         Solutions = [];
         _mapMatrix = mapMatrix;
     }
 
-    public static Result<RgvMap> Create(int rowDim, int colDim, List<PathPoint> points, List<(int rowPos, int colPos)> stationsOrder)
+    public static Result<RgvMap> Create(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> points, List<(int rowPos, int colPos)> stationsOrder)
     {
         if (rowDim < MinRowDim || colDim < MinColDim)
         {
             return Result.Fail<RgvMap>(new InvalidRgvMapDimensionError());
         }
+
+        if (widthLength < MinWidthLength || heightLength < MinHeightLength)
+        {
+            return Result.Fail<RgvMap>(new InvalidRgvMapActualDimensionError());
+        }
+
         if (stationsOrder.Count < MinNumberStationsOrder)
         {
             return Result.Fail<RgvMap>(new InvalidNumberOfStationsOrderError());
@@ -80,7 +91,7 @@ public sealed class RgvMap : ValueObject
             solutionPointsOrder.Add(mapMatrix[rowPos, colPos]);
         }
 
-        return new RgvMap(rowDim, colDim, solutionPointsOrder, mapMatrix);
+        return new RgvMap(rowDim, colDim, widthLength, heightLength, solutionPointsOrder, mapMatrix);
     }
 
     public PathPoint? GetPointAt(int rowPos, int colPos)
@@ -91,6 +102,12 @@ public sealed class RgvMap : ValueObject
         }
 
         return _mapMatrix[rowPos, colPos];
+    }
+
+    public int GetSquareLength()
+    {
+        var perSquareArea = WidthLength * HeightLength / (RowDim * ColDim);
+        return (int)Math.Sqrt(perSquareArea);
     }
 
     public void SetMapSolution(List<PathPoint> solutions)

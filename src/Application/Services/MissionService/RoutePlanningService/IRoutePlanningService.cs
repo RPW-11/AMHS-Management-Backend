@@ -11,6 +11,8 @@ public interface IRoutePlanningService
         string algorithm,
         int rowDim,
         int colDim,
+        int widthLength,
+        int heightLength,
         IEnumerable<PathPointDto> points,
         IEnumerable<PointPositionDto> stationsOrder,
         IEnumerable<IEnumerable<PointPositionDto>> sampleSolutions

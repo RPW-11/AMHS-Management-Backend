@@ -54,6 +54,28 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Get all missions associated with the current logged-in user.
+        /// </summary>
+        [HttpGet("me")]
+        public async Task<ActionResult<PagedResult<MissionDto>>> GetMyMissions(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? searchTerm = null
+        )
+        {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                return Problem(statusCode: 404, title: "Employee not found");
+            }
+
+            var missionsResult = await _missionService.GetAllMissionsByEmployeeId(employeeId, page, pageSize, searchTerm);
+
+            return HandleResult(missionsResult);
+        }
+
+        /// <summary>
         /// Get the mission members
         /// </summary>
         [HttpGet("{id}/members")]
@@ -127,6 +149,7 @@ namespace API.Controllers
         [HttpDelete]
         public async Task<ActionResult> DeleteMissions(DeleteMissionsRequest deleteMissionsRequest)
         {
+            Console.WriteLine(deleteMissionsRequest.MissionIds);
             FluentResults.Result<object> deleteMissionsResult = await _missionService.DeleteMissions(deleteMissionsRequest.MissionIds);
             return HandleResult(deleteMissionsResult);
         }
@@ -243,6 +266,8 @@ namespace API.Controllers
                     routeMetadata.Algorithm,
                     routeMetadata.RowDim,
                     routeMetadata.ColDim,
+                    routeMetadata.WidthLength,
+                    routeMetadata.HeightLength,
                     points,
                     stations,
                     sampleSolutions

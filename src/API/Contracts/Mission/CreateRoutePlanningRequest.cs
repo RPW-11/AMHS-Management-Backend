@@ -8,6 +8,8 @@ public record CreateRoutePlanningRequest (
 public record RouteMetadata(
     int RowDim,
     int ColDim,
+    int WidthLength,
+    int HeightLength,
     string Algorithm,
     IEnumerable<Position> StationsOrder,
     IEnumerable<IEnumerable<Position>> SampleSolutions,

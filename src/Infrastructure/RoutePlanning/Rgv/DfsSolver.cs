@@ -12,7 +12,7 @@ internal class DfsSolver
             return [];
         }
         
-        List<PathPoint> bestRoute = RouteEvaluator.GetBestRoute(possibleRoutes, map.StationsOrder);
+        List<PathPoint> bestRoute = RouteEvaluator.GetBestRoute(possibleRoutes, map.StationsOrder, map);
 
         return bestRoute;
     }

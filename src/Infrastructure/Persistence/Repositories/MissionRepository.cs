@@ -1,4 +1,5 @@
 using Application.Common.Interfaces.Persistence;
+using Domain.Employee.ValueObjects;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
 using FluentResults;
@@ -95,17 +96,45 @@ public class MissionRepository : IMissionRepository
         }
     }
 
-    public async Task<Result<int>> GetMissionsCountAsync()
+    public async Task<Result<int>> GetMissionsCountAsync(EmployeeId? employeeId)
     {
         try
         {
-            var count = await _dbContext.Missions.CountAsync();
-            return count;
+            if (employeeId is null)
+            {
+                var count = await _dbContext.Missions.CountAsync();
+                return count;
+            }
+            else
+            {
+                var count = await _dbContext.Missions.Where(m => m.AssignedEmployees.Any(e => e.EmployeeId == employeeId)).CountAsync();
+                return count;
+            }
         }
         catch (Exception error)
         {
             Console.WriteLine(error);
             return Result.Fail(new Error("Fail to count the number of missions").CausedBy(error));
+        }
+    }
+
+    public async Task<Result<IEnumerable<MissionBase>>> GetAllMissionsByUserIdAsync(EmployeeId employeeId, int page, int pageSize)
+    {
+        try
+        {
+            var missionsResult = await _dbContext.Missions
+                                    .Where(m => m.AssignedEmployees.Any(e => e.EmployeeId == employeeId))
+                                    .OrderByDescending(m => m.UpdatedAt)
+                                    .Skip((page - 1) * pageSize)
+                                    .Take(pageSize)
+                                    .ToListAsync();
+
+            return missionsResult;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get all missions from the database").CausedBy(error));
         }
     }
 

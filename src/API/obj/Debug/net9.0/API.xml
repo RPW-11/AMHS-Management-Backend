@@ -51,6 +51,11 @@
             Get a mission by id
             </summary>
         </member>
+        <member name="M:API.Controllers.MissionController.GetMyMissions(System.Int32,System.Int32,System.String)">
+            <summary>
+            Get all missions associated with the current logged-in user.
+            </summary>
+        </member>
         <member name="M:API.Controllers.MissionController.GetMissionMembers(System.String)">
             <summary>
             Get the mission members

@@ -17,6 +17,12 @@ public interface IMissionService
         int pageSize,
         string? searchTerm = null
     );
+    Task<Result<PagedResult<MissionDto>>> GetAllMissionsByEmployeeId(
+        string employeeId,
+        int page, 
+        int pageSize, 
+        string? searchTerm
+    );
     Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId);
     Task<Result> DeleteMission(string missionId);
     Task<Result> DeleteMissions(IEnumerable<string> missionIds);

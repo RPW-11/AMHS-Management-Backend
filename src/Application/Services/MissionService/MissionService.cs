@@ -119,6 +119,52 @@ public class MissionService : BaseService, IMissionService
         };
     }
 
+    public async Task<Result<PagedResult<MissionDto>>> GetAllMissionsByEmployeeId(
+        string employeeId,
+        int page, 
+        int pageSize, 
+        string? searchTerm
+    )
+    {
+        var employeeIdResult = EmployeeId.FromString(employeeId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Validation("Invalid employee id"));
+        }
+
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 5, 100);
+
+        var missionsCountResult = await _missionRepository.GetMissionsCountAsync(employeeIdResult.Value);
+        if (missionsCountResult.IsFailed)
+        {
+            _logger.LogError("Failed to get missions count: {msg}", missionsCountResult.Errors[0].Message);
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
+        }
+
+        var missionsResult = await _missionRepository.GetAllMissionsByUserIdAsync(employeeIdResult.Value, page, pageSize);
+        if (missionsResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
+        }
+
+        List<MissionDto> missionsDto = [];
+        foreach (var mission in missionsResult.Value)
+        {
+            missionsDto.Add(MapToMissionDto(mission));
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+
+        return new PagedResult<MissionDto>
+        {
+            Items = missionsDto,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = missionsCountResult.Value
+        };
+    }
+
     public async Task<Result<MissionDetailDto>> GetMission(string id)
     {
         var missionIdResult = MissionId.FromString(id);

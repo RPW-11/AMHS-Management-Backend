@@ -26,6 +26,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                    string algorithm,
                                    int rowDim,
                                    int colDim,
+                                   int widthLength,
+                                   int heightLength,
                                    IEnumerable<PathPointDto> points,
                                    IEnumerable<PointPositionDto> stationsOrder,
                                    IEnumerable<IEnumerable<PointPositionDto>> sampleSolutions)
@@ -91,6 +93,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         var mapResult = RgvMap.Create(
             rowDim,
             colDim,
+            widthLength,
+            heightLength,
             pathPoints,
             stationOrderPoints
         );
