@@ -8,14 +8,14 @@ public record PointPositionDto(int RowPos, int ColPos);
 public record RoutePlanningDetailDto(
     string Id,
     string Algorithm,
-    string ImageUrl,
+    IEnumerable<string> ImageUrls,
     RgvMap RgvMap,
     RoutePlanningScoreDto? Score
 );
 
 public record RoutePlanningSummaryDto(
     string Algorithm,
-    string ImageUrl,
+    IEnumerable<string> ImageUrls,
     RgvMapSummaryDto RgvMap,
     RoutePlanningScoreDto Score
 );
@@ -28,5 +28,7 @@ public record RoutePlanningScoreDto(
 
 public record RgvMapSummaryDto(
     int RowDim,
-    int ColDim
+    int ColDim,
+    int WidthLength,
+    int HeightLength
 );

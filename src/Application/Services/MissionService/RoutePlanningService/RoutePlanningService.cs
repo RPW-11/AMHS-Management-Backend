@@ -115,17 +115,16 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         // Modify the current mission
         RoutePlanningMission routePlanningMission = RoutePlanningMission.FromBaseClass(missionResult.Value,
-                                                                                       "Not Configured Yet",
                                                                                        algorithmResult.Value,
                                                                                        rgvMap);
 
-        // Convert to RoutePlanningSummary
+        // Convert to RoutePlanningDetail
         var routePlanningDetail = ToRoutePlanningDto(routePlanningMission);
 
         // Write the map file to json.
         string resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
 
-        var routes = _rgvRoutePlanning.Solve(routePlanningDetail, algorithmResult.Value, convertedSampleSolutions);
+        var (routes, postProcessedRoutes) = _rgvRoutePlanning.Solve(routePlanningDetail, algorithmResult.Value, convertedSampleSolutions);
 
         if (!routes.Any())
         {
@@ -135,14 +134,27 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         // Get the route scores
         var scores = _rgvRoutePlanning.GetRouteScore([.. routes], rgvMap);
 
+        // Draw the original solution
+        byte[] imageBytes = imageStream.ToArray();
         rgvMap.SetMapSolution([.. routes]);
 
         string imgResultLink = _rgvRoutePlanning.DrawImage(
-            imageStream,
+            imageBytes,
             routePlanningDetail
         );
+
+        // Draw the post-processed solution
+        rgvMap.SetMapSolution([.. postProcessedRoutes]);
+
+        string postProcessedImgLink = _rgvRoutePlanning.DrawImage(
+            imageBytes,
+            routePlanningDetail,
+            "postprocessed"
+        );
+
         routePlanningMission.SetMissionResourceLink(resourceLink);
-        routePlanningMission.SetImageUrl(imgResultLink);
+        routePlanningMission.AddImageUrl(imgResultLink);
+        routePlanningMission.AddImageUrl(postProcessedImgLink);
         routePlanningDetail = ToRoutePlanningDto(routePlanningMission, scores);
 
         _rgvRoutePlanning.WriteToJson(routePlanningDetail);
@@ -167,7 +179,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         return new(
                     routePlanningMission.Id.ToString(),
                     routePlanningMission.Algorithm.ToString(),
-                    routePlanningMission.ImageUrl,
+                    routePlanningMission.ImageUrls,
                     routePlanningMission.RgvMap,
                     scoreDto
                 );

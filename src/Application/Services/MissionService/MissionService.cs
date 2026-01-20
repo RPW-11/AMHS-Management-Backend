@@ -213,11 +213,17 @@ public class MissionService : BaseService, IMissionService
             RoutePlanningSummaryDto routePlanningSummary = _rgvRoutePlanning.ReadFromJson(getMissionResult.Value.ResourceLink);
 
             // for now, read the image result and send it as base 64
-            byte[] imageBytes = File.ReadAllBytes(routePlanningSummary.ImageUrl);
-            string base64String = Convert.ToBase64String(imageBytes);
+            List<string> base64Strings = [];
+            foreach(var imgUrl in routePlanningSummary.ImageUrls)
+            {
+                byte[] imageBytes = File.ReadAllBytes(imgUrl);
+                string base64String = Convert.ToBase64String(imageBytes);
+                base64Strings.Add(base64String);
+            }
+            
 
             routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
-                                                               base64String,
+                                                               base64Strings,
                                                                routePlanningSummary.RgvMap,
                                                                routePlanningSummary.Score);
             return MapToMissionDetailDto(getMissionResult.Value, leaderResult.Value, routePlanningSummary);

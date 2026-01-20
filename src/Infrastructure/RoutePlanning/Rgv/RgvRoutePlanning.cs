@@ -14,11 +14,11 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
     private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.LocalDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
-    public string DrawImage(MemoryStream imageStream, RoutePlanningDetailDto routePlanningDetailDto)
+    public string DrawImage(byte[] imageBytes, RoutePlanningDetailDto routePlanningDetailDto, string suffix = "")
     {
         RgvMap rgvMap = routePlanningDetailDto.RgvMap;
-
-        using var original = SKBitmap.Decode(imageStream);
+        using var stream = new MemoryStream(imageBytes);
+        using var original = SKBitmap.Decode(stream);
         using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
         using var canvas = surface.Canvas;
 
@@ -94,7 +94,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
 
-        string outputPath = Path.Combine(_localRoutePlanningDirectory, $"{routePlanningDetailDto.Id}.png");
+        string outputPath = Path.Combine(_localRoutePlanningDirectory, $"{routePlanningDetailDto.Id}{suffix}.png");
         Directory.CreateDirectory(_localRoutePlanningDirectory);
 
         File.WriteAllBytes(outputPath, data.ToArray());
@@ -136,7 +136,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         canvas.DrawPath(arrowPath, fillPaint);
         canvas.DrawPath(arrowPath, strokePaint);
     }
-    public IEnumerable<PathPoint> Solve(RoutePlanningDetailDto routePlanningDetailDto,
+    public (IEnumerable<PathPoint>, IEnumerable<PathPoint>) Solve(RoutePlanningDetailDto routePlanningDetailDto,
                                         RoutePlanningAlgorithm routePlanningAlgorithm,
                                         List<List<PathPoint>> sampleSolutions)
     {
@@ -144,12 +144,18 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
 
         if (routePlanningAlgorithm == RoutePlanningAlgorithm.Dfs)
         {
-            return DfsSolver.FindBestRoute(rgvMap);
+            var result = DfsSolver.FindBestRoute(rgvMap);
+            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, rgvMap);
+
+            return (result, preprocessedResult);
         }
         if (routePlanningAlgorithm == RoutePlanningAlgorithm.GeneticAlgorithm)
         {
             var gaSolver = new GeneticAlgorithmSolver(rgvMap);
-            return gaSolver.Solve(sampleSolutions);
+            var result = gaSolver.Solve(sampleSolutions);
+            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, rgvMap);
+
+            return (result, preprocessedResult);
         }
 
         throw new Exception($"Algorithm '{routePlanningAlgorithm}' is not implemented");

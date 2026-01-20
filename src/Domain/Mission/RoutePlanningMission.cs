@@ -4,12 +4,12 @@ namespace Domain.Mission;
 
 public sealed class RoutePlanningMission : MissionBase
 {
-    public string ImageUrl { get; private set; }
+    public IEnumerable<string> ImageUrls { get; private set; }
     public RoutePlanningAlgorithm Algorithm { get; private set; }
     public RgvMap RgvMap { get; private set; }
 
     private RoutePlanningMission(MissionBase missionBase,
-                                 string imageUrl,
+                                 IEnumerable<string> imageUrls,
                                  RoutePlanningAlgorithm algorithm,
                                  RgvMap rgvMap)
     : base(missionBase.Id,
@@ -21,15 +21,15 @@ public sealed class RoutePlanningMission : MissionBase
           missionBase.FinishedAt)
     {
         Algorithm = algorithm;
-        ImageUrl = imageUrl;
+        ImageUrls = imageUrls;
         RgvMap = rgvMap;
     }
 
-    public static RoutePlanningMission FromBaseClass(MissionBase missionBase, string imageUrl, RoutePlanningAlgorithm algorithm, RgvMap rgvMap)
+    public static RoutePlanningMission FromBaseClass(MissionBase missionBase, RoutePlanningAlgorithm algorithm, RgvMap rgvMap)
     {
         return new(
             missionBase,
-            imageUrl,
+            [],
             algorithm,
             rgvMap
         );
@@ -40,9 +40,9 @@ public sealed class RoutePlanningMission : MissionBase
         RgvMap = newMap;
     }
 
-    public void SetImageUrl(string imageUrl)
+    public void AddImageUrl(string imageUrl)
     {
-        ImageUrl = imageUrl;
+        ImageUrls = ImageUrls.Append(imageUrl);
     }
 
     public void SetAlgorithm(RoutePlanningAlgorithm algorithm)
