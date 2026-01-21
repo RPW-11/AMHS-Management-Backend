@@ -114,11 +114,11 @@ public static class ModifiedAStar
 
         var configurations = new[]
         {
-            new { Weight = 1.00, Perturbation = 0.15 },   // close to optimal, classic
+            new { Weight = 1.00, Perturbation = 0.15 },
             new { Weight = 1.35, Perturbation = 0.20 },
-            new { Weight = 1.80, Perturbation = 0.25 },   // good diversity/speed balance
-            new { Weight = 2.50, Perturbation = 0.30 },   // greedy, very different corridors
-            new { Weight = 3.50, Perturbation = 0.40 },   // very aggressive
+            new { Weight = 1.80, Perturbation = 0.25 },
+            new { Weight = 2.50, Perturbation = 0.30 },
+            new { Weight = 3.50, Perturbation = 0.40 },
         };
 
         foreach (var config in configurations)
