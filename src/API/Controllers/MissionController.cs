@@ -239,7 +239,7 @@ namespace API.Controllers
                     Time: point.Time
                 ));
             }
-
+            
             foreach (var point in routeMetadata.StationsOrder)
             {
                 stations.Add(new(point.RowPos, point.ColPos));

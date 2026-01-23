@@ -5,13 +5,13 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public class GeneticAlgorithmSolver
 {
-    private const int PopulationSize = 200;
-    private const int MaxGenerations = 200;
+    private const int PopulationSize = 400;
+    private const int MaxGenerations = 500;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 0.5;
-    private const double TurnPenaltyRate = 1;
+    private const double TurnPenaltyRate = 0.1;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;
@@ -24,11 +24,18 @@ public class GeneticAlgorithmSolver
 
     public List<PathPoint> Solve(List<List<PathPoint>> sampleSolutions)
     {
-        var solutions = ModifiedAStar.GetValidSolutions(_rgvMap);
+        // Console.WriteLine("Running A star...");
+        var aStarSolutions = ModifiedAStar.GetValidSolutions(_rgvMap);
+        // Console.WriteLine($"Found: {aStarSolutions.Count} solutions");
+        // Console.WriteLine("Running RRT star...");
+        var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_rgvMap);
+        // Console.WriteLine($"Found: {rrtSolutions.Count} solutions");
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
                         .ToList();
-        population.AddRange(solutions);
+
+        population.AddRange(aStarSolutions);
+        population.AddRange(rrtSolutions);
         population.AddRange(sampleSolutions);
 
         for (int i = 0; i < MaxGenerations; i++)
@@ -111,7 +118,7 @@ public class GeneticAlgorithmSolver
         var endPoint = child[endIdx];
 
         // Re-compute alternative path between these points
-        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1);
+        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
         if (subPaths is null || subPaths.Count == 0)
         {
             return child;
@@ -209,7 +216,7 @@ public class GeneticAlgorithmSolver
             || !IsPathConnected(solution)
             || IsPathUsingObstacles(solution))
         {
-            return 0;
+            return int.MinValue;
         }
 
         int numOfDuplicates = CountDuplicates(solution);

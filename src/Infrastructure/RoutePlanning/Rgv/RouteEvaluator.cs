@@ -4,31 +4,60 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 internal static class RouteEvaluator
 {
-    private const double RgvSpeed = 0.4; //ms-1
+    private const double RgvSpeed = 1; //ms-1
     private const double ThroughputWeight = 0.8;
     private const double LengthWeight = 0.1;
     private const double NumOfRgvsWeight = 0.1;
+    private const double LoadingUnloadingTime = 15;
     private const int HourInSeconds = 3600;
 
     public static double EvaluateOptimality(List<PathPoint> solution, RgvMap map)
     {
         var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, map);
-
-        return ThroughputWeight * totalThroughput + LengthWeight * 1/trackLength + NumOfRgvsWeight * 1/maxRgvs;
+        var finalScore = ThroughputWeight * totalThroughput + LengthWeight * 1/trackLength + NumOfRgvsWeight * 1/maxRgvs;
+        
+        return finalScore;
     }
 
     public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
     {
-        var totalTimeStations = map.StationsOrder.Sum(s => s.Time);
-        double trackLength = solution.Count * map.GetSquareLength();
-        double cycleTime = (trackLength / RgvSpeed) + totalTimeStations;
+        // BASIC VERSION
+        // var totalTimeStations = map.StationsOrder.Sum(s => s.Time);
+        // double trackLength = solution.Count * map.GetSquareLength();
+        // double cycleTime = (trackLength / RgvSpeed) + LoadingUnloadingTime +  totalTimeStations;
 
-        double throughputPerRgv = HourInSeconds / cycleTime;
-        double rgvAvgSpeed = trackLength / cycleTime;
-        double intermediateSpaceLength = map.StationsOrder.Max(s => s.Time) * rgvAvgSpeed;
+        // double throughputPerRgv = HourInSeconds / cycleTime;
+        // double rgvAvgSpeed = trackLength / cycleTime;
+        // double intermediateSpaceLength = map.StationsOrder.Max(s => s.Time) * rgvAvgSpeed;
 
-        int maxRgvs = (int)Math.Floor(trackLength / intermediateSpaceLength);
-        double totalThroughput = maxRgvs * throughputPerRgv;
+        // int maxRgvs = (int)Math.Floor(trackLength / intermediateSpaceLength);
+        // double totalThroughput = maxRgvs * throughputPerRgv;
+
+        // return (totalThroughput, trackLength, maxRgvs);
+
+        // BOTTLENECK FOCUS
+        double trackLength = solution.Count * map.GetSquareLength();  
+        double travelTime = trackLength / RgvSpeed;
+
+        // Find the station with maximum occupation time
+        double maxStationTime = 0;
+        foreach (var station in map.StationsOrder)
+        {
+            double stationTime = station.Time + LoadingUnloadingTime;
+            if (stationTime > maxStationTime)
+                maxStationTime = stationTime;
+        }
+
+        double minHeadwayTime = maxStationTime;
+
+        double cycleTimeForPipeline = travelTime + LoadingUnloadingTime;
+
+        int maxRgvs = (int)Math.Floor(cycleTimeForPipeline / minHeadwayTime) + 1;
+
+        double bottleneckThroughputPerRgv = HourInSeconds / maxStationTime;
+        double totalThroughput = maxRgvs * bottleneckThroughputPerRgv;
+
+        totalThroughput *= 0.90;
 
         return (totalThroughput, trackLength, maxRgvs);
     }
