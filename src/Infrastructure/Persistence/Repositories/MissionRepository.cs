@@ -1,8 +1,11 @@
 using Application.Common.Interfaces.Persistence;
+using Application.DTOs.Common;
+using Application.DTOs.Mission;
 using Domain.Employee.ValueObjects;
 using Domain.Mission;
 using Domain.Mission.ValueObjects;
 using FluentResults;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
@@ -30,17 +33,39 @@ public class MissionRepository : IMissionRepository
         }
     }
 
-    public async Task<Result<IEnumerable<MissionBase>>> GetAllMissionsAsync(int page, int pageSize)
+    public async Task<Result<PagedResult<MissionBase>>> GetAllMissionsAsync(MissionFilterDto missionFilterDto)
     {
         try
         {
-            var missionsResult = await _dbContext.Missions
-                                    .OrderByDescending(m => m.UpdatedAt)
+            IQueryable<MissionBase> query = _dbContext.Missions;
+
+            if (missionFilterDto.EmployeeId is not null)
+                query = query.Where(m => m.AssignedEmployees.Any(ae => ae.EmployeeId == missionFilterDto.EmployeeId));
+
+            if (missionFilterDto.Status is not null)
+                query = query.Where(m => m.Status == missionFilterDto.Status);
+
+            if (!string.IsNullOrWhiteSpace(missionFilterDto.Name))
+                query = query.Where(m => EF.Functions.ILike(m.Name, $"%{missionFilterDto.Name.Trim()}%"));
+
+            int totalCount = await query.CountAsync();
+            
+            int page = missionFilterDto.Page;
+            int pageSize = missionFilterDto.PageSize;
+
+            var items = await query.OrderByDescending(m => m.UpdatedAt)
                                     .Skip((page - 1) * pageSize)
                                     .Take(pageSize)
                                     .ToListAsync();
 
-            return missionsResult;
+
+            return new PagedResult<MissionBase>
+            {
+                Items = items,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
         }
         catch (Exception error)
         {

@@ -113,47 +113,44 @@ public class MissionService : BaseService, IMissionService
     public async Task<Result<PagedResult<MissionDto>>> GetAllMission(
         int page,
         int pageSize,
-        string? searchTerm = null
+        string? status, 
+        string? name, 
+        string? employeeId
     )
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["Page"] = page,
             ["PageSize"] = pageSize,
-            ["HasSearchTerm"] = !string.IsNullOrWhiteSpace(searchTerm)
+            ["HasStatus"] = !string.IsNullOrWhiteSpace(status),
+            ["HasName"] = !string.IsNullOrWhiteSpace(name),
+            ["HasEmployee"] = !string.IsNullOrWhiteSpace(employeeId)
         });
+
+        var missionFilterResult = MissionFilterDto.Create(page, pageSize, employeeId, status, name);
+        if (missionFilterResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Validation(missionFilterResult.Errors[0].Message));
+        }
 
         _logger.LogInformation("Get all missions paged request started");
 
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 5, 100);
+        var missionFilterDto = missionFilterResult.Value;
 
-        _logger.LogDebug("Pagination adjusted → Page: {Page}, PageSize: {PageSize}", page, pageSize);        
-
-        var missionsCountResult = await _missionRepository.GetMissionsCountAsync();
-        if (missionsCountResult.IsFailed)
-        {
-            _logger.LogError("Failed to retrieve total missions count: {ErrorMessage}", missionsCountResult.Errors[0].Message);
-            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
-        }
-
-        int totalCount = missionsCountResult.Value;
-        _logger.LogDebug("Total missions in database: {TotalCount}", totalCount);
-
-        var getMissionsResult = await _missionRepository.GetAllMissionsAsync(page, pageSize);
+        var getMissionsResult = await _missionRepository.GetAllMissionsAsync(missionFilterDto);
         if (getMissionsResult.IsFailed)
         {
             _logger.LogError("Failed to retrieve paged missions (page {Page}, size {PageSize}): {ErrorMessage}",
-            page, pageSize, getMissionsResult.Errors[0].Message);
+            missionFilterDto.Page, missionFilterDto.PageSize, getMissionsResult.Errors[0].Message);
             return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
         }
 
-        var missions = getMissionsResult.Value;
+        var missions = getMissionsResult.Value.Items;
         _logger.LogDebug("Retrieved {FetchedCount} missions for page {Page}", 
-            missions.Count(), page);
+            missions.Count(), missionFilterDto.Page);
 
         List<MissionDto> missionsDto = [];
-        foreach (var mission in getMissionsResult.Value)
+        foreach (var mission in missions)
         {
             missionsDto.Add(MapToMissionDto(mission));
         }
@@ -161,85 +158,17 @@ public class MissionService : BaseService, IMissionService
         var pagedResult = new PagedResult<MissionDto>
         {
             Items = missionsDto,
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = totalCount
+            Page = getMissionsResult.Value.Page,
+            PageSize = getMissionsResult.Value.PageSize,
+            TotalCount = getMissionsResult.Value.TotalCount
         };
 
         _logger.LogInformation("Successfully returned {ItemCount} missions (page {Page} of {TotalPages})",
             pagedResult.Items.Count(),
             pagedResult.Page,
-            (int)Math.Ceiling((double)totalCount / pageSize));
+            (int)Math.Ceiling((double)getMissionsResult.Value.TotalCount / getMissionsResult.Value.PageSize));
 
         return Result.Ok(pagedResult);
-    }
-
-    public async Task<Result<PagedResult<MissionDto>>> GetAllMissionsByEmployeeId(
-        string employeeId,
-        int page, 
-        int pageSize, 
-        string? searchTerm
-    )
-    {
-        using var logScope = _logger.BeginScope(new Dictionary<string, object>
-        {
-            ["EmployeeId"] = employeeId,
-            ["Page"]       = page,
-            ["PageSize"]   = pageSize,
-            ["SearchTerm"] = searchTerm ?? "(none)"
-        });
-
-        _logger.LogInformation("Get missions for employee - started");
-
-        var employeeIdResult = EmployeeId.FromString(employeeId);
-        if (employeeIdResult.IsFailed)
-        {
-            _logger.LogWarning("Invalid employee ID format: {ErrorMessage}", employeeIdResult.Errors[0].Message);
-            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Validation("Invalid employee id"));
-        }
-
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 5, 100);
-
-        _logger.LogDebug("Pagination adjusted → Page: {Page}, PageSize: {PageSize}", page, pageSize);
-
-        var missionsCountResult = await _missionRepository.GetMissionsCountAsync(employeeIdResult.Value);
-        if (missionsCountResult.IsFailed)
-        {
-            _logger.LogError("Failed to retrieve missions count for employee: {ErrorMessage}", missionsCountResult.Errors[0].Message);
-            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
-        }
-
-        int totalCount = missionsCountResult.Value;
-        _logger.LogDebug("Total missions found for employee: {TotalCount}", totalCount);
-
-        var missionsResult = await _missionRepository.GetAllMissionsByUserIdAsync(employeeIdResult.Value, page, pageSize);
-        if (missionsResult.IsFailed)
-        {
-            _logger.LogError("Failed to retrieve paged missions for employee: {ErrorMessage}", missionsResult.Errors[0].Message);
-            return Result.Fail<PagedResult<MissionDto>>(ApplicationError.Internal);
-        }
-
-        List<MissionDto> missionsDto = [];
-        foreach (var mission in missionsResult.Value)
-        {
-            missionsDto.Add(MapToMissionDto(mission));
-        }
-
-        var pagedResult = new PagedResult<MissionDto>
-        {
-            Items     = missionsDto,
-            Page      = page,
-            PageSize  = pageSize,
-            TotalCount = totalCount
-        };
-
-        _logger.LogInformation("Successfully retrieved {ItemCount} missions (page {Page} of {TotalPages})",
-            missionsDto.Count,
-            page,
-            (int)Math.Ceiling((double)totalCount / pageSize));
-
-        return pagedResult;
     }
 
     public async Task<Result<MissionDetailDto>> GetMission(string id)

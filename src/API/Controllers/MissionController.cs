@@ -34,10 +34,13 @@ namespace API.Controllers
         public async Task<ActionResult<PagedResult<MissionDto>>> GetAllMissions(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
-            [FromQuery] string? searchTerm = null
+            [FromQuery] string? status = null,
+            [FromQuery] string? employeeId = null,
+            [FromQuery] string? name = null
+
         )
         {
-            var missionsResult = await _missionService.GetAllMission(page, pageSize, searchTerm);
+            var missionsResult = await _missionService.GetAllMission(page, pageSize, status, name, employeeId);
 
             return HandleResult(missionsResult);
         }
@@ -60,7 +63,8 @@ namespace API.Controllers
         public async Task<ActionResult<PagedResult<MissionDto>>> GetMyMissions(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
-            [FromQuery] string? searchTerm = null
+            [FromQuery] string? status = null,
+            [FromQuery] string? name = null
         )
         {
             var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -70,7 +74,7 @@ namespace API.Controllers
                 return Problem(statusCode: 404, title: "Employee not found");
             }
 
-            var missionsResult = await _missionService.GetAllMissionsByEmployeeId(employeeId, page, pageSize, searchTerm);
+            var missionsResult = await _missionService.GetAllMission(page, pageSize, status, name, employeeId);
 
             return HandleResult(missionsResult);
         }
