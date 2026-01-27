@@ -2,8 +2,8 @@ using System.Text.Json;
 using SkiaSharp;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission.RoutePlanning;
-using Domain.Mission.ValueObjects;
 using Microsoft.Extensions.Options;
+using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 

@@ -1,5 +1,5 @@
-using Domain.Mission;
-using Domain.Mission.ValueObjects;
+using Domain.Missions;
+using Domain.Missions.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

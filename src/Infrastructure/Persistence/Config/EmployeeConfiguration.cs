@@ -1,5 +1,5 @@
-using Domain.Employee;
-using Domain.Employee.ValueObjects;
+using Domain.Employees;
+using Domain.Employees.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

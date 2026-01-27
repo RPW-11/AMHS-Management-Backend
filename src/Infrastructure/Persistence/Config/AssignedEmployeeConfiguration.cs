@@ -1,8 +1,8 @@
-using Domain.Employee;
-using Domain.Employee.ValueObjects;
-using Domain.Mission;
-using Domain.Mission.Entities;
-using Domain.Mission.ValueObjects;
+using Domain.Employees;
+using Domain.Employees.ValueObjects;
+using Domain.Missions;
+using Domain.Missions.Entities;
+using Domain.Missions.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

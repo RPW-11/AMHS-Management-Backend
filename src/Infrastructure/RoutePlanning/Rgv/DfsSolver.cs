@@ -1,4 +1,4 @@
-using Domain.Mission.ValueObjects;
+using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 

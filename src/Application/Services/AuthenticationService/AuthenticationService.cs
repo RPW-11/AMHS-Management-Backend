@@ -5,7 +5,7 @@ using Application.DTOs.Authentication;
 using FluentResults;
 using Application.Common.Interfaces.Security;
 using Application.Common.Interfaces;
-using Domain.Employee;
+using Domain.Employees;
 
 namespace Application.Services.AuthenticationService;
 

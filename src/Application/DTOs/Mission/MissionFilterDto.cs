@@ -1,5 +1,5 @@
-using Domain.Employee.ValueObjects;
-using Domain.Mission.ValueObjects;
+using Domain.Employees.ValueObjects;
+using Domain.Missions.ValueObjects;
 using FluentResults;
 
 namespace Application.DTOs.Mission;

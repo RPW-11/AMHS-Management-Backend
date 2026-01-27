@@ -3,8 +3,8 @@ using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Mission.RoutePlanning;
-using Domain.Mission;
-using Domain.Mission.ValueObjects;
+using Domain.Missions;
+using Domain.Missions.ValueObjects;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 

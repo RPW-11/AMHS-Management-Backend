@@ -1,6 +1,6 @@
 using Application.Common.Interfaces.Persistence;
-using Domain.Employee;
-using Domain.Employee.ValueObjects;
+using Domain.Employees;
+using Domain.Employees.ValueObjects;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
 

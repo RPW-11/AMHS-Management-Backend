@@ -1,5 +1,5 @@
 using Application.DTOs.Mission.RoutePlanning;
-using Domain.Mission.ValueObjects;
+using Domain.Missions.ValueObjects;
 
 namespace Application.Common.Interfaces.RoutePlanning;
 

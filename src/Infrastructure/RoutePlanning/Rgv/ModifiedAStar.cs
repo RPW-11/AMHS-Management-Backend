@@ -1,6 +1,6 @@
-using Domain.Mission.ValueObjects;
-using static Domain.Mission.ValueObjects.PathPoint;
-using static Domain.Mission.ValueObjects.RgvMap;
+using static Domain.Missions.ValueObjects.PathPoint;
+using static Domain.Missions.ValueObjects.RgvMap;
+using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 

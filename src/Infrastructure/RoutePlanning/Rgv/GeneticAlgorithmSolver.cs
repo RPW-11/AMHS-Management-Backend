@@ -1,17 +1,17 @@
-using Domain.Mission.ValueObjects;
-using static Domain.Mission.ValueObjects.RgvMap;
+using Domain.Missions.ValueObjects;
+using static Domain.Missions.ValueObjects.RgvMap;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
 public class GeneticAlgorithmSolver
 {
     private const int PopulationSize = 400;
-    private const int MaxGenerations = 500;
+    private const int MaxGenerations = 200;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
-    private const double DuplicateRoutePenaltyRate = 0.5;
-    private const double TurnPenaltyRate = 0.1;
+    private const double DuplicateRoutePenaltyRate = 1;
+    private const double TurnPenaltyRate = 0.3;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;

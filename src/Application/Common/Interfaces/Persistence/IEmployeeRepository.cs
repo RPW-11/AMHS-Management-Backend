@@ -1,5 +1,5 @@
-using Domain.Employee;
-using Domain.Employee.ValueObjects;
+using Domain.Employees;
+using Domain.Employees.ValueObjects;
 using FluentResults;
 
 namespace Application.Common.Interfaces.Persistence;

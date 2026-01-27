@@ -4,8 +4,8 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.Security;
 using Application.DTOs.Common;
 using Application.DTOs.Employee;
-using Domain.Employee;
-using Domain.Employee.ValueObjects;
+using Domain.Employees;
+using Domain.Employees.ValueObjects;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 

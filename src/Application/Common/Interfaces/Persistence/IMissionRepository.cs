@@ -1,8 +1,7 @@
 using Application.DTOs.Common;
 using Application.DTOs.Mission;
-using Domain.Employee.ValueObjects;
-using Domain.Mission;
-using Domain.Mission.ValueObjects;
+using Domain.Missions;
+using Domain.Missions.ValueObjects;
 using FluentResults;
 
 namespace Application.Common.Interfaces.Persistence;

@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Application.Common.Interfaces.Authentication;
 using Application.Common.Interfaces.Services;
-using Domain.Employee;
+using Domain.Employees;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 

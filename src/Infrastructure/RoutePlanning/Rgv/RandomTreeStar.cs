@@ -1,5 +1,5 @@
-using Domain.Mission.ValueObjects;
-using static Domain.Mission.ValueObjects.PathPoint;
+using Domain.Missions.ValueObjects;
+using static Domain.Missions.ValueObjects.PathPoint;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 

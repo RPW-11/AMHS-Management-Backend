@@ -1,6 +1,6 @@
-using Domain.Employee;
-using Domain.Mission;
-using Domain.Mission.Entities;
+using Domain.Employees;
+using Domain.Missions;
+using Domain.Missions.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence;

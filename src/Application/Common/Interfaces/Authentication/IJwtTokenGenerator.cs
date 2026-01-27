@@ -1,4 +1,4 @@
-using Domain.Employee;
+using Domain.Employees;
 
 namespace Application.Common.Interfaces.Authentication;
 

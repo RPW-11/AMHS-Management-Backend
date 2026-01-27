@@ -1,4 +1,4 @@
-using Domain.Mission.ValueObjects;
+using Domain.Missions.ValueObjects;
 
 namespace Application.DTOs.Mission.RoutePlanning;
 
