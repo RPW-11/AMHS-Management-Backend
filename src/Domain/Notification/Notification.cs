@@ -37,7 +37,9 @@ public class Notification : AggregateRoot<NotificationId>
         CreatedAt = DateTime.UtcNow;
     }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
     protected Notification(NotificationId id) : base(id) { }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
     public static Result<Notification> Create(
         EmployeeId recipientId,

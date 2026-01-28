@@ -6,11 +6,11 @@ namespace Infrastructure.RoutePlanning.Rgv;
 public class GeneticAlgorithmSolver
 {
     private const int PopulationSize = 400;
-    private const int MaxGenerations = 200;
+    private const int MaxGenerations = 400;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
-    private const double DuplicateRoutePenaltyRate = 1;
+    private const double DuplicateRoutePenaltyRate = 10;
     private const double TurnPenaltyRate = 0.3;
 
     private readonly Random _random;
@@ -51,7 +51,7 @@ public class GeneticAlgorithmSolver
 
             var bestSolution = evaluated.First();
 
-            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness}");
+            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness} | Solution Length = {bestSolution.Path.Count}");
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]

@@ -1,4 +1,3 @@
-using Application.Common.Errors;
 using Application.DTOs.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using API.Contracts.Authentication;

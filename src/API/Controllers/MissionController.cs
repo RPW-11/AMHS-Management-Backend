@@ -216,7 +216,7 @@ namespace API.Controllers
         /// <summary>
         /// Update the created route planning task with the required data
         /// </summary>
-    
+
         [HttpPatch("{id}/route-planning")]
         public async Task<ActionResult> CreateRoutePlanningTask(
             string id,
@@ -230,34 +230,9 @@ namespace API.Controllers
                 return BadRequest();
             }
 
-            List<PathPointDto> points = [];
-            List<PointPositionDto> stations = [];
-            List<List<PointPositionDto>> sampleSolutions = [];
-
-            foreach (var point in routeMetadata.Points)
-            {
-                points.Add(new(
-                    Name: point.Name,
-                    Category: point.Category,
-                    Position: new(point.Position.RowPos, point.Position.ColPos),
-                    Time: point.Time
-                ));
-            }
-            
-            foreach (var point in routeMetadata.StationsOrder)
-            {
-                stations.Add(new(point.RowPos, point.ColPos));
-            }
-
-            foreach (var sol in routeMetadata.SampleSolutions)
-            {
-                List<PointPositionDto> temp = [];
-                foreach (var point in sol)
-                {
-                    temp.Add(new(point.RowPos, point.ColPos));
-                }
-                sampleSolutions.Add(temp);
-            }
+            var points = routeMetadata.Points;
+            var routeFlows = routeMetadata.RouteFlows;
+            var sampleSolutions = routeMetadata.SampleSolutions;
 
             using (var imageStream = new MemoryStream())
             {
@@ -273,7 +248,7 @@ namespace API.Controllers
                     routeMetadata.WidthLength,
                     routeMetadata.HeightLength,
                     points,
-                    stations,
+                    routeFlows,
                     sampleSolutions
                 );
 

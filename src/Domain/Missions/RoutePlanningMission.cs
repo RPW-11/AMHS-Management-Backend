@@ -6,12 +6,12 @@ public sealed class RoutePlanningMission : MissionBase
 {
     public IEnumerable<string> ImageUrls { get; private set; }
     public RoutePlanningAlgorithm Algorithm { get; private set; }
-    public RgvMap RgvMap { get; private set; }
+    public IEnumerable<RgvMap> RgvMaps { get; private set; }
 
     private RoutePlanningMission(MissionBase missionBase,
                                  IEnumerable<string> imageUrls,
                                  RoutePlanningAlgorithm algorithm,
-                                 RgvMap rgvMap)
+                                 IEnumerable<RgvMap> rgvMaps)
     : base(missionBase.Id,
           missionBase.Name,
           missionBase.Description,
@@ -22,22 +22,22 @@ public sealed class RoutePlanningMission : MissionBase
     {
         Algorithm = algorithm;
         ImageUrls = imageUrls;
-        RgvMap = rgvMap;
+        RgvMaps = rgvMaps;
     }
 
-    public static RoutePlanningMission FromBaseClass(MissionBase missionBase, RoutePlanningAlgorithm algorithm, RgvMap rgvMap)
+    public static RoutePlanningMission FromBaseClass(MissionBase missionBase, RoutePlanningAlgorithm algorithm, IEnumerable<RgvMap> rgvMaps)
     {
         return new(
             missionBase,
             [],
             algorithm,
-            rgvMap
+            rgvMaps
         );
     }
 
-    public void SetRgvMap(RgvMap newMap)
+    public void SetRgvMaps(IEnumerable<RgvMap> newMaps)
     {
-        RgvMap = newMap;
+        RgvMaps = newMaps;
     }
 
     public void AddImageUrl(string imageUrl)

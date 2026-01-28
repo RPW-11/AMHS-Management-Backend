@@ -1,3 +1,5 @@
+using Application.DTOs.Mission.RoutePlanning;
+
 namespace API.Contracts.Mission;
 
 public record CreateRoutePlanningRequest (
@@ -11,16 +13,6 @@ public record RouteMetadata(
     int WidthLength,
     int HeightLength,
     string Algorithm,
-    IEnumerable<Position> StationsOrder,
-    IEnumerable<IEnumerable<Position>> SampleSolutions,
-    IEnumerable<Point> Points);
-
-public record Point(
-    string Name,
-    string Category,
-    double Time,
-    Position Position);
-
-public record Position(
-    int RowPos,
-    int ColPos);
+    IEnumerable<RouteFlowDto> RouteFlows,
+    IEnumerable<IEnumerable<PointPositionDto>> SampleSolutions,
+    IEnumerable<PathPointDto> Points);

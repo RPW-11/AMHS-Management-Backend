@@ -36,7 +36,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                    int widthLength,
                                    int heightLength,
                                    IEnumerable<PathPointDto> points,
-                                   IEnumerable<PointPositionDto> stationsOrder,
+                                   IEnumerable<RouteFlowDto> routeFlows,
                                    IEnumerable<IEnumerable<PointPositionDto>> sampleSolutions)
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
@@ -77,6 +77,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogDebug("Mission validated | Category: {Category} | Name: {Name}",
             missionResult.Value.Category, missionResult.Value.Name ?? "(no name)");
 
+        // Point conversion
         List<PathPoint> pathPoints = [];
         foreach (var point in points)
         {
@@ -99,37 +100,50 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             pathPoints.Add(pathPointResult.Value);
         }
 
-        var stationOrderPoints = stationsOrder?
-            .Select(s => (s.RowPos, s.ColPos))
-            .ToList() ?? [];
+        // Route flows conversion
+        List<List<(int rowPos, int colPos)>> stationsOrders = [];
+        foreach(var routeFlow in routeFlows)
+        {
+            var routeFlowPoints = routeFlow.StationsOrder
+                .Select(p => (p.RowPos, p.ColPos))
+                .ToList();
+            stationsOrders.Add(routeFlowPoints);
+        }
 
+        // Sample solution conversion
         List<List<PathPoint>> convertedSampleSolutions = [];
         foreach (var sol in sampleSolutions)
         {
             var converted = sol.Select(p => PathPoint.Path(p.RowPos, p.ColPos)).ToList();
             convertedSampleSolutions.Add(converted);
-        } 
-
-        // map creation
-        var mapResult = RgvMap.Create(
-            rowDim,
-            colDim,
-            widthLength,
-            heightLength,
-            pathPoints,
-            stationOrderPoints
-        );
-
-        if (mapResult.IsFailed)
-        {
-            _logger.LogWarning("Failed to create RGV map: {ErrorMessage}",
-                mapResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(mapResult.Errors[0].Message));
         }
 
-        RgvMap rgvMap = mapResult.Value;
-        _logger.LogDebug("RGV map created | Grid: {RowDim}×{ColDim} | Points: {PointCount}",
-            rowDim, colDim, pathPoints.Count);
+        // Maps creation
+        List<RgvMap> rgvMaps = [];
+        foreach (var stationOrder in stationsOrders)
+        {
+            // map creation
+            var mapResult = RgvMap.Create(
+                rowDim,
+                colDim,
+                widthLength,
+                heightLength,
+                pathPoints,
+                stationOrder
+            );
+
+            if (mapResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to create RGV map: {ErrorMessage}",
+                    mapResult.Errors[0].Message);
+                return Result.Fail(ApplicationError.Validation(mapResult.Errors[0].Message));
+            }
+
+            rgvMaps.Add(mapResult.Value);
+        }
+
+        _logger.LogDebug("RGV maps created with count: {MapCount} | Grid size: {RowDim}x{ColDim}",
+                rgvMaps.Count, rowDim, colDim);   
 
         // Algorithm correctness check
         var algorithmResult = RoutePlanningAlgorithm.FromString(algorithm);
@@ -140,15 +154,52 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Validation(algorithmResult.Errors[0].Message));
         }
 
-        // Modify the current mission
-        RoutePlanningMission routePlanningMission = RoutePlanningMission.FromBaseClass(missionResult.Value,
-                                                                                       algorithmResult.Value,
-                                                                                       rgvMap);
+        RoutePlanningMission routePlanningMission = RoutePlanningMission
+                                                        .FromBaseClass(missionResult.Value,
+                                                                    algorithmResult.Value,
+                                                                    rgvMaps);
+        
+        // Solve every flow
+        List<List<PathPoint>> postProcessedRoutesList = [];
+        List<RouteSolutionDto> routeSolutions = [];
+        for (int i = 0; i < routeFlows.Count(); i++)
+        {
+            var rgvMap = rgvMaps[i];
 
-        // Convert to RoutePlanningDetail
-        var routePlanningDetail = ToRoutePlanningDto(routePlanningMission);
+            var (routes, postProcessedRoutes) = _rgvRoutePlanning.Solve(rgvMap, algorithmResult.Value, convertedSampleSolutions);
+            if (!routes.Any())
+            {
+                _logger.LogInformation("No route solution found after solving");
+                return Result.Fail(ApplicationError.NotFound("No solution is found"));
+            }
 
-        // Write the map file to json.
+            _logger.LogInformation("Flow {FlowNumber} -> Route found | Original points: {Count} | Post-processed: {PostCount}",
+                i + 1,routes.Count(), postProcessedRoutes.Count());
+
+            var scores = _rgvRoutePlanning.GetRouteScore([.. routes], rgvMap);
+            rgvMap.SetMapSolution([.. routes]);
+
+            routeSolutions.Add(new(rgvMap, scores));
+
+            postProcessedRoutesList.Add([.. postProcessedRoutes]);
+        }
+
+        string imgResultLink;
+        try
+        {
+            byte[] imageBytes = imageStream.ToArray();
+            imgResultLink = _rgvRoutePlanning.DrawMultipleFlows(imageBytes, [.. routeFlows.Select(f => f.ArrowColor)], routePlanningMission);
+            _logger.LogInformation("Original route image generated: {ImageLink}", imgResultLink);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate original route image");
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        routePlanningMission.AddImageUrl(imgResultLink);
+
+        var routePlanningDetail = ToRoutePlanningDto(routePlanningMission, routeSolutions);
         string resourceLink;
         try
         {
@@ -161,56 +212,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        var (routes, postProcessedRoutes) = _rgvRoutePlanning.Solve(routePlanningDetail, algorithmResult.Value, convertedSampleSolutions);
-        if (!routes.Any())
-        {
-            _logger.LogInformation("No route solution found after solving");
-            return Result.Fail(ApplicationError.NotFound("No solution is found"));
-        }
-
-        _logger.LogInformation("Route found | Original points: {Count} | Post-processed: {PostCount}",
-            routes.Count(), postProcessedRoutes.Count());
-
-        // Get the route scores
-        var scores = _rgvRoutePlanning.GetRouteScore([.. routes], rgvMap);
-
-        // Draw the original solution
-        byte[] imageBytes = imageStream.ToArray();
-
-        rgvMap.SetMapSolution([.. routes]);
-        string imgResultLink;
-        try
-        {
-            imgResultLink = _rgvRoutePlanning.DrawImage(imageBytes, routePlanningDetail);
-            _logger.LogInformation("Original route image generated: {ImageLink}", imgResultLink);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate original route image");
-            return Result.Fail(ApplicationError.Internal);
-        }
-
-        rgvMap.SetMapSolution([.. postProcessedRoutes]);
-        string postProcessedImgLink;
-        try
-        {
-            postProcessedImgLink = _rgvRoutePlanning.DrawImage(
-                imageBytes, routePlanningDetail, "_postprocessed");
-            _logger.LogInformation("Post-processed route image generated: {ImageLink}", postProcessedImgLink);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate post-processed route image");
-            return Result.Fail(ApplicationError.Internal);
-        }
-
-        routePlanningMission.SetMissionResourceLink(resourceLink);
-        routePlanningMission.AddImageUrl(imgResultLink);
-        routePlanningMission.AddImageUrl(postProcessedImgLink);
-        routePlanningDetail = ToRoutePlanningDto(routePlanningMission, scores);
-
-        _rgvRoutePlanning.WriteToJson(routePlanningDetail);
-
+    
         // Update the mission status to finished. Also, 
         missionResult.Value.SetMissionStatus(MissionStatus.Finished);
         missionResult.Value.SetMissionResourceLink(resourceLink);
@@ -235,14 +237,13 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
     }
 
-    private static RoutePlanningDetailDto ToRoutePlanningDto(RoutePlanningMission routePlanningMission, RoutePlanningScoreDto? scoreDto = null)
+    private static RoutePlanningDetailDto ToRoutePlanningDto(RoutePlanningMission routePlanningMission, List<RouteSolutionDto> routeSolutions)
     {
         return new(
                     routePlanningMission.Id.ToString(),
                     routePlanningMission.Algorithm.ToString(),
                     routePlanningMission.ImageUrls,
-                    routePlanningMission.RgvMap,
-                    scoreDto
+                    routeSolutions
                 );
     }
 }

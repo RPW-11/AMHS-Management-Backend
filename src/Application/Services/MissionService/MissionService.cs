@@ -261,8 +261,7 @@ public class MissionService : BaseService, IMissionService
 
             routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
                                                                base64Images,
-                                                               routePlanningSummary.RgvMap,
-                                                               routePlanningSummary.Score);
+                                                               routePlanningSummary.RouteSolutions);
                                         
             _logger.LogInformation("Successfully loaded route planning summary with {ImageCount} images",
                 base64Images.Count);
