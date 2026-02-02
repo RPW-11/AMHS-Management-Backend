@@ -1,9 +1,9 @@
 using Domain.Common.Models;
 using Domain.Employees.ValueObjects;
-using Domain.Notification.ValueObjects;
+using Domain.Notifications.ValueObjects;
 using FluentResults;
 
-namespace Domain.Notification;
+namespace Domain.Notifications;
 
 
 public class Notification : AggregateRoot<NotificationId>
@@ -13,7 +13,6 @@ public class Notification : AggregateRoot<NotificationId>
     public string ActorName { get; private set; }
     public string? ActorAvatarUrl { get; private set; }
     public NotificationTarget NotificationTarget { get; private set; }
-
     public NotificationType NotificationType { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? ReadAt { get; private set; }

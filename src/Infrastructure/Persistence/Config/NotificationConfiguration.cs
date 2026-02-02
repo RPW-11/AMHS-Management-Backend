@@ -1,7 +1,7 @@
 using Domain.Employees;
 using Domain.Employees.ValueObjects;
-using Domain.Notification;
-using Domain.Notification.ValueObjects;
+using Domain.Notifications;
+using Domain.Notifications.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -1,6 +1,6 @@
 using Domain.Common.Models;
 
-namespace Domain.Notification.ValueObjects;
+namespace Domain.Notifications.ValueObjects;
 
 public sealed class NotificationTarget : ValueObject
 {

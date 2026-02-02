@@ -2,7 +2,7 @@ using Domain.Common.Models;
 using Domain.Errors.Notifications;
 using FluentResults;
 
-namespace Domain.Notification.ValueObjects;
+namespace Domain.Notifications.ValueObjects;
 
 public sealed class NotificationId : ValueObject
 {

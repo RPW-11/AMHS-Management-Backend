@@ -47,6 +47,8 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IMissionRepository, MissionRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+
 
         return services;
     }

@@ -1,0 +1,82 @@
+using Application.Common.Interfaces.Persistence;
+using Application.DTOs.Common;
+using Domain.Employees.ValueObjects;
+using Domain.Notifications;
+using Domain.Notifications.ValueObjects;
+using FluentResults;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Persistence.Repositories;
+
+public class NotificationRepository : INotificationRepository
+{
+    private readonly AppDbContext _dbContext;
+    public NotificationRepository(AppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+    public async Task<Result> AddNotificationAsync(Notification notification)
+    {
+        try
+        {
+            await _dbContext.Notifications.AddAsync(notification);
+            return Result.Ok();
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to insert the employee to the database").CausedBy(error));
+        }
+    }
+
+    public async Task<Result> DeleteNotificationAsync(NotificationId notificationId)
+    {
+        try
+        {
+            await _dbContext.Notifications.Where(n => n.Id == notificationId).ExecuteDeleteAsync();
+            return Result.Ok();
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to delete the notification from the database").CausedBy(error));
+        }
+    }
+
+    public Task<Result<Notification?>> GetNotificationByIdAsync(NotificationId notificationId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<Result<PagedResult<Notification>>> GetNotificationsByEmployeeIdAsync(EmployeeId employeeId, int page, int pageSize)
+    {
+        try
+        {
+            var notifications = await _dbContext.Notifications
+                .Where(n => n.RecipientId == employeeId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var totalNotifications = await _dbContext.Notifications.CountAsync(n => n.RecipientId == employeeId);
+
+            return Result.Ok(new PagedResult<Notification>
+            {
+                Items = notifications,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalNotifications
+            });
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get the notification from the database").CausedBy(error));
+        }
+    }
+
+    public Task<Result> UpdateNotificationAsync(Notification notification)
+    {
+        throw new NotImplementedException();
+    }
+}

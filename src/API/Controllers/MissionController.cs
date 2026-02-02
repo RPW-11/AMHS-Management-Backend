@@ -152,7 +152,6 @@ namespace API.Controllers
         [HttpDelete]
         public async Task<ActionResult> DeleteMissions(DeleteMissionsRequest deleteMissionsRequest)
         {
-            Console.WriteLine(deleteMissionsRequest.MissionIds);
             FluentResults.Result<object> deleteMissionsResult = await _missionService.DeleteMissions(deleteMissionsRequest.MissionIds);
             return HandleResult(deleteMissionsResult);
         }
