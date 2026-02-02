@@ -1,7 +1,7 @@
 using System.Text.Json;
 using SkiaSharp;
 using Application.Common.Interfaces.RoutePlanning;
-using Application.DTOs.Mission.RoutePlanning;
+using Application.DTOs.RoutePlanning;
 using Microsoft.Extensions.Options;
 using Domain.Missions.ValueObjects;
 using Domain.Missions;
@@ -106,6 +106,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         byte[] imageBytes,
         List<string> colors,
         RoutePlanningMission routePlanningMission,
+        List<PathPoint> intersections,
         string suffix = "")
     {
         if (!routePlanningMission.RgvMaps.Any())
@@ -126,7 +127,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         float cellWidth  = (float)original.Width  / firstMap.ColDim;
         float cellHeight = (float)original.Height / firstMap.RowDim;
 
-        float penThickness = Math.Max(1, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
+        float penThickness = Math.Max(1.5f, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
         float arrowSize    = ArrowThicknessControl * penThickness;
 
         int arrowInterval = Math.Max(1, 10);
@@ -200,6 +201,8 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
             }
         }
 
+        DrawIntersections(canvas, intersections, firstMap, original.Width, original.Height);
+
         using var finalImage = surface.Snapshot();
         using var data = finalImage.Encode(SKEncodedImageFormat.Png, 92);
 
@@ -246,9 +249,47 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         canvas.DrawPath(arrowPath, fillPaint);
         canvas.DrawPath(arrowPath, strokePaint);
     }
+
+    private static void DrawIntersections(
+        SKCanvas canvas,
+        List<PathPoint> intersections,
+        RgvMap rgvMap,
+        float imageWidth,
+        float imageHeight,
+        float circleRadiusMultiplier = 0.38f)
+    {
+        if (intersections.Count == 0)
+            return;
+
+        float cellWidth  = imageWidth  / rgvMap.ColDim;
+        float cellHeight = imageHeight / rgvMap.RowDim;
+        float baseSize   = Math.Min(cellWidth, cellHeight);
+        float radius     = baseSize * circleRadiusMultiplier;
+
+        float strokeWidth = Math.Max(2f, baseSize * 0.08f);
+
+        using var strokePaint = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = SKColors.Black,        
+            StrokeWidth = strokeWidth,
+            IsAntialias = true
+        };
+
+        foreach (var point in intersections)
+        {
+            float x = point.ColPos * cellWidth  + cellWidth  / 2f;
+            float y = point.RowPos * cellHeight + cellHeight / 2f;
+
+            if (x < 0 || y < 0 || x >= imageWidth || y >= imageHeight)
+                continue;
+
+            canvas.DrawCircle(x, y, radius, strokePaint);
+        }
+    }
     public (IEnumerable<PathPoint>, IEnumerable<PathPoint>) Solve(RgvMap rgvMap,
-                                        RoutePlanningAlgorithm routePlanningAlgorithm,
-                                        List<List<PathPoint>> sampleSolutions)
+                                        List<List<PathPoint>> currentRoutePoints,
+                                        RoutePlanningAlgorithm routePlanningAlgorithm)
     {
 
         if (routePlanningAlgorithm == RoutePlanningAlgorithm.Dfs)
@@ -260,8 +301,8 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         }
         if (routePlanningAlgorithm == RoutePlanningAlgorithm.GeneticAlgorithm)
         {
-            var gaSolver = new GeneticAlgorithmSolver(rgvMap);
-            var result = gaSolver.Solve(sampleSolutions);
+            var gaSolver = new GeneticAlgorithmSolver(rgvMap, currentRoutePoints);
+            var result = gaSolver.Solve();
             var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, rgvMap);
 
             return (result, preprocessedResult);

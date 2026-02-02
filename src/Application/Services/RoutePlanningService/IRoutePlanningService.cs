@@ -1,7 +1,7 @@
-using Application.DTOs.Mission.RoutePlanning;
+using Application.DTOs.RoutePlanning;
 using FluentResults;
 
-namespace Application.Services.MissionService.RoutePlanningService;
+namespace Application.Services.RoutePlanningService;
 
 public interface IRoutePlanningService
 {
@@ -14,7 +14,6 @@ public interface IRoutePlanningService
         int widthLength,
         int heightLength,
         IEnumerable<PathPointDto> points,
-        IEnumerable<RouteFlowDto> routeFlows,
-        IEnumerable<IEnumerable<PointPositionDto>> sampleSolutions
+        IEnumerable<RouteFlowDto> routeFlows
     );
 }

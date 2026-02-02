@@ -21,7 +21,7 @@ public static class ModifiedAStar
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count; i++) // O(n)
+        for (int i = 0; i < rgvMap.StationsOrder.Count-1; i++) // O(n)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
@@ -31,7 +31,7 @@ public static class ModifiedAStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O(n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -63,7 +63,7 @@ public static class ModifiedAStar
         // Initial search
         List<List<PathPoint>> possiblePaths = SolveMultipleTimes(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O (n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O (n * m * k)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];

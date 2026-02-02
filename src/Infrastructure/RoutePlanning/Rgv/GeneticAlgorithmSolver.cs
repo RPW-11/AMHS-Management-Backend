@@ -10,33 +10,33 @@ public class GeneticAlgorithmSolver
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
-    private const double DuplicateRoutePenaltyRate = 10;
-    private const double TurnPenaltyRate = 0.3;
+    private const double DuplicateRoutePenaltyRate = 20;
+    private const double TurnPenaltyRate = 20;
+    private const double ConflictPenaltyRate = 100;
 
     private readonly Random _random;
     private readonly RgvMap _rgvMap;
+    private readonly List<List<PathPoint>> _currentRoutes;
+    private readonly int _goalCount = 0; // it is possible to have multiple goals in the map (goals visited multiple times)
 
-    public GeneticAlgorithmSolver(RgvMap rgvMap)
+    public GeneticAlgorithmSolver(RgvMap rgvMap, List<List<PathPoint>> currentRoutes)
     {
         _random = new Random();
         _rgvMap = rgvMap;
+        _currentRoutes = currentRoutes;
+        _goalCount = _rgvMap.StationsOrder.Count(point => point == _rgvMap.StationsOrder.Last());
     }
 
-    public List<PathPoint> Solve(List<List<PathPoint>> sampleSolutions)
+    public List<PathPoint> Solve()
     {
-        // Console.WriteLine("Running A star...");
         var aStarSolutions = ModifiedAStar.GetValidSolutions(_rgvMap);
-        // Console.WriteLine($"Found: {aStarSolutions.Count} solutions");
-        // Console.WriteLine("Running RRT star...");
         var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_rgvMap);
-        // Console.WriteLine($"Found: {rrtSolutions.Count} solutions");
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
                         .ToList();
 
         population.AddRange(aStarSolutions);
         population.AddRange(rrtSolutions);
-        population.AddRange(sampleSolutions);
 
         for (int i = 0; i < MaxGenerations; i++)
         {
@@ -221,17 +221,25 @@ public class GeneticAlgorithmSolver
 
         int numOfDuplicates = CountDuplicates(solution);
         int numOfTurns = CountPathTurns(solution);
+        int numOfConflicts = CountConflictingDirection(solution);
 
         // Compute the optimality value based on throughput, track length, and num of rgvs
-        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns;
+        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns - ConflictPenaltyRate * numOfConflicts;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
     {
         int startIdx = 0;
         bool valid = false;
+        int goalVisitedCount = 0;
+
         foreach (var point in solution)
         {
+            if (point == _rgvMap.StationsOrder.Last())
+            {
+                goalVisitedCount++;
+            }
+
             if (_rgvMap.StationsOrder[startIdx] == point)
             {
                 startIdx++;
@@ -243,7 +251,12 @@ public class GeneticAlgorithmSolver
             }
         }
 
-        if (valid && _rgvMap.StationsOrder[0] != solution.Last())
+        if (goalVisitedCount != _goalCount)
+        {
+            return false;
+        }
+
+        if (valid && _rgvMap.StationsOrder.Last() != solution.Last())
         {
             valid = false;
         }
@@ -307,5 +320,36 @@ public class GeneticAlgorithmSolver
         }
 
         return turns;
+    }
+
+    private int CountConflictingDirection(List<PathPoint> solution)
+    {
+        int conflicts = 0;
+        var reversedSolution = solution.AsEnumerable().Reverse().ToList();
+        
+        foreach (var route in _currentRoutes)
+        {
+            conflicts += LongestCommonSubsequence(reversedSolution, route);
+        }
+        return conflicts;
+    }
+
+    private static int LongestCommonSubsequence(List<PathPoint> solution1, List<PathPoint> solution2) {
+        int m = solution1.Count;
+        int n = solution2.Count;
+        
+        int[,] dp = new int[m + 1, n + 1];
+        
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (solution1[i - 1] == solution2[j - 1]) {
+                    dp[i, j] = 1 + dp[i - 1, j - 1];
+                } else {
+                    dp[i, j] = Math.Max(dp[i - 1, j], dp[i, j - 1]);
+                }
+            }
+        }
+        
+        return dp[m, n];
     }
 }

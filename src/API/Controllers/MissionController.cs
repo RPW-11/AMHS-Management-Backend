@@ -4,9 +4,8 @@ using System.Text.Json;
 using API.Contracts.Mission;
 using Application.DTOs.Common;
 using Application.DTOs.Mission;
-using Application.DTOs.Mission.RoutePlanning;
 using Application.Services.MissionService;
-using Application.Services.MissionService.RoutePlanningService;
+using Application.Services.RoutePlanningService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -232,7 +231,6 @@ namespace API.Controllers
 
             var points = routeMetadata.Points;
             var routeFlows = routeMetadata.RouteFlows;
-            var sampleSolutions = routeMetadata.SampleSolutions;
 
             using (var imageStream = new MemoryStream())
             {
@@ -248,8 +246,7 @@ namespace API.Controllers
                     routeMetadata.WidthLength,
                     routeMetadata.HeightLength,
                     points,
-                    routeFlows,
-                    sampleSolutions
+                    routeFlows
                 );
 
                 if (routeResult.IsFailed)

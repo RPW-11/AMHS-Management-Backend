@@ -16,7 +16,7 @@ public static class RandomTreeStar
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count; i++) // O(n)
+        for (int i = 0; i < rgvMap.StationsOrder.Count-1; i++) // O(n)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
@@ -26,7 +26,7 @@ public static class RandomTreeStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count; i++) // O(n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;

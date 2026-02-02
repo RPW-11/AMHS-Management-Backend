@@ -1,4 +1,4 @@
-using Application.DTOs.Mission.RoutePlanning;
+using Application.DTOs.RoutePlanning;
 
 namespace API.Contracts.Mission;
 

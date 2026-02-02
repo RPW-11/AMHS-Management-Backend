@@ -4,7 +4,7 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.Common;
 using Application.DTOs.Mission;
-using Application.DTOs.Mission.RoutePlanning;
+using Application.DTOs.RoutePlanning;
 using Domain.Employees;
 using Domain.Employees.ValueObjects;
 using Domain.Missions;
