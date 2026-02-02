@@ -21,20 +21,6 @@ internal static class RouteEvaluator
 
     public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
     {
-        // BASIC VERSION
-        // var totalTimeStations = map.StationsOrder.Sum(s => s.Time);
-        // double trackLength = solution.Count * map.GetSquareLength();
-        // double cycleTime = (trackLength / RgvSpeed) + LoadingUnloadingTime +  totalTimeStations;
-
-        // double throughputPerRgv = HourInSeconds / cycleTime;
-        // double rgvAvgSpeed = trackLength / cycleTime;
-        // double intermediateSpaceLength = map.StationsOrder.Max(s => s.Time) * rgvAvgSpeed;
-
-        // int maxRgvs = (int)Math.Floor(trackLength / intermediateSpaceLength);
-        // double totalThroughput = maxRgvs * throughputPerRgv;
-
-        // return (totalThroughput, trackLength, maxRgvs);
-
         // BOTTLENECK FOCUS
         double trackLength = solution.Count * map.GetSquareLength();  
         double travelTime = trackLength / RgvSpeed;

@@ -7,10 +7,10 @@ public static class RandomTreeStar
 {
     private const int MaxSolutions = 100;
     private const int NumVariationsPerSegment = 6;
-    private const int maxIterations = 1500;
-    private const double stepSize = 3.0;
-    private const double rewireRadius = 5.0;
-    private const double goalBias = 0.15;
+    private const int MaxIterations = 1500;
+    private const double StepSize = 3.0;
+    private const double RewireRadius = 5.0;
+    private const double GoalBias = 0.15;
 
     public static List<List<PathPoint>> GenerateRRTSolutions(RgvMap rgvMap)
     {
@@ -74,10 +74,10 @@ public static class RandomTreeStar
 
             bool found = false;
 
-            for (int iter = 0; iter < maxIterations; iter++)
+            for (int iter = 0; iter < MaxIterations; iter++)
             {
                 PathPoint sample;
-                if (variationRand.NextDouble() < goalBias)
+                if (variationRand.NextDouble() < GoalBias)
                     sample = goal;
                 else
                     sample = GetRandomFreePoint(rgvMap, variationRand);
@@ -96,7 +96,7 @@ public static class RandomTreeStar
                 }
 
                 // Steer: extend toward sample (up to stepSize)
-                PathPoint newNode = ExtendToward(nearest, sample, stepSize, rgvMap);
+                PathPoint newNode = ExtendToward(nearest, sample, StepSize, rgvMap);
 
                 if (newNode is null || occupiedPoints.Contains(newNode) && !newNode.Equals(goal))
                     continue;
@@ -108,7 +108,7 @@ public static class RandomTreeStar
                 double newCost = costMap[nearest] + Distance(nearest, newNode);
                 PathPoint bestParent = nearest;
 
-                var nearby = GetNodesInRadius(treeNodes, newNode, rewireRadius);
+                var nearby = GetNodesInRadius(treeNodes, newNode, RewireRadius);
                 foreach (var near in nearby)
                 {
                     if (near.Equals(nearest)) continue;
@@ -136,7 +136,7 @@ public static class RandomTreeStar
                 }
 
                 // Check if close to goal
-                if (Distance(newNode, goal) <= stepSize * 1.5)  // loose tolerance
+                if (Distance(newNode, goal) <= StepSize * 1.5)
                 {
                     // Reconnect to goal if better
                     if (IsLineFree(rgvMap, newNode, goal))
@@ -155,7 +155,7 @@ public static class RandomTreeStar
                         var path = ReconstructRRTPath(parentMap, goal);
                         allPaths.Add(path);
                         found = true;
-                        break;  // one path per variation; remove if want multiple per run
+                        break; 
                     }
                 }
             }
@@ -252,7 +252,7 @@ public static class RandomTreeStar
                 break;
             }
 
-            if (parent is not null && parent == current) // self-loop protection (should never happen)
+            if (parent is not null && parent == current)
             {
                 Console.WriteLine("→ Self-loop detected!");
                 break;

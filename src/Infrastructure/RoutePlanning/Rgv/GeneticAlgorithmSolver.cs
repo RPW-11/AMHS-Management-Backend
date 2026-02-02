@@ -44,14 +44,13 @@ public class GeneticAlgorithmSolver
             {
                 Individual = ind,
                 Fitness = EvaluateFitness(ind),
-                Path = ind
             })
             .OrderByDescending(x => x.Fitness)
             .ToList();
 
             var bestSolution = evaluated.First();
 
-            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness} | Solution Length = {bestSolution.Path.Count}");
+            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness} | Solution Length = {bestSolution.Individual.Count}");
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]
@@ -64,7 +63,6 @@ public class GeneticAlgorithmSolver
         {
             Individual = ind,
             Fitness = EvaluateFitness(ind),
-            Path = ind
         })
             .OrderByDescending(x => x.Fitness)
             .First();
@@ -96,43 +94,15 @@ public class GeneticAlgorithmSolver
                 child = _random.NextDouble() < 0.5 ? parent1 : parent2;
             }
 
-            child = Mutate(child);
+            if (_random.NextDouble() > MutationRate)
+            {
+                child = Mutate(child);
+            }
 
             newPopulation.Add(child);
         }
 
         return newPopulation;
-    }
-
-    private List<PathPoint> Mutate(List<PathPoint> child)
-    {
-        if (_random.NextDouble() > MutationRate)
-        {
-            return child;
-        }
-
-        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count-10));
-        int endIdx = (int) _random.NextInt64(Math.Min(child.Count-1, startIdx + 5), child.Count-1);
-
-        var startPoint = child[startIdx];
-        var endPoint = child[endIdx];
-
-        // Re-compute alternative path between these points
-        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
-        if (subPaths is null || subPaths.Count == 0)
-        {
-            return child;
-        }
-
-        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx+1)];
-    }
-
-    private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
-    {
-        return population.OrderBy(x => _random.Next())
-        .Take(5)
-        .OrderByDescending(EvaluateFitness)
-        .First();
     }
 
     private List<PathPoint> CrossOver(List<PathPoint> parent1, List<PathPoint> parent2)
@@ -157,6 +127,32 @@ public class GeneticAlgorithmSolver
         }
 
         return child;
+    }
+
+    private List<PathPoint> Mutate(List<PathPoint> child)
+    {
+        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count-10));
+        int endIdx = (int) _random.NextInt64(Math.Min(child.Count-1, startIdx + 5), child.Count-1);
+
+        var startPoint = child[startIdx];
+        var endPoint = child[endIdx];
+
+        // Re-compute alternative path between these points
+        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
+        if (subPaths is null || subPaths.Count == 0)
+        {
+            return child;
+        }
+
+        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx+1)];
+    }
+
+    private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
+    {
+        return population.OrderBy(x => _random.Next())
+        .Take(5)
+        .OrderByDescending(EvaluateFitness)
+        .First();
     }
 
     private List<PathPoint> GenerateIndividual()
@@ -223,7 +219,6 @@ public class GeneticAlgorithmSolver
         int numOfTurns = CountPathTurns(solution);
         int numOfConflicts = CountConflictingDirection(solution);
 
-        // Compute the optimality value based on throughput, track length, and num of rgvs
         return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns - ConflictPenaltyRate * numOfConflicts;
     }
 
