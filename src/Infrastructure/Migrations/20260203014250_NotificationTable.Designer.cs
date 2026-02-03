@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260127070959_NotificationTableUpdateFK")]
-    partial class NotificationTableUpdateFK
+    [Migration("20260203014250_NotificationTable")]
+    partial class NotificationTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -148,7 +148,7 @@ namespace Infrastructure.Migrations
                     b.ToTable("Missions");
                 });
 
-            modelBuilder.Entity("Domain.Notification.Notification", b =>
+            modelBuilder.Entity("Domain.Notifications.Notification", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -173,6 +173,10 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -181,7 +185,7 @@ namespace Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("RecipientId");
 
-                    b.ComplexProperty<Dictionary<string, object>>("NotificationTarget", "Domain.Notification.Notification.NotificationTarget#NotificationTarget", b1 =>
+                    b.ComplexProperty<Dictionary<string, object>>("NotificationTarget", "Domain.Notifications.Notification.NotificationTarget#NotificationTarget", b1 =>
                         {
                             b1.IsRequired();
 
@@ -205,7 +209,7 @@ namespace Infrastructure.Migrations
                     b.HasIndex("RecipientId", "ReadAt", "CreatedAt")
                         .HasDatabaseName("Notifications_Recipient_Unread_Recent");
 
-                    b.ToTable("Notification");
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("Domain.Missions.Entities.AssignedEmployee", b =>
@@ -223,7 +227,7 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Notification.Notification", b =>
+            modelBuilder.Entity("Domain.Notifications.Notification", b =>
                 {
                     b.HasOne("Domain.Employees.Employee", null)
                         .WithMany()

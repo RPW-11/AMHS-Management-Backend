@@ -70,6 +70,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         )
         .IsRequired();
 
+        builder.Property(e => e.Payload);
+
         builder.Property(e => e.ReadAt);
 
         // Critical indexes

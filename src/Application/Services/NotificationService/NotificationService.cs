@@ -149,8 +149,9 @@ public class NotificationService : BaseService, INotificationService
                     Id: notification.Id.ToString(),
                     ActorAvatarUrl: notification.ActorAvatarUrl,
                     ActorName: notification.ActorName,
-                    Title: notification.GetFormattedPayload(),
-                    Message: "Empty",
+                    Message: notification.Payload,
+                    TargetId: notification.NotificationTarget.Id.ToString(),
+                    TargetType: notification.NotificationTarget.Type,
                     IsRead: notification.ReadAt.HasValue,
                     CreatedAt: notification.CreatedAt
                 );

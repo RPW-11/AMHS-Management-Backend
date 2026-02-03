@@ -14,6 +14,7 @@ public class Notification : AggregateRoot<NotificationId>
     public string? ActorAvatarUrl { get; private set; }
     public NotificationTarget NotificationTarget { get; private set; }
     public NotificationType NotificationType { get; private set; }
+    public string Payload { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? ReadAt { get; private set; }
 
@@ -24,9 +25,11 @@ public class Notification : AggregateRoot<NotificationId>
         string actorName,
         string? actorAvatarUrl,
         NotificationTarget notificationTarget,
-        NotificationType notificationType
+        NotificationType notificationType,
+        string payload
         ) : base(id)
     {
+        Payload = payload;
         RecipientId = recipientId;
         ActorId = actorId;
         ActorName = actorName;
@@ -46,7 +49,8 @@ public class Notification : AggregateRoot<NotificationId>
         string actorName,
         string? actorAvatarUrl,
         NotificationTarget notificationTarget,
-        NotificationType notificationType
+        NotificationType notificationType,
+        string Payload
     )
     {
         return new Notification(
@@ -56,17 +60,13 @@ public class Notification : AggregateRoot<NotificationId>
             actorName,
             actorAvatarUrl,
             notificationTarget,
-            notificationType
+            notificationType,
+            Payload
         );
     }
 
     public void MarkAsRead ()
     {
         ReadAt = DateTime.UtcNow;
-    }
-
-    public string GetFormattedPayload ()
-    {
-        return $"{ActorName ?? "System"} has {NotificationTarget} to you";
     }
 }

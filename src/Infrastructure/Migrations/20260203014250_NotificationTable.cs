@@ -6,14 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Notificationtablenamechange : Migration
+    public partial class NotificationTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Notification");
-
             migrationBuilder.CreateTable(
                 name: "Notifications",
                 columns: table => new
@@ -24,6 +21,7 @@ namespace Infrastructure.Migrations
                     ActorName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     ActorAvatarUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     NotificationType = table.Column<string>(type: "text", nullable: false),
+                    Payload = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ReadAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     TargetId = table.Column<int>(type: "integer", nullable: false),
@@ -65,51 +63,6 @@ namespace Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Notifications");
-
-            migrationBuilder.CreateTable(
-                name: "Notification",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    ActorAvatarUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    ActorId = table.Column<string>(type: "text", nullable: true),
-                    ActorName = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    NotificationType = table.Column<string>(type: "text", nullable: false),
-                    ReadAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RecipientId = table.Column<string>(type: "text", nullable: false),
-                    TargetId = table.Column<int>(type: "integer", nullable: false),
-                    TargetType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Notification", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Notification_Actor_Employee",
-                        column: x => x.ActorId,
-                        principalTable: "Employees",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Notification_Recipient_Employee",
-                        column: x => x.RecipientId,
-                        principalTable: "Employees",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Notification_ActorId",
-                table: "Notification",
-                column: "ActorId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Notification_RecipientId",
-                table: "Notification",
-                column: "RecipientId");
-
-            migrationBuilder.CreateIndex(
-                name: "Notifications_Recipient_Unread_Recent",
-                table: "Notification",
-                columns: new[] { "RecipientId", "ReadAt", "CreatedAt" });
         }
     }
 }
