@@ -10,17 +10,22 @@ public class NotificationPublisher : INotificationPublisher
 {
     private readonly INotificationHub _hub;
     private readonly ILogger<NotificationPublisher> _logger;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     public NotificationPublisher(INotificationHub hub, ILogger<NotificationPublisher> logger)
     {
         _hub = hub;
         _logger = logger;
+        _jsonSerializerOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
     }
     public async Task PublishToUserAsync(EmployeeId employeeId, NotificationDto notification)
     {
         try
         {
-            var json = JsonSerializer.Serialize(notification);
+            var json = JsonSerializer.Serialize(notification, _jsonSerializerOptions);
             var sseMessage = $"data: {json}\n\n";
             await _hub.PublishToUserAsync(employeeId, sseMessage);
         }

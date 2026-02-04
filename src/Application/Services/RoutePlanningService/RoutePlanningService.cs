@@ -189,13 +189,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{missionId}_postprocessed_solution");;
         _logger.LogInformation("Post-processed route image saved at: {ImageUrl}", postProcessedImgUrl);
 
-        var routePlanningMission = RoutePlanningMission.FromBaseClass(missionResult.Value,
-                                                                    algorithmResult.Value,
-                                                                    rgvMaps);
-
-        routePlanningMission.AddImageUrl(originalImgUrl);
-        routePlanningMission.AddImageUrl(postProcessedImgUrl);
-
         List<RouteSolutionDto> routeSolutions = [];
         for (int i = 0; i < flowSolutions.Count; i++)
         {
@@ -206,7 +199,12 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             routeSolutions.Add(routeSolutionDto);
         }
 
-        var routePlanningDetail = ToRoutePlanningDto(routePlanningMission, routeSolutions);
+        var routePlanningDetail = ToRoutePlanningDto(
+            missionResult.Value.Id,
+            algorithmResult.Value,
+            [originalImgUrl, postProcessedImgUrl],
+            routeSolutions);
+
         string resourceLink;
         try
         {
@@ -219,8 +217,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        routePlanningMission.Finish();
-        routePlanningMission.SetMissionResourceLink(resourceLink);
+        missionResult.Value.Finish();
+        missionResult.Value.SetMissionResourceLink(resourceLink);
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
         if (updateResult.IsFailed)
@@ -239,8 +237,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        await _domainDispatcher.DispatchAsync(routePlanningMission.DomainEvents);
-        routePlanningMission.ClearDomainEvents();
+        await _domainDispatcher.DispatchAsync(missionResult.Value.DomainEvents);
+        missionResult.Value.ClearDomainEvents();
 
         _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
         return Result.Ok();
@@ -295,12 +293,16 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         return (isError: false, value: null);
     }
 
-    private static RoutePlanningDetailDto ToRoutePlanningDto(RoutePlanningMission routePlanningMission, List<RouteSolutionDto> routeSolutions)
+    private static RoutePlanningDetailDto ToRoutePlanningDto(
+        MissionId missionId,
+        RoutePlanningAlgorithm routePlanningAlgorithm,
+        List<string> imageUrls,
+        List<RouteSolutionDto> routeSolutions)
     {
         return new(
-                    routePlanningMission.Id.ToString(),
-                    routePlanningMission.Algorithm.ToString(),
-                    routePlanningMission.ImageUrls,
+                    missionId.ToString(),
+                    routePlanningAlgorithm.ToString(),
+                    imageUrls,
                     routeSolutions
                 );
     }
