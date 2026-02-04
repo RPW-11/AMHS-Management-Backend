@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using Application.Common.Errors;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
+using Application.Common.Interfaces.RealTime;
 using Application.DTOs.Common;
 using Application.DTOs.Notification;
 using Domain.Employees.ValueObjects;
@@ -14,16 +16,19 @@ namespace Application.Services.NotificationService;
 public class NotificationService : BaseService, INotificationService
 {
     private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationHub _notificationHub;
     private readonly ILogger<NotificationService> _logger;
 
     public NotificationService(
         IUnitOfWork unitOfWork,
         INotificationRepository notificationRepository,
+        INotificationHub notificationHub,
         ILogger<NotificationService> logger
     ) : base(unitOfWork)
     {
         _notificationRepository = notificationRepository;
         _logger = logger;
+        _notificationHub = notificationHub;
     }
 
     public async Task<Result<PagedResult<NotificationDto>>> GetNotificationsByEmployeeIdAsync(string employeeId, int page, int pageSize)
@@ -141,6 +146,49 @@ public class NotificationService : BaseService, INotificationService
             _logger.LogError(ex, "Database commit failed while deleting notification");
             return Result.Fail(ApplicationError.Internal);
         }
+    }
+
+    public Result CreateChannel(string requesterId)
+    {
+        var employeeIdResult = EmployeeId.FromString(requesterId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid requester id"));
+        }
+
+        _notificationHub.CreateChannel(employeeIdResult.Value);
+
+        return Result.Ok();
+    }
+
+    public async IAsyncEnumerable<Result<string>> ReadAllAsync(
+        string requesterId, 
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var employeeIdResult = EmployeeId.FromString(requesterId);
+        if (employeeIdResult.IsFailed)
+        {
+            yield return Result.Fail(ApplicationError.Validation("Invalid requester id"));
+        }
+
+        await foreach (var message in _notificationHub.ReadFromChannelAsync(employeeIdResult.Value, cancellationToken))
+        {
+            yield return message;
+        }
+
+        yield return "";
+    }
+
+    public Result DeleteChannel(string requesterId)
+    {
+        var employeeIdResult = EmployeeId.FromString(requesterId);
+        if (employeeIdResult.IsFailed)
+        {
+            return Result.Fail(ApplicationError.Validation("Invalid requester id"));
+        }
+        _notificationHub.TryRemoveChannel(employeeIdResult.Value);
+
+        return Result.Ok();
     }
 
     private static NotificationDto ToNotificationDto(Notification notification)

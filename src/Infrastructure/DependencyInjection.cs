@@ -2,12 +2,14 @@ using System.Text;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Authentication;
 using Application.Common.Interfaces.Persistence;
+using Application.Common.Interfaces.RealTime;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.Common.Interfaces.Security;
 using Application.Common.Interfaces.Services;
 using Infrastructure.Authentication;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
+using Infrastructure.RealTime;
 using Infrastructure.RoutePlanning;
 using Infrastructure.RoutePlanning.Rgv;
 using Infrastructure.Security;
@@ -44,11 +46,13 @@ public static class DependencyInjection
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IRgvRoutePlanning, RgvRoutePlanning>();
+        services.AddSingleton<INotificationHub, NotificationHub>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IMissionRepository, MissionRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
-
+        services.AddScoped<INotificationPublisher, NotificationPublisher>();
 
         return services;
     }

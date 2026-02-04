@@ -68,9 +68,9 @@ public class NotificationRepository : INotificationRepository
         {
             var notifications = await _dbContext.Notifications
                 .Where(n => n.RecipientId == employeeId)
+                .OrderByDescending(n => n.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
             var totalNotifications = await _dbContext.Notifications.CountAsync(n => n.RecipientId == employeeId);

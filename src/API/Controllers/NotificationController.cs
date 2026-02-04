@@ -11,9 +11,79 @@ namespace API.Controllers
     public class NotificationController : ApiBaseController
     {
         private readonly INotificationService _notificationService;
-        public NotificationController(INotificationService notificationService)
+        private readonly ILogger<NotificationController> _logger;
+        public NotificationController(INotificationService notificationService, ILogger<NotificationController> logger)
         {
             _notificationService = notificationService;
+            _logger = logger;
+        }
+
+        [HttpGet("stream")]
+        public async Task StreamNotifications()
+        {
+            var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (employeeId is null)
+            {
+                Response.StatusCode = 400;
+                await Response.WriteAsync("token is required");
+                return;
+            }
+
+            Response.Headers.Append("Content-Type", "text/event-stream");
+            Response.Headers.Append("Cache-Control", "no-cache");
+            Response.Headers.Append("Connection", "keep-alive");
+            Response.Headers.Append("X-Accel-Buffering", "no"); // important for nginx / reverse proxy
+
+            var createChannelResult = _notificationService.CreateChannel(employeeId);
+            if (createChannelResult.IsFailed)
+            {
+                await Response.WriteAsync("Invalid employee id");
+                return;
+            }
+
+            _logger.LogInformation("User {employeeId} has connected", employeeId);
+
+            try
+            {
+                // Heartbeat every 20 seconds to keep connection alive
+                using var cts = new CancellationTokenSource();
+                var heartbeatTask = Task.Run(async () =>
+                {
+                    while (!cts.Token.IsCancellationRequested)
+                    {
+                        await Response.WriteAsync(": heartbeat\n\n");
+                        await Response.Body.FlushAsync();
+                        await Task.Delay(20000, cts.Token);
+                    }
+                }, cts.Token);
+
+                await foreach(var readResult in _notificationService.ReadAllAsync(employeeId, HttpContext.RequestAborted))
+                {
+                    if (readResult.IsFailed)
+                    {
+                        await Response.WriteAsync("Invalid employee id");
+                        return; 
+                    }
+                    await Response.WriteAsync(readResult.Value);
+                    await Response.Body.FlushAsync();
+                }
+
+                cts.Cancel();
+            }
+            catch (OperationCanceledException)
+            {
+                // Client disconnected normally
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SSE connection error for user {employeeId}", employeeId);
+            }
+            finally
+            {
+                _notificationService.DeleteChannel(employeeId);
+                _logger.LogInformation("SSE connection closed for user {employeeId}", employeeId);
+            }
         }
 
         [HttpGet]
