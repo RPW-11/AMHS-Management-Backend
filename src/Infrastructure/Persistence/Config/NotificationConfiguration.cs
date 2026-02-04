@@ -59,6 +59,10 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
                 .IsRequired();
 
             target.Property(t => t.Id)
+                .HasConversion(
+                    id => id.ToString(),
+                    value => Guid.Parse(value)
+                )
                 .HasColumnName("TargetId")
                 .IsRequired();
         });

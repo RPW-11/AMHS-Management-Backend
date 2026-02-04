@@ -16,17 +16,20 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
     private readonly IMissionRepository _missionRepository;
     private readonly ILogger<RoutePlanningService> _logger;
+    private readonly IDomainDispatcher _domainDispatcher;
 
 
     public RoutePlanningService(IRgvRoutePlanning rgvRoutePlanning,
                                 IMissionRepository missionRepository,
                                 IUnitOfWork unitOfWork,
-                                ILogger<RoutePlanningService> logger)
+                                ILogger<RoutePlanningService> logger,
+                                IDomainDispatcher domainDispatcher)
                                 : base(unitOfWork)
     {
         _rgvRoutePlanning = rgvRoutePlanning;
         _missionRepository = missionRepository;
         _logger = logger;
+        _domainDispatcher = domainDispatcher;
     }
 
     public async Task<Result> FindRgvBestRoute(string missionId,
@@ -49,7 +52,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         _logger.LogInformation("Route planning request started | Input points: {PointCount}", points.Count());
 
-        // Validate whether the mission exists or not and its category
         var missionIdResult = MissionId.FromString(missionId);
         if (missionIdResult.IsFailed)
         {
@@ -217,8 +219,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        missionResult.Value.SetMissionStatus(MissionStatus.Finished);
-        missionResult.Value.SetMissionResourceLink(resourceLink);
+        routePlanningMission.Finish();
+        routePlanningMission.SetMissionResourceLink(resourceLink);
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
         if (updateResult.IsFailed)
@@ -230,14 +232,18 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         try
         {
             await _unitOfWork.SaveChangesAsync();
-            _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
-            return Result.Ok();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database commit failed after route planning");
             return Result.Fail(ApplicationError.Internal);
         }
+
+        await _domainDispatcher.DispatchAsync(routePlanningMission.DomainEvents);
+        routePlanningMission.ClearDomainEvents();
+
+        _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
+        return Result.Ok();
     }
 
     private (bool isError, Result? value) DrawSolution(MemoryStream imageStream, IEnumerable<RouteFlowDto> routeFlows, List<RgvMap> rgvMaps, List<PathPoint> intersections, out byte[] drawnImageBytes)

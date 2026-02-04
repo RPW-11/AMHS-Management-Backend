@@ -29,6 +29,20 @@ public class NotificationRepository : INotificationRepository
         }
     }
 
+    public async Task<Result> AddNotificationsAsync(IEnumerable<Notification> notifications)
+    {
+        try
+        {
+            await _dbContext.Notifications.AddRangeAsync(notifications);
+            return Result.Ok();
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to insert the notifications to the database").CausedBy(error));
+        }
+    }
+
     public async Task<Result> DeleteNotificationAsync(NotificationId notificationId)
     {
         try
@@ -56,6 +70,7 @@ public class NotificationRepository : INotificationRepository
                 .Where(n => n.RecipientId == employeeId)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
             var totalNotifications = await _dbContext.Notifications.CountAsync(n => n.RecipientId == employeeId);

@@ -9,7 +9,9 @@ public sealed class NotificationType : ValueObject
     private enum TypeValue
     {
         Add,
-        Remove
+        Remove,
+        MissionFinished,
+        Info
     }
     private readonly TypeValue _value;
 
@@ -20,7 +22,8 @@ public sealed class NotificationType : ValueObject
 
     public static NotificationType Add => new(TypeValue.Add);
     public static NotificationType Remove => new(TypeValue.Remove);
-
+    public static NotificationType Info => new(TypeValue.Info);
+    public static NotificationType MissionFinished => new(TypeValue.MissionFinished);
     public static Result<NotificationType> FromString(string notificationType)
     {
         if (string.IsNullOrEmpty(notificationType))
@@ -32,6 +35,8 @@ public sealed class NotificationType : ValueObject
         {
             "add" => Add,
             "remove" => Remove,
+            "info" => Info,
+            "missionfinished" => MissionFinished,
             _ => Result.Fail<NotificationType>(new InvalidNotificationType(notificationType))
         };
     }

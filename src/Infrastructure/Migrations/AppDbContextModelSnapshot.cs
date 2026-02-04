@@ -186,8 +186,9 @@ namespace Infrastructure.Migrations
                         {
                             b1.IsRequired();
 
-                            b1.Property<int>("Id")
-                                .HasColumnType("integer")
+                            b1.Property<string>("Id")
+                                .IsRequired()
+                                .HasColumnType("text")
                                 .HasColumnName("TargetId");
 
                             b1.Property<string>("Type")

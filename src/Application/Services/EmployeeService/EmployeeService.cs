@@ -6,6 +6,8 @@ using Application.DTOs.Common;
 using Application.DTOs.Employee;
 using Domain.Employees;
 using Domain.Employees.ValueObjects;
+using Domain.Notifications;
+using Domain.Notifications.ValueObjects;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 
@@ -14,16 +16,19 @@ namespace Application.Services.EmployeeService;
 public class EmployeeService : BaseService, IEmployeeService
 {
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<EmployeeService> _logger;
 
     public EmployeeService(IEmployeeRepository employeeRepository,
+                        INotificationRepository notificationRepository,
                         IPasswordHasher passwordHasher,
                         IUnitOfWork unitOfWork,
                         ILogger<EmployeeService> logger)
                         : base(unitOfWork)
     {
         _employeeRepository = employeeRepository;
+        _notificationRepository = notificationRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
     }
@@ -91,6 +96,24 @@ public class EmployeeService : BaseService, IEmployeeService
         if (addResult.IsFailed)
         {
             _logger.LogError("Failed to add new employee to repository: {ErrorMessage}", addResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        // Notify the new user
+        var notification = Notification.Create(
+            recipientId: newEmployee.Id,
+            actorId: null,
+            actorName: "System",
+            actorAvatarUrl: null,
+            notificationTarget: NotificationTarget.Create(Guid.NewGuid(), "Welcome"),
+            notificationType: NotificationType.FromString("info").Value, // optimistic
+            Payload: $"Welcome to the company, {newEmployee.FirstName}!"
+        );
+
+        var notificationAddResult = await _notificationRepository.AddNotificationAsync(notification.Value);
+        if (notificationAddResult.IsFailed)
+        {
+            _logger.LogError("Failed to add welcome notification for new employee: {ErrorMessage}", notificationAddResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
 

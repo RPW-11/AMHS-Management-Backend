@@ -9,6 +9,7 @@ namespace Application.Common.Interfaces.Persistence;
 public interface INotificationRepository
 {
     Task<Result> AddNotificationAsync(Notification notification);
+    Task<Result> AddNotificationsAsync(IEnumerable<Notification> notifications);
     Task<Result<PagedResult<Notification>>> GetNotificationsByEmployeeIdAsync(EmployeeId employeeId, int page, int pageSize);
     Task<Result<Notification?>> GetNotificationByIdAsync(NotificationId notificationId);
     Task<Result> UpdateNotificationAsync(Notification notification);

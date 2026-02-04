@@ -4,13 +4,17 @@ namespace Domain.Notifications.ValueObjects;
 
 public sealed class NotificationTarget : ValueObject
 {
-    public int Id { get; private set; }
+    public Guid Id { get; private set; }
     public string Type { get; private set; }
 
-    public NotificationTarget(int id, string type)
+    private NotificationTarget(Guid id, string type)
     {
         Id = id;
         Type = type;
+    }
+    public static NotificationTarget Create(Guid id, string type)
+    {
+        return new NotificationTarget(id, type);
     }
 
     public override string ToString() => Type;

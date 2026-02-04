@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260203014250_NotificationTable")]
+    [Migration("20260203015633_NotificationTable")]
     partial class NotificationTable
     {
         /// <inheritdoc />
@@ -189,8 +189,9 @@ namespace Infrastructure.Migrations
                         {
                             b1.IsRequired();
 
-                            b1.Property<int>("Id")
-                                .HasColumnType("integer")
+                            b1.Property<string>("Id")
+                                .IsRequired()
+                                .HasColumnType("text")
                                 .HasColumnName("TargetId");
 
                             b1.Property<string>("Type")

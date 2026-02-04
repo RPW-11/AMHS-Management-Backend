@@ -2,6 +2,7 @@ using Domain.Common.Models;
 using Domain.Employees.ValueObjects;
 using Domain.Errors.Missions;
 using Domain.Missions.Entities;
+using Domain.Missions.Events;
 using Domain.Missions.ValueObjects;
 using FluentResults;
 
@@ -165,5 +166,12 @@ public class MissionBase : AggregateRoot<MissionId>
         }
 
         return Result.Ok();
+    }
+
+    public void Finish()
+    {
+        SetMissionStatus(MissionStatus.Finished);
+        FinishedAt = DateTime.UtcNow;
+        AddDomainEvent(new MissionFinishedEvent(Id, Name, [.. AssignedEmployees.Select(ae => ae.EmployeeId)], FinishedAt));
     }
 }

@@ -23,6 +23,7 @@ public class MissionService : BaseService, IMissionService
 
     public MissionService(IMissionRepository missionRepository,
                           IEmployeeRepository employeeRepository,
+                          INotificationRepository notificationRepository,
                           IRgvRoutePlanning rgvRoutePlanning,
                           IUnitOfWork unitOfWork,
                           ILogger<MissionService> logger)
@@ -508,6 +509,19 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.Validation("Invalid added member id"));
         }
 
+        var requesterResult = await _employeeRepository.GetEmployeeByIdAsync(employeeIdResult.Value);
+        if (requesterResult.IsFailed)
+        {
+            _logger.LogError("Failed to load requester employee from repository: {ErrorMessage}", requesterResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (requesterResult.Value is null)
+        {
+            _logger.LogInformation("Requester employee not found");
+            return Result.Fail(ApplicationError.NotFound("The requester employee is not found"));
+        }
+
         var memberResult = await _employeeRepository.GetEmployeeByIdAsync(memberIdResult.Value);
         if (memberResult.IsFailed)
         {
@@ -542,7 +556,7 @@ public class MissionService : BaseService, IMissionService
             _logger.LogError("Failed to update mission in repository: {ErrorMessage}", updateResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);    
         }
-
+        
         try
         {
             await _unitOfWork.SaveChangesAsync();
