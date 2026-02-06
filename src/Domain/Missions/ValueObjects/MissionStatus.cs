@@ -11,6 +11,8 @@ public sealed class MissionStatus: ValueObject
         Active,
         Inactive,
         Finished,
+        Processing,
+        Failed,
     }
     private readonly StatusValue _value;
 
@@ -22,6 +24,8 @@ public sealed class MissionStatus: ValueObject
     public static MissionStatus Active => new(StatusValue.Active);
     public static MissionStatus Inactive => new(StatusValue.Inactive);
     public static MissionStatus Finished => new(StatusValue.Finished);
+    public static MissionStatus Processing => new(StatusValue.Processing);
+    public static MissionStatus Failed => new(StatusValue.Failed);
 
     public static Result<MissionStatus> FromString(string status)
     {
@@ -35,6 +39,8 @@ public sealed class MissionStatus: ValueObject
             "active" => Active,
             "inactive" => Inactive,
             "finished" => Finished,
+            "processing" => Processing,
+            "failed" => Failed,
             _ => Result.Fail<MissionStatus>(new InvalidMissionStatusError(status))
         };
     }

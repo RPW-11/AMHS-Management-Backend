@@ -1,3 +1,4 @@
+using Application.BackgroundJobService;
 using Application.Common.Errors;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Persistence;
@@ -5,8 +6,10 @@ using Application.Common.Interfaces.RoutePlanning;
 using Application.Common.Utilities;
 using Application.DTOs.RoutePlanning;
 using Domain.Missions;
+using Domain.Missions.Events;
 using Domain.Missions.ValueObjects;
 using FluentResults;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
@@ -14,12 +17,12 @@ namespace Application.Services.RoutePlanningService;
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
+    private readonly BackgroundServiceRunner _backgroundServiceRunner;
     private readonly IMissionRepository _missionRepository;
     private readonly ILogger<RoutePlanningService> _logger;
-    private readonly IDomainDispatcher _domainDispatcher;
-
 
     public RoutePlanningService(IRgvRoutePlanning rgvRoutePlanning,
+                                BackgroundServiceRunner backgroundServiceRunner,
                                 IMissionRepository missionRepository,
                                 IUnitOfWork unitOfWork,
                                 ILogger<RoutePlanningService> logger,
@@ -27,9 +30,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 : base(unitOfWork)
     {
         _rgvRoutePlanning = rgvRoutePlanning;
+        _backgroundServiceRunner = backgroundServiceRunner;
         _missionRepository = missionRepository;
         _logger = logger;
-        _domainDispatcher = domainDispatcher;
     }
 
     public async Task<Result> FindRgvBestRoute(string missionId,
@@ -83,19 +86,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return value;
         }
 
-        // Route flows conversion
-        List<List<(int rowPos, int colPos)>> stationsOrders = [];
-        foreach (var routeFlow in routeFlows)
-        {
-            var routeFlowPoints = routeFlow.StationsOrder
-                .Select(p => (p.RowPos, p.ColPos))
-                .ToList();
-            stationsOrders.Add(routeFlowPoints);
-        }
-
-        // Maps creation
+        // Maps Creation
         List<RgvMap> rgvMaps = [];
-        foreach (var stationOrder in stationsOrders)
+        foreach (var routeFlow in routeFlows)
         {
             var mapResult = RgvMap.Create(
                 rowDim,
@@ -103,7 +96,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 widthLength,
                 heightLength,
                 pathPoints,
-                stationOrder
+                [.. routeFlow.StationsOrder.Select(s => (s.RowPos, s.ColPos))],
+                routeFlow.ArrowColor
             );
 
             if (mapResult.IsFailed)
@@ -127,24 +121,68 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Validation(algorithmResult.Errors[0].Message));
         }
 
+        // Update status to Processing
+        missionResult.Value.ProcessRoutePlanning(new MissionRoutePlanningStartedEvent(
+            missionResult.Value.Id,
+            rgvMaps,
+            algorithmResult.Value,
+            imageStream
+        ));
+
+        var updateResult = _missionRepository.UpdateMission(missionResult.Value);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database commit failed after route planning");
+            return Result.Fail(ApplicationError.Internal);
+        }
+        
+        // Solve the mission in the background
+        await _backgroundServiceRunner.EnqueueAsync(async (sp, ct) =>
+        {
+            var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+            var missionRepository = sp.GetRequiredService<IMissionRepository>();
+            var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
+            await SolveRoute(domainDispatcher, unitOfWork, missionRepository, missionResult.Value, rgvMaps, algorithmResult.Value, imageStream);
+        });
+
+        _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
+
+        return Result.Ok();
+    }
+    
+    private async Task SolveRoute(
+        IDomainDispatcher domainDispatcher,
+        IUnitOfWork unitOfWork,
+        IMissionRepository missionRepository,
+        MissionBase mission, 
+        List<RgvMap> rgvMaps, 
+        RoutePlanningAlgorithm algorithm, 
+        MemoryStream imageStream)
+    {
         // Solve for each flow
         List<List<PathPoint>> flowSolutions = [];
         List<List<PathPoint>> postProcessedFlowSolutions = [];
         List<RoutePlanningScoreDto> flowScores = [];
-        for (int i = 0; i < routeFlows.Count(); i++)
+
+        for (int i = 0; i < rgvMaps.Count; i++)
         {
-            var rgvMap = rgvMaps[i];
+            var rgvMap = rgvMaps.ElementAt(i);
 
             var (routes, postProcessedRoutes) = _rgvRoutePlanning.Solve(
                 rgvMap,
                 flowSolutions,
-                algorithmResult.Value
+                algorithm
             );
 
             if (!routes.Any())
             {
                 _logger.LogInformation("No route solution found after solving");
-                return Result.Fail(ApplicationError.NotFound("No solution is found"));
+                mission.SetMissionStatus(MissionStatus.Failed);
             }
 
             _logger.LogInformation("Flow {FlowNumber} -> Route found | Original points: {Count} | Post-processed: {PostCount}",
@@ -157,113 +195,97 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             flowScores.Add(scores);
         }
         
-
         // Get intersections and draw original solution
+        List<RgvMap> rgvMapsWithOriginalSolutions = [];
         for (int i = 0; i < flowSolutions.Count; i++)
         {
-            rgvMaps[i].SetMapSolution(flowSolutions[i]);
+            var map = rgvMaps.ElementAt(i);
+            rgvMapsWithOriginalSolutions.Add(new RgvMap(
+                map.RowDim, map.ColDim, map.WidthLength, map.HeightLength,
+                map.StationsOrder, map.MapMatrix, flowSolutions[i], map.PathColor
+            ));
         }
         List<PathPoint> intersections = RouteIntersection.GetIntersectionPathPoints(flowSolutions);
 
-        (isError, value) = DrawSolution(imageStream, routeFlows, rgvMaps, intersections, out byte[] drawnImageBytes);
-        if (isError && value is not null)
+        if (DrawSolution(imageStream, rgvMapsWithOriginalSolutions, intersections, out byte[] drawnImageBytes))
         {
-            return value;
+            _logger.LogError("Error drawing the original solution");
+            mission.SetMissionStatus(MissionStatus.Failed);
         }
 
-        var originalImgUrl = _rgvRoutePlanning.WriteImage(drawnImageBytes, $"{missionId}_original_solution");;
+        var originalImgUrl = _rgvRoutePlanning.WriteImage(drawnImageBytes, $"{mission.Id}_original_solution");;
         _logger.LogInformation("Original route image saved at: {ImageUrl}", originalImgUrl);
 
 
         // Draw post-processed solution
-        for (int i = 0; i < flowSolutions.Count; i++)
+        List<RgvMap> rgvMapsWithPostProcessedSolutions = [];
+        for (int i = 0; i < postProcessedFlowSolutions.Count; i++)
         {
-            rgvMaps[i].SetMapSolution(postProcessedFlowSolutions[i]);
+            var map = rgvMaps.ElementAt(i);
+            rgvMapsWithPostProcessedSolutions.Add(new RgvMap(
+                map.RowDim, map.ColDim, map.WidthLength, map.HeightLength,
+                map.StationsOrder, map.MapMatrix, flowSolutions[i], map.PathColor
+            ));
         }
         List<PathPoint> postProcessedIntersections = RouteIntersection.GetIntersectionPathPoints(postProcessedFlowSolutions);
-        (isError, value) = DrawSolution(imageStream, routeFlows, rgvMaps, postProcessedIntersections, out byte[] postProcessedImageBytes);
-        if (isError && value is not null)
+        if (DrawSolution(imageStream, rgvMapsWithPostProcessedSolutions, postProcessedIntersections, out byte[] postProcessedImageBytes))
         {
-            return value;
+            _logger.LogError("Error drawing the post-processed solution");
         }
-        var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{missionId}_postprocessed_solution");;
+        var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{mission.Id}_postprocessed_solution");;
         _logger.LogInformation("Post-processed route image saved at: {ImageUrl}", postProcessedImgUrl);
 
         List<RouteSolutionDto> routeSolutions = [];
         for (int i = 0; i < flowSolutions.Count; i++)
         {
             var routeSolutionDto = new RouteSolutionDto(
-                rgvMaps[i],
+                rgvMapsWithOriginalSolutions[i],
                 flowScores[i]
             );
             routeSolutions.Add(routeSolutionDto);
         }
 
         var routePlanningDetail = ToRoutePlanningDto(
-            missionResult.Value.Id,
-            algorithmResult.Value,
+            mission.Id,
+            algorithm,
             [originalImgUrl, postProcessedImgUrl],
             routeSolutions);
 
         string resourceLink;
+
         try
         {
             resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
             _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
+            
+            mission.Finish();
+            mission.SetMissionResourceLink(resourceLink);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to write route planning JSON");
-            return Result.Fail(ApplicationError.Internal);
+            mission.SetMissionStatus(MissionStatus.Failed);
         }
 
-        missionResult.Value.Finish();
-        missionResult.Value.SetMissionResourceLink(resourceLink);
-
-        var updateResult = _missionRepository.UpdateMission(missionResult.Value);
+        var updateResult = missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)
         {
             _logger.LogError("Failed to update mission entity: {ErrorMessage}", updateResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Internal);
         }
 
         try
         {
-            await _unitOfWork.SaveChangesAsync();
+            await unitOfWork.SaveChangesAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Database commit failed after route planning");
-            return Result.Fail(ApplicationError.Internal);
         }
 
-        await _domainDispatcher.DispatchAsync(missionResult.Value.DomainEvents);
-        missionResult.Value.ClearDomainEvents();
+        await domainDispatcher.DispatchAsync(mission.DomainEvents);
+        mission.ClearDomainEvents();
 
         _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
-        return Result.Ok();
-    }
-
-    private (bool isError, Result? value) DrawSolution(MemoryStream imageStream, IEnumerable<RouteFlowDto> routeFlows, List<RgvMap> rgvMaps, List<PathPoint> intersections, out byte[] drawnImageBytes)
-    {
-        drawnImageBytes = [];
-        try
-        {
-            byte[] imageBytes = imageStream.ToArray();
-            drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(
-                imageBytes,
-                [.. routeFlows.Select(f => f.ArrowColor)],
-                rgvMaps,
-                intersections);
-            _logger.LogInformation("Original route image generated");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate original route image");
-            return (isError: true, value: Result.Fail(ApplicationError.Internal));
-        }
-
-        return (isError: false, value: null);
     }
 
     private (bool isError, Result? value) ToPathPoints(IEnumerable<PathPointDto> points, out List<PathPoint> pathPoints)
@@ -291,6 +313,30 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         return (isError: false, value: null);
+    }
+
+    private bool DrawSolution(
+        MemoryStream imageStream, 
+        List<RgvMap> rgvMaps, 
+        List<PathPoint> intersections, out byte[] drawnImageBytes)
+    {
+        drawnImageBytes = [];
+        try
+        {
+            byte[] imageBytes = imageStream.ToArray();
+            drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(
+                imageBytes,
+                rgvMaps,
+                intersections);
+            _logger.LogInformation("Original route image generated");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate original route image");
+            return true;
+        }
+
+        return false;
     }
 
     private static RoutePlanningDetailDto ToRoutePlanningDto(

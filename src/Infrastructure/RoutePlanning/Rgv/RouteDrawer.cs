@@ -9,7 +9,6 @@ public static class RouteDrawer
 
     public static byte[] DrawMultipleRoutes (
         byte[] imageBytes,
-        List<string> hexColors,
         List<RgvMap> mapsWithSolutions,
         List<PathPoint> intersections
     )
@@ -33,7 +32,7 @@ public static class RouteDrawer
         for (int i = 0; i < mapsWithSolutions.Count; i++)
         {
             var rgvMap = mapsWithSolutions.ElementAt(i);
-            string hexColor = hexColors[i];
+            string hexColor = rgvMap.PathColor;
 
             if (!SKColor.TryParse(hexColor, out SKColor routeColor))
             {
@@ -41,7 +40,7 @@ public static class RouteDrawer
             }
 
             var points = new List<SKPoint>();
-            foreach (var p in rgvMap.Solutions)
+            foreach (var p in rgvMap.Solution)
             {
                 float x = p.ColPos * cellWidth + cellWidth / 2f;
                 float y = p.RowPos * cellHeight + cellHeight / 2f;

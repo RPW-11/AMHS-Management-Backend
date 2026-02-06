@@ -13,19 +13,14 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
 
     public byte[] DrawMultipleFlows(
         byte[] imageBytes,
-        List<string> colors,
         List<RgvMap> mapsWithSolutions,
         List<PathPoint> intersections)
     {
         if (mapsWithSolutions.Count == 0)
             throw new ArgumentException("No route details provided");
 
-        if (colors == null || colors.Count != mapsWithSolutions.Count)
-            throw new ArgumentException("Number of colors must match number of route details");
-
         return RouteDrawer.DrawMultipleRoutes(
             imageBytes,
-            colors,
             mapsWithSolutions,
             intersections
         );

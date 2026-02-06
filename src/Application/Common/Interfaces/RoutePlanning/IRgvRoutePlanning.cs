@@ -13,7 +13,6 @@ public interface IRgvRoutePlanning
 
     byte[] DrawMultipleFlows(
         byte[] imageBytes,
-        List<string> colors,
         List<RgvMap> mapsWithSolutions,
         List<PathPoint> intersections);
     string WriteImage(byte[] imageBytes, string fileName);

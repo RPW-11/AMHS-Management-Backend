@@ -28,37 +28,127 @@ public sealed class RgvMap : ValueObject
     public int WidthLength { get; private set; }
     public int HeightLength { get; private set; }
     public List<PathPoint> StationsOrder { get; }
-    public List<PathPoint> Solutions { get; private set; }
-    private readonly PathPoint[,] _mapMatrix;
+    public List<PathPoint> Solution { get; private set; }
+    public string PathColor { get; private set; }
+    public readonly PathPoint[,] MapMatrix;
 
-    private RgvMap(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> stationsOrder, PathPoint[,] mapMatrix)
+    public RgvMap(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> stationsOrder, PathPoint[,] mapMatrix, List<PathPoint> solution, string pathColor)
     {
         RowDim = rowDim;
         ColDim = colDim;
         WidthLength = widthLength;
         HeightLength = heightLength;
         StationsOrder = stationsOrder;
-        Solutions = [];
-        _mapMatrix = mapMatrix;
+        Solution = solution;
+        PathColor = pathColor;
+        MapMatrix = mapMatrix;
     }
 
-    public static Result<RgvMap> Create(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> points, List<(int rowPos, int colPos)> stationsOrder)
+    public static Result<RgvMap> Create(
+        int rowDim,
+        int colDim, 
+        int widthLength, 
+        int heightLength, 
+        List<PathPoint> points, 
+        List<(int rowPos, int colPos)> stationsOrder,
+        string pathColor
+        )
     {
-        if (rowDim < MinRowDim || colDim < MinColDim)
+        (bool isCorrect, Result<RgvMap>? value) = CheckDimensionCorrectness(rowDim, colDim);
+        if (!isCorrect && value is not null)
         {
-            return Result.Fail<RgvMap>(new InvalidRgvMapDimensionError());
+            return value;
         }
 
-        if (widthLength < MinWidthLength || heightLength < MinHeightLength)
+        (isCorrect, value) = CheckActualDimensionCorrectness(widthLength, heightLength, stationsOrder);
+        if (!isCorrect && value is not null)
         {
-            return Result.Fail<RgvMap>(new InvalidRgvMapActualDimensionError());
+            return value;
         }
 
-        if (stationsOrder.Count < MinNumberStationsOrder)
+        PathPoint[,] mapMatrix = CreateMapMatrix(rowDim, colDim);
+
+        (isCorrect, value) = InsertPointsToMatrix(rowDim, colDim, points, mapMatrix);
+        if (!isCorrect && value is not null)
         {
-            return Result.Fail<RgvMap>(new InvalidNumberOfStationsOrderError());
+            return value;
         }
 
+        List<PathPoint> stationOrderPoints = ToPathPointList(stationsOrder, mapMatrix);
+
+        return new RgvMap(rowDim, colDim, widthLength, heightLength, stationOrderPoints, mapMatrix, [], pathColor);
+    }
+
+    public static Result<RgvMap> Create(
+        int rowDim,
+        int colDim, 
+        int widthLength, 
+        int heightLength, 
+        List<PathPoint> points, 
+        List<(int rowPos, int colPos)> stationsOrder,
+        string pathColor,
+        List<(int rowPos, int colPos)> solution
+        )
+    {
+        (bool isCorrect, Result<RgvMap>? value) = CheckDimensionCorrectness(rowDim, colDim);
+        if (!isCorrect && value is not null)
+        {
+            return value;
+        }
+
+        (isCorrect, value) = CheckActualDimensionCorrectness(widthLength, heightLength, stationsOrder);
+        if (!isCorrect && value is not null)
+        {
+            return value;
+        }
+
+        PathPoint[,] mapMatrix = CreateMapMatrix(rowDim, colDim);
+
+        (isCorrect, value) = InsertPointsToMatrix(rowDim, colDim, points, mapMatrix);
+        if (!isCorrect && value is not null)
+        {
+            return value;
+        }
+
+        List<PathPoint> stationOrderPoints = ToPathPointList(stationsOrder, mapMatrix);
+        List<PathPoint> solutionPoints = ToPathPointList(solution, mapMatrix);
+
+        return new RgvMap(rowDim, colDim, widthLength, heightLength, stationOrderPoints, mapMatrix, solutionPoints, pathColor);
+    }
+
+    private static List<PathPoint> ToPathPointList(List<(int rowPos, int colPos)> pointLocations, PathPoint[,] mapMatrix)
+    {
+        List<PathPoint> pathPointList = [];
+
+        foreach (var (rowPos, colPos) in pointLocations)
+        {
+            pathPointList.Add(mapMatrix[rowPos, colPos]);
+        }
+
+        return pathPointList;
+    }
+
+    private static (bool isCorrect, Result<RgvMap>? value) InsertPointsToMatrix(int rowDim, int colDim, List<PathPoint> points, PathPoint[,] mapMatrix)
+    {
+        foreach (PathPoint p in points)
+        {
+            if (p.RowPos < 0 || p.RowPos >= rowDim)
+            {
+                return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRowPosValueError(p.RowPos, rowDim)));
+            }
+            if (p.ColPos < 0 || p.ColPos >= colDim)
+            {
+                return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidColPosValueError(p.ColPos, colDim)));
+            }
+
+            mapMatrix[p.RowPos, p.ColPos] = p;
+        }
+
+        return (isCorrect: true, value: null);
+    }
+
+    private static PathPoint[,] CreateMapMatrix(int rowDim, int colDim)
+    {
         var mapMatrix = new PathPoint[rowDim, colDim];
 
         for (int rowPos = 0; rowPos < rowDim; rowPos++)
@@ -70,28 +160,32 @@ public sealed class RgvMap : ValueObject
 
         }
 
-        foreach (PathPoint p in points)
-        {
-            if (p.RowPos < 0 || p.RowPos >= rowDim)
-            {
-                return Result.Fail<RgvMap>(new InvalidRowPosValueError(p.RowPos, rowDim));
-            }
-            if (p.ColPos < 0 || p.ColPos >= colDim)
-            {
-                return Result.Fail<RgvMap>(new InvalidColPosValueError(p.ColPos, colDim));
-            }
+        return mapMatrix;
+    }
 
-            mapMatrix[p.RowPos, p.ColPos] = p;
+    private static (bool isCorrect, Result<RgvMap>? value) CheckActualDimensionCorrectness(int widthLength, int heightLength, List<(int rowPos, int colPos)> stationsOrder)
+    {
+        if (widthLength < MinWidthLength || heightLength < MinHeightLength)
+        {
+            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRgvMapActualDimensionError()));
         }
 
-        List<PathPoint> solutionPointsOrder = [];
-
-        foreach (var (rowPos, colPos) in stationsOrder)
+        if (stationsOrder.Count < MinNumberStationsOrder)
         {
-            solutionPointsOrder.Add(mapMatrix[rowPos, colPos]);
+            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidNumberOfStationsOrderError()));
         }
 
-        return new RgvMap(rowDim, colDim, widthLength, heightLength, solutionPointsOrder, mapMatrix);
+        return (isCorrect: true, value: null);
+    }
+
+    private static (bool isCorrect, Result<RgvMap>? value) CheckDimensionCorrectness(int rowDim, int colDim)
+    {
+        if (rowDim < MinRowDim || colDim < MinColDim)
+        {
+            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRgvMapDimensionError()));
+        }
+
+        return (isCorrect: true, value: null);
     }
 
     public PathPoint? GetPointAt(int rowPos, int colPos)
@@ -101,7 +195,7 @@ public sealed class RgvMap : ValueObject
             return null;
         }
 
-        return _mapMatrix[rowPos, colPos];
+        return MapMatrix[rowPos, colPos];
     }
 
     public int GetSquareLength()
@@ -110,17 +204,12 @@ public sealed class RgvMap : ValueObject
         return (int)Math.Sqrt(perSquareArea);
     }
 
-    public void SetMapSolution(List<PathPoint> solutions)
-    {
-        Solutions = solutions;
-    }
-
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return RowDim;
         yield return ColDim;
         yield return StationsOrder;
-        yield return Solutions; 
-        yield return _mapMatrix;
+        yield return Solution; 
+        yield return MapMatrix;
     }
 }

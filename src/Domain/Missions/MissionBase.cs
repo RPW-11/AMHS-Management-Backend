@@ -1,6 +1,7 @@
 using Domain.Common.Models;
 using Domain.Employees.ValueObjects;
 using Domain.Errors.Missions;
+using Domain.Interfaces;
 using Domain.Missions.Entities;
 using Domain.Missions.Events;
 using Domain.Missions.ValueObjects;
@@ -173,5 +174,10 @@ public class MissionBase : AggregateRoot<MissionId>
         SetMissionStatus(MissionStatus.Finished);
         FinishedAt = DateTime.UtcNow;
         AddDomainEvent(new MissionFinishedEvent(Id, Name, [.. AssignedEmployees.Select(ae => ae.EmployeeId)], FinishedAt));
+    }
+
+    public void ProcessRoutePlanning(MissionRoutePlanningStartedEvent evt){
+        SetMissionStatus(MissionStatus.Processing);
+        AddDomainEvent(evt);
     }
 }

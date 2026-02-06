@@ -1,3 +1,4 @@
+using Application.BackgroundJobService;
 using Application.Common.Interfaces;
 using Application.EventHandlers;
 using Application.EventHandlers.Missions;
@@ -22,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDomainDispatcher, DomainDispatcher>();
         services.AddScoped<IDomainEventHandler<MissionFinishedEvent>, MissionFinishedHandler>();
+        services.AddSingleton<BackgroundServiceRunner>();
+        services.AddHostedService(sp => sp.GetRequiredService<BackgroundServiceRunner>());
 
         return services;
     }
