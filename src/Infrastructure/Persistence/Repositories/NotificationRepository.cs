@@ -57,9 +57,18 @@ public class NotificationRepository : INotificationRepository
         }
     }
 
-    public Task<Result<Notification?>> GetNotificationByIdAsync(NotificationId notificationId)
+    public async Task<Result<Notification?>> GetNotificationByIdAsync(NotificationId notificationId)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var notification = await _dbContext.Notifications.FirstAsync(n => n.Id == notificationId);
+            return notification;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to get the notification from the database").CausedBy(error));
+        }
     }
 
     public async Task<Result<PagedResult<Notification>>> GetNotificationsByEmployeeIdAsync(EmployeeId employeeId, int page, int pageSize)
@@ -90,8 +99,17 @@ public class NotificationRepository : INotificationRepository
         }
     }
 
-    public Task<Result> UpdateNotificationAsync(Notification notification)
+    public async Task<Result> UpdateNotificationAsync(Notification notification)
     {
-        throw new NotImplementedException();
+        try
+        {
+            _dbContext.Notifications.Update(notification);
+            return Result.Ok();
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine(error);
+            return Result.Fail(new Error("Fail to update the notification").CausedBy(error));
+        }
     }
 }
