@@ -1,6 +1,6 @@
-using Application.BackgroundJobService;
 using Application.Common.Errors;
 using Application.Common.Interfaces;
+using Application.Common.Interfaces.BackgroundJobHub;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.Common.Utilities;
@@ -17,20 +17,19 @@ namespace Application.Services.RoutePlanningService;
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
-    private readonly BackgroundServiceRunner _backgroundServiceRunner;
+    private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
     private readonly ILogger<RoutePlanningService> _logger;
 
     public RoutePlanningService(IRgvRoutePlanning rgvRoutePlanning,
-                                BackgroundServiceRunner backgroundServiceRunner,
+                                IBackgroundJobHub backgroundJobHub,
                                 IMissionRepository missionRepository,
                                 IUnitOfWork unitOfWork,
-                                ILogger<RoutePlanningService> logger,
-                                IDomainDispatcher domainDispatcher)
+                                ILogger<RoutePlanningService> logger)
                                 : base(unitOfWork)
     {
         _rgvRoutePlanning = rgvRoutePlanning;
-        _backgroundServiceRunner = backgroundServiceRunner;
+        _backgroundJobHub = backgroundJobHub;
         _missionRepository = missionRepository;
         _logger = logger;
     }
@@ -142,7 +141,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
         
         // Solve the mission in the background
-        await _backgroundServiceRunner.EnqueueAsync(async (sp, ct) =>
+        await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
         {
             var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
             var missionRepository = sp.GetRequiredService<IMissionRepository>();

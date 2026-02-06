@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Application.Common.Interfaces.BackgroundJobHub;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Application.BackgroundJobService;
+namespace Infrastructure.BackgroundJob;
 
 
 public record JobItem(
@@ -12,17 +13,17 @@ public record JobItem(
     Func<IServiceProvider, CancellationToken, Task> Work
 );
 
-public class BackgroundServiceRunner : BackgroundService
+public class BackgroundJobHub : BackgroundService, IBackgroundJobHub
 {
     private readonly Channel<JobItem> _channel;
-    private readonly ILogger<BackgroundServiceRunner> _logger;
+    private readonly ILogger<BackgroundJobHub> _logger;
     private readonly ConcurrentDictionary<Guid, string> _statuses;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly int _maxConcurrentWorkers;
     private readonly int _maxQueueSize;
 
-    public BackgroundServiceRunner(
-        ILogger<BackgroundServiceRunner> logger,
+    public BackgroundJobHub(
+        ILogger<BackgroundJobHub> logger,
         IServiceScopeFactory scopeFactory,
         int maxConcurrentWorkers = 4,
         int maxQueueSize = 200)

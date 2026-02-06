@@ -1,12 +1,14 @@
 using System.Text;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Authentication;
+using Application.Common.Interfaces.BackgroundJobHub;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RealTime;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.Common.Interfaces.Security;
 using Application.Common.Interfaces.Services;
 using Infrastructure.Authentication;
+using Infrastructure.BackgroundJob;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.RealTime;
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IRgvRoutePlanning, RgvRoutePlanning>();
         services.AddSingleton<INotificationHub, NotificationHub>();
+        services.AddSingleton<IBackgroundJobHub, BackgroundJobHub>();
+        services.AddHostedService(sp => (BackgroundJobHub)sp.GetRequiredService<IBackgroundJobHub>());
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();

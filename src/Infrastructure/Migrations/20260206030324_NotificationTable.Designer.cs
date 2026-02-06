@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260203015633_NotificationTable")]
+    [Migration("20260206030324_NotificationTable")]
     partial class NotificationTable
     {
         /// <inheritdoc />

@@ -35,10 +35,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
 
         builder.Property(n => n.ActorId)
         .HasConversion(
-            id => id.ToString(),
-            value => string.IsNullOrEmpty(value) 
-                ? null 
-                : EmployeeId.FromString(value).Value
+            id => id == null ? null : id.ToString(),
+            value => value != null ? EmployeeId.FromString(value).Value : null
         )
         .HasColumnName("ActorId");
 
