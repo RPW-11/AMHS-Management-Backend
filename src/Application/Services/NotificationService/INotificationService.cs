@@ -6,7 +6,7 @@ namespace Application.Services.NotificationService;
 
 public interface INotificationService
 {
-    Task<Result<PagedResult<NotificationDto>>> GetNotificationsByEmployeeIdAsync(string employeeId, int page, int pageSize);
+    Task<Result<PagedResult<NotificationDto>>> GetNotificationsByEmployeeIdAsync(string employeeId, int page, int pageSize, string? type);
     Task<Result> DeleteNotificationAsync(string requesterId, string notificationId);
     Task<Result> MarkNotificationAsReadAsync(string requesterId, string notificationId);
     Result CreateChannel(string requesterId);

@@ -89,7 +89,8 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<PagedResult<NotificationDto>>> Get(
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? type = null
         )
         {
             var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -98,7 +99,7 @@ namespace API.Controllers
                 return Problem(statusCode: 404, title: "Employee not found");
             }
 
-            var notificationsResult = await _notificationService.GetNotificationsByEmployeeIdAsync(employeeId, page, pageSize);
+            var notificationsResult = await _notificationService.GetNotificationsByEmployeeIdAsync(employeeId, page, pageSize, type);
 
             return HandleResult(notificationsResult);
         }

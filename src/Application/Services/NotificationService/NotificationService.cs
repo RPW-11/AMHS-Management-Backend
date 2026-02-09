@@ -31,15 +31,27 @@ public class NotificationService : BaseService, INotificationService
         _notificationHub = notificationHub;
     }
 
-    public async Task<Result<PagedResult<NotificationDto>>> GetNotificationsByEmployeeIdAsync(string employeeId, int page, int pageSize)
+    public async Task<Result<PagedResult<NotificationDto>>> GetNotificationsByEmployeeIdAsync( string employeeId, int page, int pageSize, string? type)
     {
-        var employeeIdResult = EmployeeId.FromString(employeeId);
-        if (employeeIdResult.IsFailed)
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            return Result.Fail(ApplicationError.Validation("Invalid employee id"));
+            ["Page"] = page,
+            ["PageSize"] = pageSize,
+            ["EmployeeId"] = employeeId,
+            ["HasType"] = !string.IsNullOrWhiteSpace(type),
+        });
+
+        _logger.LogInformation("Get all missions paged request started");
+        _logger.LogInformation("Notification filter: Page = {page} | Page Size = {pageSize} | Type = {type}", page, pageSize, type);
+
+
+        var filterResult = NotificationFilterDto.Create(page, pageSize, employeeId, type);
+        if (filterResult.IsFailed)
+        {
+            return Result.Fail<PagedResult<NotificationDto>>(ApplicationError.Validation(filterResult.Errors[0].Message));
         }
 
-        var pagedNotificationsResult = await _notificationRepository.GetNotificationsByEmployeeIdAsync(employeeIdResult.Value, page, pageSize);
+        var pagedNotificationsResult = await _notificationRepository.GetNotificationsByEmployeeIdAsync(filterResult.Value);
         if (pagedNotificationsResult.IsFailed)
         {
             return Result.Fail(ApplicationError.Internal);

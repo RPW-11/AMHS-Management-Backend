@@ -1,5 +1,6 @@
 using Application.Common.Interfaces.Persistence;
 using Application.DTOs.Common;
+using Application.DTOs.Notification;
 using Domain.Employees.ValueObjects;
 using Domain.Notifications;
 using Domain.Notifications.ValueObjects;
@@ -71,26 +72,34 @@ public class NotificationRepository : INotificationRepository
         }
     }
 
-    public async Task<Result<PagedResult<Notification>>> GetNotificationsByEmployeeIdAsync(EmployeeId employeeId, int page, int pageSize)
+    public async Task<Result<PagedResult<Notification>>> GetNotificationsByEmployeeIdAsync(NotificationFilterDto notificationFilterDto)
     {
         try
         {
-            var notifications = await _dbContext.Notifications
-                .Where(n => n.RecipientId == employeeId)
-                .OrderByDescending(n => n.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            IQueryable<Notification> query = _dbContext.Notifications;
 
-            var totalNotifications = await _dbContext.Notifications.CountAsync(n => n.RecipientId == employeeId);
-
-            return Result.Ok(new PagedResult<Notification>
+            if (notificationFilterDto.IsRead is not null)
             {
-                Items = notifications,
+                query = query.Where(m => (bool)notificationFilterDto.IsRead ? m.ReadAt != null : m.ReadAt == null);
+            }
+
+            int totalCount = await query.CountAsync();
+
+            int page = notificationFilterDto.Page;
+            int pageSize = notificationFilterDto.PageSize;
+
+            var items = await query.OrderByDescending(m => m.CreatedAt)
+                                    .Skip((page - 1) * pageSize)
+                                    .Take(pageSize)
+                                    .ToListAsync();
+
+            return new PagedResult<Notification>
+            {
+                Items = items,
                 Page = page,
                 PageSize = pageSize,
-                TotalCount = totalNotifications
-            });
+                TotalCount = totalCount
+            };
         }
         catch (Exception error)
         {
