@@ -15,7 +15,7 @@ public class AuthenticationService : BaseService, IAuthenticationService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmployeeRepository _employeeRepository;
 
-    public AuthenticationService(IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher passwordHasher, IEmployeeRepository employeeRepository, IUnitOfWork unitOfWork):
+    public AuthenticationService(IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher passwordHasher, IEmployeeRepository employeeRepository, IUnitOfWork unitOfWork) :
     base(unitOfWork)
     {
         _jwtTokenGenerator = jwtTokenGenerator;

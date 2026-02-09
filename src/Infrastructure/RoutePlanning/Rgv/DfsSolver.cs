@@ -11,12 +11,12 @@ internal class DfsSolver
         {
             return [];
         }
-        
+
         List<PathPoint> bestRoute = RouteEvaluator.GetBestRoute(possibleRoutes, map.StationsOrder, map);
 
         return bestRoute;
     }
-    
+
     private static List<List<PathPoint>> FindAllPossibleRoutes(RgvMap map, int? limit = null)
     {
         List<List<PathPoint>> finalRoutes;
@@ -113,7 +113,8 @@ internal class DfsSolver
         RgvMap map,
         PathPoint startPoint,
         PathPoint goalPoint
-    ) {
+    )
+    {
 
         HashSet<PathPoint> visitedPos = [.. route];
 

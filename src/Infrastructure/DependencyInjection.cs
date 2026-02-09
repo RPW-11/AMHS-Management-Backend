@@ -39,7 +39,7 @@ public static class DependencyInjection
 
         //  Postgres config
         string? postgresConnectionStr = configuration.GetConnectionString("PostgresConnectionString") ?? throw new Exception("Postgres connection string is not found");
-        
+
         services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(postgresConnectionStr,
                     b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));

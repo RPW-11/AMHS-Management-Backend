@@ -22,7 +22,7 @@ public class MissionFilterDto
         Name = name;
     }
 
-    public static Result<MissionFilterDto> Create (int page, int pageSize, string? employeeId, string? status, string? name)
+    public static Result<MissionFilterDto> Create(int page, int pageSize, string? employeeId, string? status, string? name)
     {
         EmployeeId? empId = null;
         MissionStatus? missionStatus = null;
@@ -34,7 +34,7 @@ public class MissionFilterDto
                 return Result.Fail<MissionFilterDto>("Invalid employee id");
             }
             empId = employeeIdResult.Value;
-        } 
+        }
 
         if (!string.IsNullOrWhiteSpace(status))
         {

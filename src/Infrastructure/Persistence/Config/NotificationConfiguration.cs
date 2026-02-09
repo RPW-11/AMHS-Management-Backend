@@ -27,10 +27,10 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         .HasColumnName("RecipientId")
         .IsRequired();
 
-        builder.HasOne<Employee>()                    
+        builder.HasOne<Employee>()
                 .WithMany()
                 .HasForeignKey(n => n.RecipientId)
-                .OnDelete(DeleteBehavior.NoAction)   
+                .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_Notification_Recipient_Employee");
 
         builder.Property(n => n.ActorId)
@@ -40,13 +40,14 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         )
         .HasColumnName("ActorId");
 
-        builder.HasOne<Employee>()                    
+        builder.HasOne<Employee>()
                 .WithMany()
                 .HasForeignKey(n => n.ActorId)
-                .OnDelete(DeleteBehavior.NoAction)   
+                .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_Notification_Actor_Employee");
 
         builder.Property(e => e.ActorName).HasMaxLength(120).IsRequired();
+
         builder.Property(e => e.ActorAvatarUrl).HasMaxLength(500);
 
         builder.ComplexProperty(n => n.NotificationTarget, target =>

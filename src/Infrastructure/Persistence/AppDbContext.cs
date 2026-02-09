@@ -17,7 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Employee> Employees { get; set; }
     public DbSet<MissionBase> Missions { get; set; }
     public DbSet<AssignedEmployee> AssignedEmployees { get; set; }
-    public DbSet<Notification> Notifications { get; set;}
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

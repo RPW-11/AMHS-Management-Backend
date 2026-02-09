@@ -7,7 +7,7 @@ public static class RouteDrawer
     private const float ArrowThicknessControl = 6f;
     private const int ImageQuality = 92;
 
-    public static byte[] DrawMultipleRoutes (
+    public static byte[] DrawMultipleRoutes(
         byte[] imageBytes,
         List<RgvMap> mapsWithSolutions,
         List<PathPoint> intersections
@@ -17,15 +17,15 @@ public static class RouteDrawer
         using var original = SKBitmap.Decode(stream) ?? throw new InvalidOperationException("Failed to decode base image");
         using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
         using var canvas = surface.Canvas;
-        canvas.Clear(SKColors.Transparent);       
+        canvas.Clear(SKColors.Transparent);
         canvas.DrawBitmap(original, 0, 0);
 
         var firstMap = mapsWithSolutions.First();
-        float cellWidth  = (float)original.Width  / firstMap.ColDim;
+        float cellWidth = (float)original.Width / firstMap.ColDim;
         float cellHeight = (float)original.Height / firstMap.RowDim;
 
         float penThickness = Math.Max(1.5f, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
-        float arrowSize    = ArrowThicknessControl * penThickness;
+        float arrowSize = ArrowThicknessControl * penThickness;
 
         int arrowInterval = Math.Max(1, 10);
 
@@ -51,12 +51,12 @@ public static class RouteDrawer
 
             using var linePaint = new SKPaint
             {
-                Style       = SKPaintStyle.Stroke,
-                Color       = routeColor,
+                Style = SKPaintStyle.Stroke,
+                Color = routeColor,
                 StrokeWidth = penThickness,
                 IsAntialias = true,
-                StrokeCap   = SKStrokeCap.Round,
-                StrokeJoin  = SKStrokeJoin.Round
+                StrokeCap = SKStrokeCap.Round,
+                StrokeJoin = SKStrokeJoin.Round
             };
 
             using var path = new SKPath();
@@ -68,15 +68,15 @@ public static class RouteDrawer
 
             using var arrowFill = new SKPaint
             {
-                Style       = SKPaintStyle.Fill,
-                Color       = routeColor,
+                Style = SKPaintStyle.Fill,
+                Color = routeColor,
                 IsAntialias = true
             };
 
             using var arrowStroke = new SKPaint
             {
-                Style       = SKPaintStyle.Stroke,
-                Color       = SKColors.Black.WithAlpha(180),
+                Style = SKPaintStyle.Stroke,
+                Color = SKColors.Black.WithAlpha(180),
                 StrokeWidth = Math.Max(1, penThickness * 0.35f),
                 IsAntialias = true
             };
@@ -105,7 +105,7 @@ public static class RouteDrawer
         return data.ToArray();
     }
 
-    private static void DrawArrow(SKCanvas canvas, SKPoint start, SKPoint end, 
+    private static void DrawArrow(SKCanvas canvas, SKPoint start, SKPoint end,
                              float size, SKPaint fillPaint, SKPaint strokePaint)
     {
         float dx = end.X - start.X;
@@ -152,24 +152,24 @@ public static class RouteDrawer
         if (intersections.Count == 0)
             return;
 
-        float cellWidth  = imageWidth  / rgvMap.ColDim;
+        float cellWidth = imageWidth / rgvMap.ColDim;
         float cellHeight = imageHeight / rgvMap.RowDim;
-        float baseSize   = Math.Min(cellWidth, cellHeight);
-        float radius     = baseSize * circleRadiusMultiplier;
+        float baseSize = Math.Min(cellWidth, cellHeight);
+        float radius = baseSize * circleRadiusMultiplier;
 
         float strokeWidth = Math.Max(2f, baseSize * 0.08f);
 
         using var strokePaint = new SKPaint
         {
             Style = SKPaintStyle.Stroke,
-            Color = SKColors.Black,        
+            Color = SKColors.Black,
             StrokeWidth = strokeWidth,
             IsAntialias = true
         };
 
         foreach (var point in intersections)
         {
-            float x = point.ColPos * cellWidth  + cellWidth  / 2f;
+            float x = point.ColPos * cellWidth + cellWidth / 2f;
             float y = point.RowPos * cellHeight + cellHeight / 2f;
 
             if (x < 0 || y < 0 || x >= imageWidth || y >= imageHeight)

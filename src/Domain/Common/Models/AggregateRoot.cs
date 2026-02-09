@@ -2,7 +2,7 @@ using Domain.Interfaces;
 
 namespace Domain.Common.Models;
 
-public abstract class AggregateRoot<TId>: Entity<TId>
+public abstract class AggregateRoot<TId> : Entity<TId>
     where TId : notnull
 {
     private readonly List<IDomainEvent> _domainEvents = [];

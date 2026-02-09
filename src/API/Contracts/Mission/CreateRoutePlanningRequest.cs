@@ -15,4 +15,5 @@ public record RouteMetadata(
     string Algorithm,
     IEnumerable<RouteFlowDto> RouteFlows,
     IEnumerable<IEnumerable<PointPositionDto>> SampleSolutions,
-    IEnumerable<PathPointDto> Points);
+    IEnumerable<PathPointDto> Points
+);

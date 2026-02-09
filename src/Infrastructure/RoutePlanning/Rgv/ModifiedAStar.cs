@@ -21,7 +21,7 @@ public static class ModifiedAStar
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count-1; i++) // O(n)
+        for (int i = 0; i < rgvMap.StationsOrder.Count - 1; i++) // O(n)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
@@ -31,7 +31,7 @@ public static class ModifiedAStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O(n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -51,7 +51,7 @@ public static class ModifiedAStar
                     tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
                 }
             }
-            
+
             allPaths = tempPaths;
         }
 
@@ -63,7 +63,7 @@ public static class ModifiedAStar
         // Initial search
         List<List<PathPoint>> possiblePaths = SolveMultipleTimes(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O (n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O (n * m * k)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
@@ -103,11 +103,11 @@ public static class ModifiedAStar
     }
 
     private static List<List<PathPoint>> SolveMultipleTimes(
-        RgvMap rgvMap, 
-        PathPoint startPoint, 
-        PathPoint goalPoint, 
+        RgvMap rgvMap,
+        PathPoint startPoint,
+        PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
-        int desiredSolutions = 8,  
+        int desiredSolutions = 8,
         double maxCostFactor = 2.5)
     {
         var allSolutions = new List<List<PathPoint>>();
@@ -141,9 +141,9 @@ public static class ModifiedAStar
     }
 
     public static List<List<PathPoint>> Solve(
-        RgvMap rgvMap, 
-        PathPoint startPoint, 
-        PathPoint goalPoint, 
+        RgvMap rgvMap,
+        PathPoint startPoint,
+        PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
         double heuristicWeight = 0.1,
         double perturbationMax = 0.5,
@@ -176,7 +176,7 @@ public static class ModifiedAStar
 
                 continue;
             }
-            
+
             foreach (var direction in MapTrajectory.AllDirections)
             {
                 var neighbor = rgvMap.GetPointAt(current.RowPos + direction[0], current.ColPos + direction[1]);
@@ -188,7 +188,7 @@ public static class ModifiedAStar
 
                 if (occupiedPoints.Contains(neighbor) && neighbor != goalPoint)
                 {
-                    continue;   
+                    continue;
                 }
 
                 double tentativeGCost = gCost + PerStepCost;
@@ -224,13 +224,13 @@ public static class ModifiedAStar
         while (current is not null)
         {
             path.Add(current);
-            
+
             if (parents[current] is not PathPoint next)
                 break;
-                
+
             current = next;
         }
-        
+
         path.Reverse();
         return path;
     }

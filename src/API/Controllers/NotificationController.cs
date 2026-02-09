@@ -58,12 +58,12 @@ namespace API.Controllers
                     }
                 }, cts.Token);
 
-                await foreach(var readResult in _notificationService.ReadAllAsync(employeeId, HttpContext.RequestAborted))
+                await foreach (var readResult in _notificationService.ReadAllAsync(employeeId, HttpContext.RequestAborted))
                 {
                     if (readResult.IsFailed)
                     {
                         await Response.WriteAsync("Invalid employee id");
-                        return; 
+                        return;
                     }
                     await Response.WriteAsync(readResult.Value);
                     await Response.Body.FlushAsync();

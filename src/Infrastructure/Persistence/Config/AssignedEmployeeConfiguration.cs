@@ -13,7 +13,7 @@ public class AssignedEmployeeConfiguration : IEntityTypeConfiguration<AssignedEm
     public void Configure(EntityTypeBuilder<AssignedEmployee> builder)
     {
         builder.Ignore(ae => ae.Id);
-        
+
         builder.Property(ae => ae.MissionId)
         .HasConversion(
             missionId => missionId.ToString(),

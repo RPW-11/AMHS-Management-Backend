@@ -6,7 +6,7 @@ using Domain.Employees.ValueObjects;
 
 namespace Infrastructure.RealTime;
 
-public class NotificationHub: INotificationHub, IDisposable
+public class NotificationHub : INotificationHub, IDisposable
 {
     private readonly ConcurrentDictionary<EmployeeId, Channel<string>> _employeeChannels = new();
 
@@ -30,7 +30,7 @@ public class NotificationHub: INotificationHub, IDisposable
         {
             await channel.Writer.WriteAsync(message);
         }
-        
+
     }
     public async IAsyncEnumerable<string> ReadFromChannelAsync(
         EmployeeId employeeId, [EnumeratorCancellation] CancellationToken cancellationToken)

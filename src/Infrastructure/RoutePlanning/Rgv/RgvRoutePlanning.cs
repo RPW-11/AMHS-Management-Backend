@@ -74,7 +74,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         catch (Exception error)
         {
             Console.WriteLine(error);
-            throw new Exception (error.Message);
+            throw new Exception(error.Message);
         }
     }
 

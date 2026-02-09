@@ -99,7 +99,7 @@ public class NotificationRepository : INotificationRepository
         }
     }
 
-    public async Task<Result> UpdateNotificationAsync(Notification notification)
+    public Result UpdateNotificationAsync(Notification notification)
     {
         try
         {

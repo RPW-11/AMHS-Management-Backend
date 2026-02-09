@@ -14,15 +14,15 @@ internal static class RouteEvaluator
     public static double EvaluateOptimality(List<PathPoint> solution, RgvMap map)
     {
         var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, map);
-        var finalScore = ThroughputWeight * totalThroughput + LengthWeight * 1/trackLength + NumOfRgvsWeight * 1/maxRgvs;
-        
+        var finalScore = ThroughputWeight * totalThroughput + LengthWeight * 1 / trackLength + NumOfRgvsWeight * 1 / maxRgvs;
+
         return finalScore;
     }
 
     public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
     {
         // BOTTLENECK FOCUS
-        double trackLength = solution.Count * map.GetSquareLength();  
+        double trackLength = solution.Count * map.GetSquareLength();
         double travelTime = trackLength / RgvSpeed;
 
         // Find the station with maximum occupation time

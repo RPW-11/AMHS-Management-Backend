@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
 
-public class ApiBaseController: ControllerBase
+public class ApiBaseController : ControllerBase
 {
     protected ActionResult HandleResult<T>(Result<T> result)
     {

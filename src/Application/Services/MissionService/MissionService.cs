@@ -78,7 +78,7 @@ public class MissionService : BaseService, IMissionService
             _logger.LogWarning("Mission creation failed due to domain rules: {ErrorMessage}", errorMsg);
             return Result.Fail(ApplicationError.Validation(errorMsg));
         }
-        
+
         var newMission = missionDomainResult.Value;
 
         var addMissionResult = await _missionRepository.AddMissionAsync(missionDomainResult.Value);
@@ -114,8 +114,8 @@ public class MissionService : BaseService, IMissionService
     public async Task<Result<PagedResult<MissionDto>>> GetAllMission(
         int page,
         int pageSize,
-        string? status, 
-        string? name, 
+        string? status,
+        string? name,
         string? employeeId
     )
     {
@@ -147,7 +147,7 @@ public class MissionService : BaseService, IMissionService
         }
 
         var missions = getMissionsResult.Value.Items;
-        _logger.LogDebug("Retrieved {FetchedCount} missions for page {Page}", 
+        _logger.LogDebug("Retrieved {FetchedCount} missions for page {Page}",
             missions.Count(), missionFilterDto.Page);
 
         List<MissionDto> missionsDto = [];
@@ -207,7 +207,8 @@ public class MissionService : BaseService, IMissionService
         var mission = missionResult.Value;
 
         var leaderAssignment = mission.AssignedEmployees.FirstOrDefault(ae => ae.MissionRole == MissionRole.Leader);
-        if (leaderAssignment is null) {
+        if (leaderAssignment is null)
+        {
             _logger.LogWarning("No leader assigned to mission");
             return Result.Fail<MissionDetailDto>(ApplicationError.NotFound("The mission has no leader"));
         }
@@ -258,12 +259,12 @@ public class MissionService : BaseService, IMissionService
                     _logger.LogWarning(ex, "Failed to read or convert image to base64. Path: {ImagePath}", imgPath);
                 }
             }
-            
+
 
             routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
                                                                base64Images,
                                                                routePlanningSummary.RouteSolutions);
-                                        
+
             _logger.LogInformation("Successfully loaded route planning summary with {ImageCount} images",
                 base64Images.Count);
 
@@ -398,7 +399,7 @@ public class MissionService : BaseService, IMissionService
             ["MissionCountRequested"] = missionIdList.Count
         });
 
-        _logger.LogInformation("Bulk delete missions request started. Count: {Count}", 
+        _logger.LogInformation("Bulk delete missions request started. Count: {Count}",
             missionIdList.Count);
 
         if (missionIdList.Count == 0)
@@ -423,8 +424,8 @@ public class MissionService : BaseService, IMissionService
 
         if (invalidIds.Count != 0)
         {
-            _logger.LogWarning("Invalid mission ID format detected. Count: {InvalidCount}. Examples: {InvalidIds}", 
-                invalidIds.Count, 
+            _logger.LogWarning("Invalid mission ID format detected. Count: {InvalidCount}. Examples: {InvalidIds}",
+                invalidIds.Count,
                 string.Join(", ", invalidIds.Take(3)));
 
             return Result.Fail(ApplicationError.Validation(
@@ -449,10 +450,10 @@ public class MissionService : BaseService, IMissionService
     }
 
     public async Task<Result> AddMemberToMission(string employeeId, string missionId, string memberId)
-    {   
+    {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            ["MissionId"]  = missionId,
+            ["MissionId"] = missionId,
             ["RequestedBy"] = employeeId,
             ["TargetMember"] = memberId
         });
@@ -462,7 +463,7 @@ public class MissionService : BaseService, IMissionService
         var missionIdResult = MissionId.FromString(missionId);
         if (missionIdResult.IsFailed)
         {
-            _logger.LogWarning("Invalid mission ID format: {ErrorMessage}", 
+            _logger.LogWarning("Invalid mission ID format: {ErrorMessage}",
                 missionIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid mission Id"));
         }
@@ -470,7 +471,7 @@ public class MissionService : BaseService, IMissionService
         var employeeIdResult = EmployeeId.FromString(employeeId);
         if (employeeIdResult.IsFailed)
         {
-            _logger.LogWarning("Invalid requester employee ID format: {ErrorMessage}", 
+            _logger.LogWarning("Invalid requester employee ID format: {ErrorMessage}",
                 employeeIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid employee Id"));
         }
@@ -490,7 +491,7 @@ public class MissionService : BaseService, IMissionService
 
         // Check if the requester is valid
         bool isRequesterValid = missionResult.Value.AssignedEmployees
-        .Any(m => 
+        .Any(m =>
             (m.MissionRole == MissionRole.Leader || m.MissionRole == MissionRole.CoLeader) &&
             m.EmployeeId == employeeIdResult.Value);
 
@@ -504,7 +505,7 @@ public class MissionService : BaseService, IMissionService
         var memberIdResult = EmployeeId.FromString(memberId);
         if (memberIdResult.IsFailed)
         {
-            _logger.LogWarning("Invalid target member ID format: {ErrorMessage}", 
+            _logger.LogWarning("Invalid target member ID format: {ErrorMessage}",
                 memberIdResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Validation("Invalid added member id"));
         }
@@ -545,18 +546,18 @@ public class MissionService : BaseService, IMissionService
         var addResult = missionResult.Value.AddMember(memberIdResult.Value, MissionRole.Member);
         if (addResult.IsFailed)
         {
-            _logger.LogWarning("Business rule violation when adding member: {ErrorMessage}", 
+            _logger.LogWarning("Business rule violation when adding member: {ErrorMessage}",
                 addResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(addResult.Errors[0].Message));    
+            return Result.Fail(ApplicationError.Validation(addResult.Errors[0].Message));
         }
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
         if (updateResult.IsFailed)
         {
             _logger.LogError("Failed to update mission in repository: {ErrorMessage}", updateResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Internal);    
+            return Result.Fail(ApplicationError.Internal);
         }
-        
+
         try
         {
             await _unitOfWork.SaveChangesAsync();
@@ -574,16 +575,16 @@ public class MissionService : BaseService, IMissionService
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            ["MissionId"]    = missionId,
-            ["RequestedBy"]  = employeeId, 
-            ["TargetMember"] = memberId  
+            ["MissionId"] = missionId,
+            ["RequestedBy"] = employeeId,
+            ["TargetMember"] = memberId
         });
 
         _logger.LogInformation("Delete member from mission operation started");
         if (employeeId == memberId)
         {
             _logger.LogWarning("Attempted self-removal from mission - forbidden");
-            return Result.Fail(ApplicationError.Validation("You cannot delete yourself"));    
+            return Result.Fail(ApplicationError.Validation("You cannot delete yourself"));
         }
 
         var missionIdResult = MissionId.FromString(missionId);
@@ -617,7 +618,7 @@ public class MissionService : BaseService, IMissionService
         // Check if the requester is valid
         bool isRequesterValid = missionResult.Value.AssignedEmployees
         .Any(m =>
-            (m.MissionRole == MissionRole.Leader || m.MissionRole ==  MissionRole.CoLeader) &&
+            (m.MissionRole == MissionRole.Leader || m.MissionRole == MissionRole.CoLeader) &&
             m.EmployeeId == employeeIdResult.Value);
 
         if (!isRequesterValid)
@@ -636,10 +637,10 @@ public class MissionService : BaseService, IMissionService
 
         var deleteResult = missionResult.Value.DeleteMember(memberIdResult.Value);
         if (deleteResult.IsFailed)
-        {   
+        {
             var errorMsg = deleteResult.Errors[0].Message;
             _logger.LogWarning("Cannot delete member: {ErrorMessage}", errorMsg);
-            return Result.Fail(ApplicationError.Validation(errorMsg));    
+            return Result.Fail(ApplicationError.Validation(errorMsg));
         }
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
@@ -666,10 +667,10 @@ public class MissionService : BaseService, IMissionService
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            ["MissionId"]    = missionId,
-            ["RequestedBy"]  = employeeId,  
-            ["TargetMember"] = memberId,    
-            ["TargetRole"]   = missionRole  
+            ["MissionId"] = missionId,
+            ["RequestedBy"] = employeeId,
+            ["TargetMember"] = memberId,
+            ["TargetRole"] = missionRole
         });
 
         _logger.LogInformation("Change member role operation started");
@@ -677,7 +678,7 @@ public class MissionService : BaseService, IMissionService
         if (employeeId == memberId)
         {
             _logger.LogWarning("Attempt to change own role - forbidden");
-            return Result.Fail(ApplicationError.Validation("You cannot change your own role yourself"));    
+            return Result.Fail(ApplicationError.Validation("You cannot change your own role yourself"));
         }
 
         var missionIdResult = MissionId.FromString(missionId);
@@ -750,7 +751,7 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.Internal);
         }
 
-       try
+        try
         {
             await _unitOfWork.SaveChangesAsync();
             _logger.LogInformation("Member role successfully changed to {NewRole}",
@@ -842,7 +843,7 @@ public class MissionService : BaseService, IMissionService
                         mission.UpdatedAt
                     );
     }
-    
+
     private static Result<MissionDetailDto> MapToMissionDetailDto(MissionBase mission, Employee leader, RoutePlanningSummaryDto? routePlanningSummary = null)
     {
         return new MissionDetailDto(mission.Id.ToString(),

@@ -7,9 +7,10 @@ public static class PostProcessingRoute
 {
     public static List<PathPoint> SmoothAndRasterizeFourDirections(
         List<PathPoint> originalPath,
-        RgvMap map)
+        RgvMap map
+    )
     {
-        if (originalPath.Count < 3) 
+        if (originalPath.Count < 3)
             return originalPath;
 
         var sparseWaypoints = GetSparseStraightWaypoints(originalPath, map);
@@ -22,7 +23,7 @@ public static class PostProcessingRoute
         for (int i = 0; i < sparseWaypoints.Count - 1; i++)
         {
             var start = sparseWaypoints[i];
-            var end   = sparseWaypoints[i + 1];
+            var end = sparseWaypoints[i + 1];
 
             var segment = GetAxisAlignedDensePath(start, end, map);
 
@@ -78,7 +79,7 @@ public static class PostProcessingRoute
             if (p is not null) points.Add(p);
         }
 
-        
+
         int dy = end.RowPos - currentY;
         int stepY = Math.Sign(dy);
 

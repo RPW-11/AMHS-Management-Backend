@@ -41,16 +41,17 @@ public class EmployeeService : BaseService, IEmployeeService
         string position,
         string phoneNumber,
         string dateOfBirth)
-    {   
+    {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["Email"] = email
         });
 
         _logger.LogInformation("Add new employee request started for email {Email}", email);
-        
+
         var existingEmployeeResult = await _employeeRepository.GetEmployeeByEmailAsync(email);
-        if (existingEmployeeResult.IsFailed) {
+        if (existingEmployeeResult.IsFailed)
+        {
             _logger.LogError("Failed to check existing employee by email: {ErrorMessage}", existingEmployeeResult.Errors[0].Message);
             return Result.Fail(ApplicationError.Internal);
         }
@@ -173,15 +174,15 @@ public class EmployeeService : BaseService, IEmployeeService
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            ["Page"]       = page,
-            ["PageSize"]   = pageSize,
+            ["Page"] = page,
+            ["PageSize"] = pageSize,
             ["SearchTerm"] = searchTerm ?? "null"
         });
 
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 5, 100);
 
-        _logger.LogDebug("Pagination adjusted → Page: {Page}, PageSize: {PageSize}", page, pageSize);  
+        _logger.LogDebug("Pagination adjusted → Page: {Page}, PageSize: {PageSize}", page, pageSize);
 
         var employeeCountResult = await _employeeRepository.GetEmployeesCountAsync();
         if (employeeCountResult.IsFailed)
@@ -196,7 +197,7 @@ public class EmployeeService : BaseService, IEmployeeService
         var employeesResult = await _employeeRepository.GetAllEmployeesAsync(page, pageSize);
         if (employeesResult.IsFailed)
         {
-            _logger.LogError("Failed to retrieve employees for page {Page} (size {PageSize}): {ErrorMessage}", 
+            _logger.LogError("Failed to retrieve employees for page {Page} (size {PageSize}): {ErrorMessage}",
                 page, pageSize, employeesResult.Errors[0].Message);
             return Result.Fail<PagedResult<EmployeeDto>>(ApplicationError.Internal);
         }

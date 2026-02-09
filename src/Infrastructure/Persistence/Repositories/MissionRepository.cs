@@ -48,7 +48,7 @@ public class MissionRepository : IMissionRepository
                 query = query.Where(m => EF.Functions.ILike(m.Name, $"%{missionFilterDto.Name.Trim()}%"));
 
             int totalCount = await query.CountAsync();
-            
+
             int page = missionFilterDto.Page;
             int pageSize = missionFilterDto.PageSize;
 

@@ -66,7 +66,7 @@ public class GeneticAlgorithmSolver
         })
             .OrderByDescending(x => x.Fitness)
             .First();
-        
+
         return bestIndividual.Individual;
     }
 
@@ -131,8 +131,8 @@ public class GeneticAlgorithmSolver
 
     private List<PathPoint> Mutate(List<PathPoint> child)
     {
-        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count-10));
-        int endIdx = (int) _random.NextInt64(Math.Min(child.Count-1, startIdx + 5), child.Count-1);
+        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count - 10));
+        int endIdx = (int)_random.NextInt64(Math.Min(child.Count - 1, startIdx + 5), child.Count - 1);
 
         var startPoint = child[startIdx];
         var endPoint = child[endIdx];
@@ -144,7 +144,7 @@ public class GeneticAlgorithmSolver
             return child;
         }
 
-        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx+1)];
+        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx + 1)];
     }
 
     private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
@@ -285,7 +285,7 @@ public class GeneticAlgorithmSolver
             if (point.Category == PathPoint.PointCategory.Obstacle)
             {
                 return true;
-            }    
+            }
         }
 
         return false;
@@ -321,7 +321,7 @@ public class GeneticAlgorithmSolver
     {
         int conflicts = 0;
         var reversedSolution = solution.AsEnumerable().Reverse().ToList();
-        
+
         foreach (var route in _currentRoutes)
         {
             conflicts += LongestCommonSubsequence(reversedSolution, route);
@@ -329,22 +329,28 @@ public class GeneticAlgorithmSolver
         return conflicts;
     }
 
-    private static int LongestCommonSubsequence(List<PathPoint> solution1, List<PathPoint> solution2) {
+    private static int LongestCommonSubsequence(List<PathPoint> solution1, List<PathPoint> solution2)
+    {
         int m = solution1.Count;
         int n = solution2.Count;
-        
+
         int[,] dp = new int[m + 1, n + 1];
-        
-        for (int i = 1; i <= m; i++) {
-            for (int j = 1; j <= n; j++) {
-                if (solution1[i - 1] == solution2[j - 1]) {
+
+        for (int i = 1; i <= m; i++)
+        {
+            for (int j = 1; j <= n; j++)
+            {
+                if (solution1[i - 1] == solution2[j - 1])
+                {
                     dp[i, j] = 1 + dp[i - 1, j - 1];
-                } else {
+                }
+                else
+                {
                     dp[i, j] = Math.Max(dp[i - 1, j], dp[i, j - 1]);
                 }
             }
         }
-        
+
         return dp[m, n];
     }
 }

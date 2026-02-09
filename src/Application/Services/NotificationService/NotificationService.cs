@@ -38,7 +38,7 @@ public class NotificationService : BaseService, INotificationService
         {
             return Result.Fail(ApplicationError.Validation("Invalid employee id"));
         }
-        
+
         var pagedNotificationsResult = await _notificationRepository.GetNotificationsByEmployeeIdAsync(employeeIdResult.Value, page, pageSize);
         if (pagedNotificationsResult.IsFailed)
         {
@@ -85,7 +85,7 @@ public class NotificationService : BaseService, INotificationService
 
         notification.MarkAsRead();
 
-        var updateResult = await _notificationRepository.UpdateNotificationAsync(notification);
+        var updateResult = _notificationRepository.UpdateNotificationAsync(notification);
         if (updateResult.IsFailed)
         {
             return Result.Fail(ApplicationError.Internal);
@@ -162,7 +162,7 @@ public class NotificationService : BaseService, INotificationService
     }
 
     public async IAsyncEnumerable<Result<string>> ReadAllAsync(
-        string requesterId, 
+        string requesterId,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var employeeIdResult = EmployeeId.FromString(requesterId);

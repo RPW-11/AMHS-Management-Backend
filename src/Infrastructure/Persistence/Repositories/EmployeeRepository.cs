@@ -77,7 +77,7 @@ public class EmployeeRepository : IEmployeeRepository
         }
     }
 
-    public async  Task<Result<Employee?>> GetEmployeeByIdAsync(EmployeeId id)
+    public async Task<Result<Employee?>> GetEmployeeByIdAsync(EmployeeId id)
     {
         try
         {

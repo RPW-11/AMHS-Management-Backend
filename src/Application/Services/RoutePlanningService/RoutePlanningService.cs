@@ -139,7 +139,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             _logger.LogError(ex, "Database commit failed after route planning");
             return Result.Fail(ApplicationError.Internal);
         }
-        
+
         // Solve the mission in the background
         await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
         {
@@ -153,14 +153,14 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         return Result.Ok();
     }
-    
+
     private async Task SolveRoute(
         IDomainDispatcher domainDispatcher,
         IUnitOfWork unitOfWork,
         IMissionRepository missionRepository,
-        MissionBase mission, 
-        List<RgvMap> rgvMaps, 
-        RoutePlanningAlgorithm algorithm, 
+        MissionBase mission,
+        List<RgvMap> rgvMaps,
+        RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream)
     {
         // Solve for each flow
@@ -193,7 +193,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             postProcessedFlowSolutions.Add([.. postProcessedRoutes]);
             flowScores.Add(scores);
         }
-        
+
         // Get intersections and draw original solution
         List<RgvMap> rgvMapsWithOriginalSolutions = [];
         for (int i = 0; i < flowSolutions.Count; i++)
@@ -212,7 +212,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             mission.SetMissionStatus(MissionStatus.Failed);
         }
 
-        var originalImgUrl = _rgvRoutePlanning.WriteImage(drawnImageBytes, $"{mission.Id}_original_solution");;
+        var originalImgUrl = _rgvRoutePlanning.WriteImage(drawnImageBytes, $"{mission.Id}_original_solution"); ;
         _logger.LogInformation("Original route image saved at: {ImageUrl}", originalImgUrl);
 
 
@@ -231,7 +231,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         {
             _logger.LogError("Error drawing the post-processed solution");
         }
-        var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{mission.Id}_postprocessed_solution");;
+        var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{mission.Id}_postprocessed_solution"); ;
         _logger.LogInformation("Post-processed route image saved at: {ImageUrl}", postProcessedImgUrl);
 
         List<RouteSolutionDto> routeSolutions = [];
@@ -256,7 +256,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         {
             resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
             _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
-            
+
             mission.Finish();
             mission.SetMissionResourceLink(resourceLink);
         }
@@ -315,8 +315,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     }
 
     private bool DrawSolution(
-        MemoryStream imageStream, 
-        List<RgvMap> rgvMaps, 
+        MemoryStream imageStream,
+        List<RgvMap> rgvMaps,
         List<PathPoint> intersections, out byte[] drawnImageBytes)
     {
         drawnImageBytes = [];

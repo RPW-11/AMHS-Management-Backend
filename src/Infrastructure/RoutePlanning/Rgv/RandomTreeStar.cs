@@ -16,7 +16,7 @@ public static class RandomTreeStar
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count-1; i++) // O(n)
+        for (int i = 0; i < rgvMap.StationsOrder.Count - 1; i++) // O(n)
         {
             var startPoint = rgvMap.StationsOrder[i];
             var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
@@ -26,7 +26,7 @@ public static class RandomTreeStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count-1; i++) // O(n * m * k)
+        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -46,7 +46,7 @@ public static class RandomTreeStar
                     tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
                 }
             }
-            
+
             allPaths = tempPaths;
         }
 
@@ -65,7 +65,7 @@ public static class RandomTreeStar
 
         for (int i = 0; i < NumVariationsPerSegment; i++)
         {
-            Console.WriteLine($"Running variation: {i+1} for point: {start} | {goal}");
+            Console.WriteLine($"Running variation: {i + 1} for point: {start} | {goal}");
             var variationRand = new Random(rand.Next());
 
             var treeNodes = new List<PathPoint> { start };
@@ -155,7 +155,7 @@ public static class RandomTreeStar
                         var path = ReconstructRRTPath(parentMap, goal);
                         allPaths.Add(path);
                         found = true;
-                        break; 
+                        break;
                     }
                 }
             }
@@ -173,7 +173,7 @@ public static class RandomTreeStar
     {
         while (true)
         {
-            int row = rand.Next(rgvMap.RowDim); 
+            int row = rand.Next(rgvMap.RowDim);
             int col = rand.Next(rgvMap.ColDim);
             var pt = rgvMap.GetPointAt(row, col);
 
@@ -182,7 +182,7 @@ public static class RandomTreeStar
         }
     }
 
-    private static double Distance (PathPoint a, PathPoint b)
+    private static double Distance(PathPoint a, PathPoint b)
     {
         int dx = a.ColPos - b.ColPos;
         int dy = a.RowPos - b.RowPos;
@@ -208,7 +208,7 @@ public static class RandomTreeStar
 
             int e2 = 2 * err;
             if (e2 > -dy) { err -= dy; current = map.GetPointAt(current.RowPos, current.ColPos + sx) ?? current; }
-            if (e2 < dx)  { err += dx; current = map.GetPointAt(current.RowPos + sy, current.ColPos) ?? current; }
+            if (e2 < dx) { err += dx; current = map.GetPointAt(current.RowPos + sy, current.ColPos) ?? current; }
         }
     }
 
