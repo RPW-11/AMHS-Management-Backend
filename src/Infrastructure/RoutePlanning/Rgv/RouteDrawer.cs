@@ -24,7 +24,7 @@ public static class RouteDrawer
         float cellWidth = (float)original.Width / firstMap.ColDim;
         float cellHeight = (float)original.Height / firstMap.RowDim;
 
-        float penThickness = Math.Max(1.5f, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
+        float penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
         float arrowSize = ArrowThicknessControl * penThickness;
 
         int arrowInterval = Math.Max(1, 10);

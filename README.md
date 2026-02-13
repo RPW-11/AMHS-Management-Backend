@@ -26,7 +26,7 @@ dotnet user-secrets set --project src/API "ConnectionStrings:PostgresConnectionS
 ...
 ```
 
-- Run your first migration if you are using a fresh database (make sure to install dotnet ef 9.0.7)
+- Run your first migration if you are using a fresh database (make sure to install dotnet ef 9.0.7 or match your dotnet version)
 
 ``` bash
 dotnet ef database update --project src/Infrastructure --startup-project src/API
@@ -45,3 +45,10 @@ dotnet build
 
 ``` bash
 dotnet run --project src/API
+```
+
+- Swagger API docs (make sure run it first locally)
+
+```plaintext
+http://localhost:5171/swagger/index.html
+```

@@ -207,7 +207,7 @@ public class GeneticAlgorithmSolver
     private double EvaluateFitness(List<PathPoint> solution)
     {
         // Fitness formula is defined based on the throughput and validity of the path
-        // Check if the solution has the correct order, if not return 0
+        // Check if the solution has the correct order, if not return -INF
         if (!IsOrderCorrect(solution)
             || !IsPathConnected(solution)
             || IsPathUsingObstacles(solution))
