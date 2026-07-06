@@ -229,7 +229,8 @@ namespace API.Controllers
             }
 
             var points = routeMetadata.Points;
-            var routeFlows = routeMetadata.RouteFlows;
+            var clusters = routeMetadata.Clusters;
+            var clusterFlows = routeMetadata.ClusterFlows;
 
             using (var imageStream = new MemoryStream())
             {
@@ -245,7 +246,8 @@ namespace API.Controllers
                     routeMetadata.WidthLength,
                     routeMetadata.HeightLength,
                     points,
-                    routeFlows
+                    clusters,
+                    clusterFlows
                 );
 
                 if (routeResult.IsFailed)

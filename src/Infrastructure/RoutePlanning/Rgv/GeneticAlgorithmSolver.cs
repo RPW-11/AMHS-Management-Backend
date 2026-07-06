@@ -1,12 +1,11 @@
 using Domain.Missions.ValueObjects;
-using static Domain.Missions.ValueObjects.RgvMap;
+using static Domain.Missions.ValueObjects.Grid;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
 public class GeneticAlgorithmSolver
 {
     private const int PopulationSize = 400;
-    private const int MaxGenerations = 400;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
@@ -15,22 +14,26 @@ public class GeneticAlgorithmSolver
     private const double ConflictPenaltyRate = 100;
 
     private readonly Random _random;
-    private readonly RgvMap _rgvMap;
+    private readonly Grid _grid;
+    private readonly List<PathPoint> _stationsOrder;
     private readonly List<List<PathPoint>> _currentRoutes;
+    private readonly int _generationsNumber;
     private readonly int _goalCount = 0; // it is possible to have multiple goals in the map (goals visited multiple times)
 
-    public GeneticAlgorithmSolver(RgvMap rgvMap, List<List<PathPoint>> currentRoutes)
+    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber)
     {
         _random = new Random();
-        _rgvMap = rgvMap;
+        _grid = grid;
+        _stationsOrder = stationsOrder;
         _currentRoutes = currentRoutes;
-        _goalCount = _rgvMap.StationsOrder.Count(point => point == _rgvMap.StationsOrder.Last());
+        _generationsNumber = generationsNumber;
+        _goalCount = _stationsOrder.Count(point => point == _stationsOrder.Last());
     }
 
     public List<PathPoint> Solve()
     {
-        var aStarSolutions = ModifiedAStar.GetValidSolutions(_rgvMap);
-        var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_rgvMap);
+        var aStarSolutions = ModifiedAStar.GetValidSolutions(_grid, _stationsOrder);
+        var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder);
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
                         .ToList();
@@ -38,7 +41,7 @@ public class GeneticAlgorithmSolver
         population.AddRange(aStarSolutions);
         population.AddRange(rrtSolutions);
 
-        for (int i = 0; i < MaxGenerations; i++)
+        for (int i = 0; i < _generationsNumber; i++)
         {
             var evaluated = population.Select(ind => new
             {
@@ -47,10 +50,6 @@ public class GeneticAlgorithmSolver
             })
             .OrderByDescending(x => x.Fitness)
             .ToList();
-
-            var bestSolution = evaluated.First();
-
-            Console.WriteLine($"Generation {i + 1}: Best Fitness = {bestSolution.Fitness} | Solution Length = {bestSolution.Individual.Count}");
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]
@@ -138,7 +137,7 @@ public class GeneticAlgorithmSolver
         var endPoint = child[endIdx];
 
         // Re-compute alternative path between these points
-        var subPaths = ModifiedAStar.Solve(_rgvMap, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
+        var subPaths = ModifiedAStar.Solve(_grid, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
         if (subPaths is null || subPaths.Count == 0)
         {
             return child;
@@ -157,8 +156,8 @@ public class GeneticAlgorithmSolver
 
     private List<PathPoint> GenerateIndividual()
     {
-        var start = _rgvMap.StationsOrder[0];
-        var goal = _rgvMap.StationsOrder.Last();
+        var start = _stationsOrder[0];
+        var goal = _stationsOrder.Last();
 
         List<PathPoint> route = [start];
         int currentLength = 1;
@@ -193,7 +192,7 @@ public class GeneticAlgorithmSolver
         var validNeighbors = new List<PathPoint>();
         foreach (var direction in MapTrajectory.AllDirections)
         {
-            var neighbor = _rgvMap.GetPointAt(point.RowPos + direction[0], point.ColPos + direction[1]);
+            var neighbor = _grid.GetPointAt(point.RowPos + direction[0], point.ColPos + direction[1]);
 
             if (neighbor is null)
             {
@@ -219,7 +218,7 @@ public class GeneticAlgorithmSolver
         int numOfTurns = CountPathTurns(solution);
         int numOfConflicts = CountConflictingDirection(solution);
 
-        return RouteEvaluator.EvaluateOptimality(solution, _rgvMap) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns - ConflictPenaltyRate * numOfConflicts;
+        return RouteEvaluator.EvaluateOptimality(solution, _grid, _stationsOrder) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns - ConflictPenaltyRate * numOfConflicts;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
@@ -230,15 +229,15 @@ public class GeneticAlgorithmSolver
 
         foreach (var point in solution)
         {
-            if (point == _rgvMap.StationsOrder.Last())
+            if (point == _stationsOrder.Last())
             {
                 goalVisitedCount++;
             }
 
-            if (_rgvMap.StationsOrder[startIdx] == point)
+            if (_stationsOrder[startIdx] == point)
             {
                 startIdx++;
-                if (startIdx == _rgvMap.StationsOrder.Count)
+                if (startIdx == _stationsOrder.Count)
                 {
                     valid = true;
                     break;
@@ -251,7 +250,7 @@ public class GeneticAlgorithmSolver
             return false;
         }
 
-        if (valid && _rgvMap.StationsOrder.Last() != solution.Last())
+        if (valid && _stationsOrder.Last() != solution.Last())
         {
             valid = false;
         }
@@ -282,7 +281,7 @@ public class GeneticAlgorithmSolver
     {
         foreach (var point in solution)
         {
-            if (point.Category == PathPoint.PointCategory.Obstacle)
+            if (point is Obstacle)
             {
                 return true;
             }

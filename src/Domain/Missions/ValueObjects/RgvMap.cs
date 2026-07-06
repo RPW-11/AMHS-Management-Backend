@@ -6,210 +6,57 @@ namespace Domain.Missions.ValueObjects;
 
 public sealed class RgvMap : ValueObject
 {
-    private const int MinRowDim = 3;
-    private const int MinColDim = 3;
-    private const int MinWidthLength = 1;
-    private const int MinHeightLength = 1;
-    private const int MinNumberStationsOrder = 2;
+    public Grid Grid { get; }
+    public List<ClusterFlow> ClusterFlows { get; }
 
-    public static class MapTrajectory
+    private RgvMap(Grid grid, List<ClusterFlow> clusterFlows)
     {
-        public static readonly int[] Up = [1, 0];
-        public static readonly int[] Down = [-1, 0];
-        public static readonly int[] Left = [0, -1];
-        public static readonly int[] Right = [0, 1];
-        public static readonly int[][] AllDirections =
-        [
-            Up, Down, Left, Right,
-        ];
-    }
-    public int RowDim { get; private set; }
-    public int ColDim { get; private set; }
-    public int WidthLength { get; private set; }
-    public int HeightLength { get; private set; }
-    public List<PathPoint> StationsOrder { get; }
-    public List<PathPoint> Solution { get; private set; }
-    public string PathColor { get; private set; }
-    public readonly PathPoint[,] MapMatrix;
-
-    public RgvMap(int rowDim, int colDim, int widthLength, int heightLength, List<PathPoint> stationsOrder, PathPoint[,] mapMatrix, List<PathPoint> solution, string pathColor)
-    {
-        RowDim = rowDim;
-        ColDim = colDim;
-        WidthLength = widthLength;
-        HeightLength = heightLength;
-        StationsOrder = stationsOrder;
-        Solution = solution;
-        PathColor = pathColor;
-        MapMatrix = mapMatrix;
+        Grid = grid;
+        ClusterFlows = clusterFlows;
     }
 
-    public static Result<RgvMap> Create(
-        int rowDim,
-        int colDim, 
-        int widthLength, 
-        int heightLength, 
-        List<PathPoint> points, 
-        List<(int rowPos, int colPos)> stationsOrder,
-        string pathColor
-        )
+    public static Result<RgvMap> Create(Grid grid, List<ClusterFlow> clusterFlows)
     {
-        (bool isCorrect, Result<RgvMap>? value) = CheckDimensionCorrectness(rowDim, colDim);
-        if (!isCorrect && value is not null)
+        var clusterFlowsResult = ValidateClusterFlows(grid, clusterFlows);
+        if (clusterFlowsResult.IsFailed)
         {
-            return value;
+            return Result.Fail(clusterFlowsResult.Errors);
         }
 
-        (isCorrect, value) = CheckActualDimensionCorrectness(widthLength, heightLength, stationsOrder);
-        if (!isCorrect && value is not null)
-        {
-            return value;
-        }
-
-        PathPoint[,] mapMatrix = CreateMapMatrix(rowDim, colDim);
-
-        (isCorrect, value) = InsertPointsToMatrix(rowDim, colDim, points, mapMatrix);
-        if (!isCorrect && value is not null)
-        {
-            return value;
-        }
-
-        List<PathPoint> stationOrderPoints = ToPathPointList(stationsOrder, mapMatrix);
-
-        return new RgvMap(rowDim, colDim, widthLength, heightLength, stationOrderPoints, mapMatrix, [], pathColor);
+        return new RgvMap(grid, clusterFlows);
     }
 
-    public static Result<RgvMap> Create(
-        int rowDim,
-        int colDim, 
-        int widthLength, 
-        int heightLength, 
-        List<PathPoint> points, 
-        List<(int rowPos, int colPos)> stationsOrder,
-        string pathColor,
-        List<(int rowPos, int colPos)> solution
-        )
+    private static Result ValidateClusterFlows(Grid grid, List<ClusterFlow> clusterFlows)
     {
-        (bool isCorrect, Result<RgvMap>? value) = CheckDimensionCorrectness(rowDim, colDim);
-        if (!isCorrect && value is not null)
+        foreach (var clusterFlow in clusterFlows)
         {
-            return value;
-        }
-
-        (isCorrect, value) = CheckActualDimensionCorrectness(widthLength, heightLength, stationsOrder);
-        if (!isCorrect && value is not null)
-        {
-            return value;
-        }
-
-        PathPoint[,] mapMatrix = CreateMapMatrix(rowDim, colDim);
-
-        (isCorrect, value) = InsertPointsToMatrix(rowDim, colDim, points, mapMatrix);
-        if (!isCorrect && value is not null)
-        {
-            return value;
-        }
-
-        List<PathPoint> stationOrderPoints = ToPathPointList(stationsOrder, mapMatrix);
-        List<PathPoint> solutionPoints = ToPathPointList(solution, mapMatrix);
-
-        return new RgvMap(rowDim, colDim, widthLength, heightLength, stationOrderPoints, mapMatrix, solutionPoints, pathColor);
-    }
-
-    private static List<PathPoint> ToPathPointList(List<(int rowPos, int colPos)> pointLocations, PathPoint[,] mapMatrix)
-    {
-        List<PathPoint> pathPointList = [];
-
-        foreach (var (rowPos, colPos) in pointLocations)
-        {
-            pathPointList.Add(mapMatrix[rowPos, colPos]);
-        }
-
-        return pathPointList;
-    }
-
-    private static (bool isCorrect, Result<RgvMap>? value) InsertPointsToMatrix(int rowDim, int colDim, List<PathPoint> points, PathPoint[,] mapMatrix)
-    {
-        foreach (PathPoint p in points)
-        {
-            if (p.RowPos < 0 || p.RowPos >= rowDim)
+            foreach (var cluster in clusterFlow.Clusters)
             {
-                return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRowPosValueError(p.RowPos, rowDim)));
+                foreach (var station in cluster.Stations)
+                {
+                    if (station.RowPos < 0 || station.RowPos >= grid.RowDim)
+                    {
+                        return Result.Fail(new InvalidRowPosValueError(station.RowPos, grid.RowDim));
+                    }
+                    if (station.ColPos < 0 || station.ColPos >= grid.ColDim)
+                    {
+                        return Result.Fail(new InvalidColPosValueError(station.ColPos, grid.ColDim));
+                    }
+
+                    if (grid.MapMatrix[station.RowPos, station.ColPos] is not Station matrixStation || matrixStation.Name != station.Name)
+                    {
+                        return Result.Fail(new InvalidStationName(station.Name));
+                    }
+                }
             }
-            if (p.ColPos < 0 || p.ColPos >= colDim)
-            {
-                return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidColPosValueError(p.ColPos, colDim)));
-            }
-
-            mapMatrix[p.RowPos, p.ColPos] = p;
         }
 
-        return (isCorrect: true, value: null);
-    }
-
-    private static PathPoint[,] CreateMapMatrix(int rowDim, int colDim)
-    {
-        var mapMatrix = new PathPoint[rowDim, colDim];
-
-        for (int rowPos = 0; rowPos < rowDim; rowPos++)
-        {
-            for (int colPos = 0; colPos < colDim; colPos++)
-            {
-                mapMatrix[rowPos, colPos] = PathPoint.Path(rowPos, colPos);
-            }
-
-        }
-
-        return mapMatrix;
-    }
-
-    private static (bool isCorrect, Result<RgvMap>? value) CheckActualDimensionCorrectness(int widthLength, int heightLength, List<(int rowPos, int colPos)> stationsOrder)
-    {
-        if (widthLength < MinWidthLength || heightLength < MinHeightLength)
-        {
-            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRgvMapActualDimensionError()));
-        }
-
-        if (stationsOrder.Count < MinNumberStationsOrder)
-        {
-            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidNumberOfStationsOrderError()));
-        }
-
-        return (isCorrect: true, value: null);
-    }
-
-    private static (bool isCorrect, Result<RgvMap>? value) CheckDimensionCorrectness(int rowDim, int colDim)
-    {
-        if (rowDim < MinRowDim || colDim < MinColDim)
-        {
-            return (isCorrect: false, value: Result.Fail<RgvMap>(new InvalidRgvMapDimensionError()));
-        }
-
-        return (isCorrect: true, value: null);
-    }
-
-    public PathPoint? GetPointAt(int rowPos, int colPos)
-    {
-        if (rowPos < 0 || rowPos > RowDim - 1 || colPos < 0 || colPos > ColDim - 1)
-        {
-            return null;
-        }
-
-        return MapMatrix[rowPos, colPos];
-    }
-
-    public int GetSquareLength()
-    {
-        var perSquareArea = WidthLength * HeightLength / (RowDim * ColDim);
-        return (int)Math.Sqrt(perSquareArea);
+        return Result.Ok();
     }
 
     public override IEnumerable<object> GetEqualityComponents()
     {
-        yield return RowDim;
-        yield return ColDim;
-        yield return StationsOrder;
-        yield return Solution; 
-        yield return MapMatrix;
+        yield return Grid;
+        yield return ClusterFlows;
     }
 }

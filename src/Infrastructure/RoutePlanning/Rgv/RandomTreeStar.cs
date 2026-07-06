@@ -1,5 +1,4 @@
 using Domain.Missions.ValueObjects;
-using static Domain.Missions.ValueObjects.PathPoint;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
@@ -12,21 +11,21 @@ public static class RandomTreeStar
     private const double RewireRadius = 5.0;
     private const double GoalBias = 0.15;
 
-    public static List<List<PathPoint>> GenerateRRTSolutions(RgvMap rgvMap)
+    public static List<List<PathPoint>> GenerateRRTSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count - 1; i++) // O(n)
+        for (int i = 0; i < stationsOrder.Count - 1; i++) // O(n)
         {
-            var startPoint = rgvMap.StationsOrder[i];
-            var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
-            var solutions = Solve(rgvMap, startPoint, goalPoint, []);
+            var startPoint = stationsOrder[i];
+            var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
+            var solutions = Solve(grid, startPoint, goalPoint, []);
             segmentPaths.Add(solutions);
         }
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O(n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -54,7 +53,7 @@ public static class RandomTreeStar
     }
 
     private static List<List<PathPoint>> Solve(
-        RgvMap rgvMap,
+        Grid grid,
         PathPoint start,
         PathPoint goal,
         HashSet<PathPoint> occupiedPoints
@@ -65,7 +64,6 @@ public static class RandomTreeStar
 
         for (int i = 0; i < NumVariationsPerSegment; i++)
         {
-            Console.WriteLine($"Running variation: {i + 1} for point: {start} | {goal}");
             var variationRand = new Random(rand.Next());
 
             var treeNodes = new List<PathPoint> { start };
@@ -80,7 +78,7 @@ public static class RandomTreeStar
                 if (variationRand.NextDouble() < GoalBias)
                     sample = goal;
                 else
-                    sample = GetRandomFreePoint(rgvMap, variationRand);
+                    sample = GetRandomFreePoint(grid, variationRand);
 
                 // Find nearest node in tree
                 PathPoint nearest = treeNodes[0];
@@ -96,12 +94,12 @@ public static class RandomTreeStar
                 }
 
                 // Steer: extend toward sample (up to stepSize)
-                PathPoint newNode = ExtendToward(nearest, sample, StepSize, rgvMap);
+                PathPoint newNode = ExtendToward(nearest, sample, StepSize, grid);
 
                 if (newNode is null || occupiedPoints.Contains(newNode) && !newNode.Equals(goal))
                     continue;
 
-                if (!IsLineFree(rgvMap, nearest, newNode))
+                if (!IsLineFree(grid, nearest, newNode))
                     continue;
 
                 // Find best parent in rewire radius
@@ -113,7 +111,7 @@ public static class RandomTreeStar
                 {
                     if (near.Equals(nearest)) continue;
                     double tempCost = costMap[near] + Distance(near, newNode);
-                    if (tempCost < newCost && IsLineFree(rgvMap, near, newNode))
+                    if (tempCost < newCost && IsLineFree(grid, near, newNode))
                     {
                         newCost = tempCost;
                         bestParent = near;
@@ -128,7 +126,7 @@ public static class RandomTreeStar
                 {
                     if (near.Equals(bestParent)) continue;
                     double rewiredCost = newCost + Distance(newNode, near);
-                    if (rewiredCost < costMap[near] && IsLineFree(rgvMap, newNode, near))
+                    if (rewiredCost < costMap[near] && IsLineFree(grid, newNode, near))
                     {
                         parentMap[near] = newNode;
                         costMap[near] = rewiredCost;
@@ -139,7 +137,7 @@ public static class RandomTreeStar
                 if (Distance(newNode, goal) <= StepSize * 1.5)
                 {
                     // Reconnect to goal if better
-                    if (IsLineFree(rgvMap, newNode, goal))
+                    if (IsLineFree(grid, newNode, goal))
                     {
                         double goalCost = costMap[newNode] + Distance(newNode, goal);
                         if (!costMap.TryGetValue(goal, out double value) || goalCost < value)
@@ -169,15 +167,15 @@ public static class RandomTreeStar
         return allPaths;
     }
 
-    private static PathPoint GetRandomFreePoint(RgvMap rgvMap, Random rand)
+    private static PathPoint GetRandomFreePoint(Grid grid, Random rand)
     {
         while (true)
         {
-            int row = rand.Next(rgvMap.RowDim);
-            int col = rand.Next(rgvMap.ColDim);
-            var pt = rgvMap.GetPointAt(row, col);
+            int row = rand.Next(grid.RowDim);
+            int col = rand.Next(grid.ColDim);
+            var pt = grid.GetPointAt(row, col);
 
-            if (pt is not null && pt.Category != PointCategory.Obstacle)
+            if (pt is not null && pt is not Obstacle)
                 return pt;
         }
     }
@@ -189,7 +187,7 @@ public static class RandomTreeStar
         return Math.Sqrt(dx * dx + dy * dy);
     }
 
-    private static bool IsLineFree(RgvMap map, PathPoint a, PathPoint b)
+    private static bool IsLineFree(Grid grid, PathPoint a, PathPoint b)
     {
         int dx = Math.Abs(b.ColPos - a.ColPos);
         int dy = Math.Abs(b.RowPos - a.RowPos);
@@ -200,19 +198,19 @@ public static class RandomTreeStar
         PathPoint current = a;
         while (true)
         {
-            if (current.Category == PointCategory.Obstacle)
+            if (current is Obstacle)
                 return false;
 
             if (current.Equals(b))
                 return true;
 
             int e2 = 2 * err;
-            if (e2 > -dy) { err -= dy; current = map.GetPointAt(current.RowPos, current.ColPos + sx) ?? current; }
-            if (e2 < dx) { err += dx; current = map.GetPointAt(current.RowPos + sy, current.ColPos) ?? current; }
+            if (e2 > -dy) { err -= dy; current = grid.GetPointAt(current.RowPos, current.ColPos + sx) ?? current; }
+            if (e2 < dx) { err += dx; current = grid.GetPointAt(current.RowPos + sy, current.ColPos) ?? current; }
         }
     }
 
-    private static PathPoint ExtendToward(PathPoint near, PathPoint target, double maxDist, RgvMap map)
+    private static PathPoint ExtendToward(PathPoint near, PathPoint target, double maxDist, Grid grid)
     {
         double dist = Distance(near, target);
         if (dist <= maxDist) return target;
@@ -221,7 +219,7 @@ public static class RandomTreeStar
         int newRow = near.RowPos + (int)Math.Round((target.RowPos - near.RowPos) * ratio);
         int newCol = near.ColPos + (int)Math.Round((target.ColPos - near.ColPos) * ratio);
 
-        return map.GetPointAt(newRow, newCol) ?? near;
+        return grid.GetPointAt(newRow, newCol) ?? near;
     }
 
     private static List<PathPoint> GetNodesInRadius(List<PathPoint> nodes, PathPoint center, double radius)
@@ -248,13 +246,11 @@ public static class RandomTreeStar
 
             if (!parentMap.TryGetValue(current, out PathPoint? parent))
             {
-                Console.WriteLine($"→ No parent found for {current} → stopping");
                 break;
             }
 
             if (parent is not null && parent == current)
             {
-                Console.WriteLine("→ Self-loop detected!");
                 break;
             }
 
@@ -262,11 +258,7 @@ public static class RandomTreeStar
             step++;
         }
 
-        if (step >= MAX_STEPS)
-            Console.WriteLine("→ Reached max steps — possible cycle!");
-
         path.Reverse();
         return path;
     }
 }
-

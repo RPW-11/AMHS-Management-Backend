@@ -42,7 +42,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                    int widthLength,
                                    int heightLength,
                                    IEnumerable<PathPointDto> points,
-                                   IEnumerable<RouteFlowDto> routeFlows)
+                                   IEnumerable<ClusterDto> clusters,
+                                   IEnumerable<ClusterFlowDto> clusterFlows)
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
@@ -85,33 +86,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return value;
         }
 
-        // Maps Creation
-        List<RgvMap> rgvMaps = [];
-        foreach (var routeFlow in routeFlows)
-        {
-            var mapResult = RgvMap.Create(
-                rowDim,
-                colDim,
-                widthLength,
-                heightLength,
-                pathPoints,
-                [.. routeFlow.StationsOrder.Select(s => (s.RowPos, s.ColPos))],
-                routeFlow.ArrowColor
-            );
-
-            if (mapResult.IsFailed)
-            {
-                _logger.LogWarning("Failed to create RGV map: {ErrorMessage}",
-                    mapResult.Errors[0].Message);
-                return Result.Fail(ApplicationError.Validation(mapResult.Errors[0].Message));
-            }
-
-            rgvMaps.Add(mapResult.Value);
-        }
-
-        _logger.LogDebug("RGV maps created with count: {MapCount} | Grid size: {RowDim}x{ColDim}",
-                rgvMaps.Count, rowDim, colDim);
-
         var algorithmResult = RoutePlanningAlgorithm.FromString(algorithm);
         if (algorithmResult.IsFailed)
         {
@@ -120,15 +94,115 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Validation(algorithmResult.Errors[0].Message));
         }
 
+        var pointLookup = pathPoints.ToDictionary(p => (p.RowPos, p.ColPos), p => p);
+
+        List<Cluster> resolvedClusters = [];
+        foreach (var clusterDto in clusters)
+        {
+            List<Station> stations = [];
+            foreach (var position in clusterDto.Stations)
+            {
+                if (!pointLookup.TryGetValue((position.RowPos, position.ColPos), out var point))
+                {
+                    _logger.LogWarning("Cluster station at ({Row},{Col}) does not match any known point",
+                        position.RowPos, position.ColPos);
+                    return Result.Fail(ApplicationError.Validation(
+                        $"Cluster station at ({position.RowPos},{position.ColPos}) does not match any known point"));
+                }
+
+                if (point is not Station station)
+                {
+                    _logger.LogWarning("Point at ({Row},{Col}) is not a station", position.RowPos, position.ColPos);
+                    return Result.Fail(ApplicationError.Validation(
+                        $"Point at ({position.RowPos},{position.ColPos}) is not a station"));
+                }
+
+                stations.Add(station);
+            }
+
+            var clusterResult = Cluster.Create(clusterDto.Name, clusterDto.ArrowColor, stations, []);
+            if (clusterResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to create cluster: {ErrorMessage}", clusterResult.Errors[0].Message);
+                return Result.Fail(ApplicationError.Validation(clusterResult.Errors[0].Message));
+            }
+
+            resolvedClusters.Add(clusterResult.Value);
+        }
+
+        List<ClusterFlow> resolvedClusterFlows = [];
+        foreach (var clusterFlowDto in clusterFlows)
+        {
+            List<Cluster> orderedClusters = [];
+            foreach (var clusterIdx in clusterFlowDto.ClusterOrder)
+            {
+                if (clusterIdx < 0 || clusterIdx >= resolvedClusters.Count)
+                {
+                    _logger.LogWarning("Cluster flow references an out-of-range cluster index: {ClusterIdx}", clusterIdx);
+                    return Result.Fail(ApplicationError.Validation(
+                        $"A cluster flow references an out-of-range cluster index: {clusterIdx}"));
+                }
+
+                orderedClusters.Add(resolvedClusters[clusterIdx]);
+            }
+
+            var clusterFlowResult = ClusterFlow.Create(clusterFlowDto.ArrowColor, orderedClusters, []);
+            if (clusterFlowResult.IsFailed)
+            {
+                _logger.LogWarning("Failed to create cluster flow: {ErrorMessage}", clusterFlowResult.Errors[0].Message);
+                return Result.Fail(ApplicationError.Validation(clusterFlowResult.Errors[0].Message));
+            }
+
+            resolvedClusterFlows.Add(clusterFlowResult.Value);
+        }
+
+        var gridResult = Grid.Create(rowDim, colDim, widthLength, heightLength, pathPoints);
+        if (gridResult.IsFailed)
+        {
+            _logger.LogWarning("Failed to create grid: {ErrorMessage}", gridResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Validation(gridResult.Errors[0].Message));
+        }
+
+        var rgvMapResult = RgvMap.Create(gridResult.Value, resolvedClusterFlows);
+        if (rgvMapResult.IsFailed)
+        {
+            _logger.LogWarning("Failed to create RGV map: {ErrorMessage}", rgvMapResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Validation(rgvMapResult.Errors[0].Message));
+        }
+
+        RgvMap rgvMap = rgvMapResult.Value;
+
+        _logger.LogDebug("RGV map created with {FlowCount} cluster flows | Grid size: {RowDim}x{ColDim}",
+                rgvMap.ClusterFlows.Count, rowDim, colDim);
+
         // Update status to Processing
         missionResult.Value.ProcessRoutePlanning(new MissionRoutePlanningStartedEvent(
             missionResult.Value.Id,
-            rgvMaps,
+            [],
             algorithmResult.Value,
             imageStream
         ));
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
+
+        try
+        {
+            // Solve the mission in the background
+            await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
+            {
+                var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+                var missionRepository = sp.GetRequiredService<IMissionRepository>();
+                var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
+                await SolveRoute(
+                    domainDispatcher, unitOfWork, missionRepository, missionResult.Value,
+                    rgvMap, algorithmResult.Value, imageStream);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Full queue");
+            return Result.Fail(ApplicationError.Validation("Full queue"));
+        }
 
         try
         {
@@ -140,120 +214,85 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        // Solve the mission in the background
-        await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
-        {
-            var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-            var missionRepository = sp.GetRequiredService<IMissionRepository>();
-            var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
-            await SolveRoute(domainDispatcher, unitOfWork, missionRepository, missionResult.Value, rgvMaps, algorithmResult.Value, imageStream);
-        });
-
         _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
 
         return Result.Ok();
     }
+
+    private const int GenerationsNumber = 300;
 
     private async Task SolveRoute(
         IDomainDispatcher domainDispatcher,
         IUnitOfWork unitOfWork,
         IMissionRepository missionRepository,
         MissionBase mission,
-        List<RgvMap> rgvMaps,
+        RgvMap rgvMap,
         RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream)
     {
-        // Solve for each flow
-        List<List<PathPoint>> flowSolutions = [];
-        List<List<PathPoint>> postProcessedFlowSolutions = [];
-        List<RoutePlanningScoreDto> flowScores = [];
+        // Solve each cluster's own route once and reuse it wherever the same cluster
+        // reappears (e.g. a looping flow like C1 -> C2 -> C1).
+        var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
 
-        for (int i = 0; i < rgvMaps.Count; i++)
+        List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
+        List<PathPoint> combinedSolution = [];
+        List<PathPoint> combinedStationsOrder = [];
+        List<ClusterFlow> solvedClusterFlows = [];
+
+        foreach (var clusterFlow in rgvMap.ClusterFlows)
         {
-            var rgvMap = rgvMaps.ElementAt(i);
+            List<Cluster> solvedClusters = [];
+            List<PathPoint> flowConnectorSolution = [];
 
-            var (routes, postProcessedRoutes) = _rgvRoutePlanning.Solve(
-                rgvMap,
-                flowSolutions,
-                algorithm
-            );
-
-            if (!routes.Any())
+            foreach (var cluster in clusterFlow.Clusters)
             {
-                _logger.LogInformation("No route solution found after solving");
-                mission.SetMissionStatus(MissionStatus.Failed);
+                if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
+                {
+                    clusterSolution = SolveClusterRoute(rgvMap.Grid, cluster, algorithm);
+                    clusterSolutionCache[cluster] = clusterSolution;
+                }
+
+                var solvedCluster = Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution).Value;
+                solvedClusters.Add(solvedCluster);
+
+                routes.Add((clusterSolution, cluster.PathColor));
+                combinedSolution.AddRange(clusterSolution);
+                combinedStationsOrder.AddRange(cluster.Stations);
             }
 
-            _logger.LogInformation("Flow {FlowNumber} -> Route found | Original points: {Count} | Post-processed: {PostCount}",
-                i + 1, routes.Count(), postProcessedRoutes.Count());
+            // Connect each cluster to the next via the closest pair of stations (Manhattan distance).
+            for (int i = 0; i < solvedClusters.Count - 1; i++)
+            {
+                var connectorSolution = SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm);
+                flowConnectorSolution.AddRange(connectorSolution);
+                combinedSolution.AddRange(connectorSolution);
+            }
 
-            var scores = _rgvRoutePlanning.GetRouteScore([.. routes], rgvMap);
+            var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, flowConnectorSolution).Value;
+            solvedClusterFlows.Add(solvedClusterFlow);
 
-            flowSolutions.Add([.. routes]);
-            postProcessedFlowSolutions.Add([.. postProcessedRoutes]);
-            flowScores.Add(scores);
+            routes.Add((flowConnectorSolution, clusterFlow.PathColor));
         }
 
-        // Get intersections and draw original solution
-        List<RgvMap> rgvMapsWithOriginalSolutions = [];
-        for (int i = 0; i < flowSolutions.Count; i++)
-        {
-            var map = rgvMaps.ElementAt(i);
-            rgvMapsWithOriginalSolutions.Add(new RgvMap(
-                map.RowDim, map.ColDim, map.WidthLength, map.HeightLength,
-                map.StationsOrder, map.MapMatrix, flowSolutions[i], map.PathColor
-            ));
-        }
-        List<PathPoint> intersections = RouteIntersection.GetIntersectionPathPoints(flowSolutions);
+        var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
+        var intersections = RouteIntersection.GetIntersectionPathPoints([.. routes.Select(r => r.Solution)]);
+        var score = _rgvRoutePlanning.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
 
-        if (DrawSolution(imageStream, rgvMapsWithOriginalSolutions, intersections, out byte[] drawnImageBytes))
-        {
-            _logger.LogError("Error drawing the original solution");
-            mission.SetMissionStatus(MissionStatus.Failed);
-        }
-
-        var originalImgUrl = _rgvRoutePlanning.WriteImage(drawnImageBytes, $"{mission.Id}_original_solution"); ;
-        _logger.LogInformation("Original route image saved at: {ImageUrl}", originalImgUrl);
-
-
-        // Draw post-processed solution
-        List<RgvMap> rgvMapsWithPostProcessedSolutions = [];
-        for (int i = 0; i < postProcessedFlowSolutions.Count; i++)
-        {
-            var map = rgvMaps.ElementAt(i);
-            rgvMapsWithPostProcessedSolutions.Add(new RgvMap(
-                map.RowDim, map.ColDim, map.WidthLength, map.HeightLength,
-                map.StationsOrder, map.MapMatrix, flowSolutions[i], map.PathColor
-            ));
-        }
-        List<PathPoint> postProcessedIntersections = RouteIntersection.GetIntersectionPathPoints(postProcessedFlowSolutions);
-        if (DrawSolution(imageStream, rgvMapsWithPostProcessedSolutions, postProcessedIntersections, out byte[] postProcessedImageBytes))
-        {
-            _logger.LogError("Error drawing the post-processed solution");
-        }
-        var postProcessedImgUrl = _rgvRoutePlanning.WriteImage(postProcessedImageBytes, $"{mission.Id}_postprocessed_solution"); ;
-        _logger.LogInformation("Post-processed route image saved at: {ImageUrl}", postProcessedImgUrl);
-
-        List<RouteSolutionDto> routeSolutions = [];
-        for (int i = 0; i < flowSolutions.Count; i++)
-        {
-            var routeSolutionDto = new RouteSolutionDto(
-                rgvMapsWithOriginalSolutions[i],
-                flowScores[i]
-            );
-            routeSolutions.Add(routeSolutionDto);
-        }
-
-        var routePlanningDetail = ToRoutePlanningDto(
-            mission.Id,
-            algorithm,
-            [originalImgUrl, postProcessedImgUrl],
-            routeSolutions);
+        List<RouteSolutionDto> routeSolutions = [new(solvedRgvMap, score)];
 
         string resourceLink;
 
         try
         {
+            var drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(imageStream.ToArray(), rgvMap.Grid, routes, intersections);
+            var imagePath = _rgvRoutePlanning.WriteImage(drawnImageBytes, mission.Id.ToString());
+
+            var routePlanningDetail = ToRoutePlanningDto(
+                mission.Id,
+                algorithm,
+                [imagePath],
+                routeSolutions);
+
             resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
             _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
 
@@ -262,7 +301,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to write route planning JSON");
+            _logger.LogError(ex, "Failed to solve, draw or write route planning result");
             mission.SetMissionStatus(MissionStatus.Failed);
         }
 
@@ -287,56 +326,97 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
     }
 
+    private List<PathPoint> SolveClusterRoute(Grid grid, Cluster cluster, RoutePlanningAlgorithm algorithm)
+    {
+        _logger.LogInformation("[32m[SOLVING][0m Solving cluster {ClusterName}", cluster.Name);
+
+        if (cluster.Stations.Count <= 1)
+        {
+            return [.. cluster.Stations];
+        }
+
+        var (result, _) = _rgvRoutePlanning.Solve(
+            grid,
+            [.. cluster.Stations.Cast<PathPoint>()],
+            [],
+            algorithm,
+            GenerationsNumber);
+
+        return [.. result];
+    }
+
+    private List<PathPoint> SolveConnectorRoute(Grid grid, Cluster from, Cluster to, RoutePlanningAlgorithm algorithm)
+    {
+        _logger.LogInformation("[32m[SOLVING][0m Solving connector for cluster {SrcClusterName} to {DstClusterName}", from.Name, to.Name);
+
+        var (start, end) = FindNearestConnector(from.Stations, to.Stations);
+
+        var (result, _) = _rgvRoutePlanning.Solve(
+            grid,
+            [start, end],
+            [],
+            algorithm,
+            GenerationsNumber);
+
+        return [.. result];
+    }
+
+    private static (Station Start, Station End) FindNearestConnector(IReadOnlyList<Station> from, IReadOnlyList<Station> to)
+    {
+        Station bestStart = from[0];
+        Station bestEnd = to[0];
+        int bestDistance = int.MaxValue;
+
+        foreach (var start in from)
+        {
+            foreach (var end in to)
+            {
+                int distance = Math.Abs(start.RowPos - end.RowPos) + Math.Abs(start.ColPos - end.ColPos);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestStart = start;
+                    bestEnd = end;
+                }
+            }
+        }
+
+        return (bestStart, bestEnd);
+    }
+
     private (bool isError, Result? value) ToPathPoints(IEnumerable<PathPointDto> points, out List<PathPoint> pathPoints)
     {
         pathPoints = [];
         foreach (var point in points)
         {
-            var pathPointResult = PathPoint.Create(
-                point.Name,
-                point.Category,
-                point.Position.RowPos,
-                point.Position.ColPos,
-                point.Time
-            );
-
-            if (pathPointResult.IsFailed)
+            try
+            {
+                pathPoints.Add(PointFactory.Create(
+                    GetPointCategoryFromString(point.Category),
+                    point.Position.RowPos,
+                    point.Position.ColPos,
+                    point.Name,
+                    point.Time
+                ));
+            }
+            catch (ArgumentException ex)
             {
                 _logger.LogWarning("Invalid path point: {Name} at ({Row},{Col}): {ErrorMessage}",
-                    point.Name, point.Position.RowPos, point.Position.ColPos,
-                    pathPointResult.Errors[0].Message);
-                return (isError: true, value: Result.Fail(ApplicationError.Validation(pathPointResult.Errors[0].Message)));
+                    point.Name, point.Position.RowPos, point.Position.ColPos, ex.Message);
+                return (isError: true, value: Result.Fail(ApplicationError.Validation(ex.Message)));
             }
-
-            pathPoints.Add(pathPointResult.Value);
         }
 
         return (isError: false, value: null);
     }
 
-    private bool DrawSolution(
-        MemoryStream imageStream,
-        List<RgvMap> rgvMaps,
-        List<PathPoint> intersections, out byte[] drawnImageBytes)
-    {
-        drawnImageBytes = [];
-        try
+    private static PointCategory GetPointCategoryFromString(string category) =>
+        category.ToLower() switch
         {
-            byte[] imageBytes = imageStream.ToArray();
-            drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(
-                imageBytes,
-                rgvMaps,
-                intersections);
-            _logger.LogInformation("Original route image generated");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate original route image");
-            return true;
-        }
-
-        return false;
-    }
+            "obs" => PointCategory.Obstacle,
+            "st" => PointCategory.Station,
+            _ => PointCategory.Path
+        };
 
     private static RoutePlanningDetailDto ToRoutePlanningDto(
         MissionId missionId,

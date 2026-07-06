@@ -6,17 +6,20 @@ namespace Application.Common.Interfaces.RoutePlanning;
 public interface IRgvRoutePlanning
 {
     (IEnumerable<PathPoint>, IEnumerable<PathPoint>) Solve(
-        RgvMap rgvMap,
+        Grid grid,
+        List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
-        RoutePlanningAlgorithm routePlanningAlgorithm
+        RoutePlanningAlgorithm routePlanningAlgorithm,
+        int generationsNumber
     );
 
     byte[] DrawMultipleFlows(
         byte[] imageBytes,
-        List<RgvMap> mapsWithSolutions,
+        Grid grid,
+        List<(List<PathPoint> Solution, string ArrowColor)> routes,
         List<PathPoint> intersections);
     string WriteImage(byte[] imageBytes, string fileName);
     string WriteToJson(RoutePlanningDetailDto routePlanningMission);
     RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl);
-    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, RgvMap rgvMap);
+    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder);
 }

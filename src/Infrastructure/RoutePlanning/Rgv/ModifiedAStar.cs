@@ -1,5 +1,4 @@
-using static Domain.Missions.ValueObjects.PathPoint;
-using static Domain.Missions.ValueObjects.RgvMap;
+using static Domain.Missions.ValueObjects.Grid;
 using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
@@ -9,29 +8,29 @@ public static class ModifiedAStar
     private const int MaxSolutions = 200;
     private const double PerStepCost = 1;
 
-    public static List<List<PathPoint>> GetValidSolutions(RgvMap rgvMap)
+    public static List<List<PathPoint>> GetValidSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
-        var intersectSolutions = GetValidSolutionsIntersect(rgvMap);
-        var nonIntersectSolutions = GetValidSolutionsNoIntersect(rgvMap);
+        var intersectSolutions = GetValidSolutionsIntersect(grid, stationsOrder);
+        var nonIntersectSolutions = GetValidSolutionsNoIntersect(grid, stationsOrder);
 
         return [.. intersectSolutions, .. nonIntersectSolutions];
     }
 
-    private static List<List<PathPoint>> GetValidSolutionsIntersect(RgvMap rgvMap)
+    private static List<List<PathPoint>> GetValidSolutionsIntersect(Grid grid, List<PathPoint> stationsOrder)
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < rgvMap.StationsOrder.Count - 1; i++) // O(n)
+        for (int i = 0; i < stationsOrder.Count - 1; i++) // O(n)
         {
-            var startPoint = rgvMap.StationsOrder[i];
-            var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
-            var solutions = SolveMultipleTimes(rgvMap, startPoint, goalPoint, []);
+            var startPoint = stationsOrder[i];
+            var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
+            var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, []);
             segmentPaths.Add(solutions);
         }
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O(n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++) // O(n * m * k)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -58,22 +57,22 @@ public static class ModifiedAStar
         return allPaths;
     }
 
-    private static List<List<PathPoint>> GetValidSolutionsNoIntersect(RgvMap rgvMap)
+    private static List<List<PathPoint>> GetValidSolutionsNoIntersect(Grid grid, List<PathPoint> stationsOrder)
     {
         // Initial search
-        List<List<PathPoint>> possiblePaths = SolveMultipleTimes(rgvMap, rgvMap.StationsOrder[0], rgvMap.StationsOrder[1], []);
+        List<List<PathPoint>> possiblePaths = SolveMultipleTimes(grid, stationsOrder[0], stationsOrder[1], []);
 
-        for (int i = 1; i < rgvMap.StationsOrder.Count - 1; i++) // O (n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++) // O (n * m * k)
         {
-            var startPoint = rgvMap.StationsOrder[i];
-            var goalPoint = rgvMap.StationsOrder[(i + 1) % rgvMap.StationsOrder.Count];
+            var startPoint = stationsOrder[i];
+            var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
             List<List<PathPoint>> tempPaths = [];
 
             foreach (var path in possiblePaths)
             {
                 var occupiedPoints = new HashSet<PathPoint>();
                 UpdateOccupiedPoints(occupiedPoints, path);
-                var solutions = SolveMultipleTimes(rgvMap, startPoint, goalPoint, occupiedPoints);
+                var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, occupiedPoints);
 
                 foreach (var sol in solutions)
                 {
@@ -103,7 +102,7 @@ public static class ModifiedAStar
     }
 
     private static List<List<PathPoint>> SolveMultipleTimes(
-        RgvMap rgvMap,
+        Grid grid,
         PathPoint startPoint,
         PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
@@ -124,7 +123,7 @@ public static class ModifiedAStar
         foreach (var config in configurations)
         {
             var solutionsFromThisRun = Solve(
-                rgvMap, startPoint, goalPoint, occupiedPoints,
+                grid, startPoint, goalPoint, occupiedPoints,
                 config.Weight, config.Perturbation,
                 maxCostFactor, maxSolutionsPerConfig: 3);
 
@@ -141,7 +140,7 @@ public static class ModifiedAStar
     }
 
     public static List<List<PathPoint>> Solve(
-        RgvMap rgvMap,
+        Grid grid,
         PathPoint startPoint,
         PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
@@ -179,9 +178,9 @@ public static class ModifiedAStar
 
             foreach (var direction in MapTrajectory.AllDirections)
             {
-                var neighbor = rgvMap.GetPointAt(current.RowPos + direction[0], current.ColPos + direction[1]);
+                var neighbor = grid.GetPointAt(current.RowPos + direction[0], current.ColPos + direction[1]);
 
-                if (neighbor is null || neighbor.Category == PointCategory.Obstacle)
+                if (neighbor is null || neighbor is Obstacle)
                 {
                     continue;
                 }

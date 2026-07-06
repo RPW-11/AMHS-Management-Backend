@@ -26,7 +26,7 @@ public class BackgroundJobHub : BackgroundService, IBackgroundJobHub
         ILogger<BackgroundJobHub> logger,
         IServiceScopeFactory scopeFactory,
         int maxConcurrentWorkers = 4,
-        int maxQueueSize = 200)
+        int maxQueueSize = 1)
     {
         _statuses = new();
         _logger = logger;

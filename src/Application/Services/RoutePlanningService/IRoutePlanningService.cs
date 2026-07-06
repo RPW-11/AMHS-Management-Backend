@@ -14,6 +14,7 @@ public interface IRoutePlanningService
         int widthLength,
         int heightLength,
         IEnumerable<PathPointDto> points,
-        IEnumerable<RouteFlowDto> routeFlows
+        IEnumerable<ClusterDto> clusters,
+        IEnumerable<ClusterFlowDto> clusterFlows
     );
 }

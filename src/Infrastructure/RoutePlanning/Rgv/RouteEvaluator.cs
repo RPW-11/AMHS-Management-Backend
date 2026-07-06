@@ -11,25 +11,26 @@ internal static class RouteEvaluator
     private const double LoadingUnloadingTime = 15;
     private const int HourInSeconds = 3600;
 
-    public static double EvaluateOptimality(List<PathPoint> solution, RgvMap map)
+    public static double EvaluateOptimality(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
-        var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, map);
+        var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, grid, stationsOrder);
         var finalScore = ThroughputWeight * totalThroughput + LengthWeight * 1 / trackLength + NumOfRgvsWeight * 1 / maxRgvs;
 
         return finalScore;
     }
 
-    public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, RgvMap map)
+    public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
         // BOTTLENECK FOCUS
-        double trackLength = solution.Count * map.GetSquareLength();
+        double trackLength = solution.Count * grid.GetSquareLength();
         double travelTime = trackLength / RgvSpeed;
 
         // Find the station with maximum occupation time
         double maxStationTime = 0;
-        foreach (var station in map.StationsOrder)
+        foreach (var point in stationsOrder)
         {
-            double stationTime = station.Time + LoadingUnloadingTime;
+            double processingTime = point is Station station ? station.ProcessingTime : 0;
+            double stationTime = processingTime + LoadingUnloadingTime;
             if (stationTime > maxStationTime)
                 maxStationTime = stationTime;
         }
@@ -48,17 +49,17 @@ internal static class RouteEvaluator
         return (totalThroughput, trackLength, maxRgvs);
     }
 
-    public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder, RgvMap map)
+    public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder, Grid grid)
     {
         List<double> routesQ = []; // product per hour
         List<int> routesMaxRgvs = []; // max Rgvs
         List<double> routesTrackLength = []; // routes length
 
-        double totalStationsTime = stationsOrder.Sum(s => s.Time);
+        double totalStationsTime = stationsOrder.Sum(s => s is Station station ? station.ProcessingTime : 0);
 
         foreach (var route in possibleRoutes)
         {
-            double trackLength = route.Count * map.GetSquareLength();
+            double trackLength = route.Count * grid.GetSquareLength();
             double timePerLoop = (trackLength / RgvSpeed) + totalStationsTime;
             double perRgvQ = 3600 / timePerLoop;
 

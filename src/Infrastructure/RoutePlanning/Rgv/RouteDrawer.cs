@@ -1,112 +1,196 @@
 using Domain.Missions.ValueObjects;
 using SkiaSharp;
 
-public static class RouteDrawer
+namespace Infrastructure.RoutePlanning.Rgv;
+
+public sealed class RouteDrawer : IDisposable
 {
     private const float ThicknessMultiplier = 0.02f;
     private const float ArrowThicknessControl = 6f;
     private const int ImageQuality = 92;
 
-    public static byte[] DrawMultipleRoutes(
-        byte[] imageBytes,
-        List<RgvMap> mapsWithSolutions,
-        List<PathPoint> intersections
-    )
+    private readonly SKBitmap _original;
+    private readonly SKSurface _surface;
+    private readonly SKCanvas _canvas;
+    private readonly float _cellWidth;
+    private readonly float _cellHeight;
+    private readonly float _penThickness;
+    private readonly float _arrowSize;
+
+    public RouteDrawer(byte[] imageBytes, Grid grid)
     {
         using var stream = new MemoryStream(imageBytes);
-        using var original = SKBitmap.Decode(stream) ?? throw new InvalidOperationException("Failed to decode base image");
-        using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
-        using var canvas = surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-        canvas.DrawBitmap(original, 0, 0);
+        _original = SKBitmap.Decode(stream) ?? throw new InvalidOperationException("Failed to decode base image");
+        _surface = SKSurface.Create(new SKImageInfo(_original.Width, _original.Height));
+        _canvas = _surface.Canvas;
+        _canvas.Clear(SKColors.Transparent);
+        _canvas.DrawBitmap(_original, 0, 0);
 
-        var firstMap = mapsWithSolutions.First();
-        float cellWidth = (float)original.Width / firstMap.ColDim;
-        float cellHeight = (float)original.Height / firstMap.RowDim;
+        _cellWidth = (float)_original.Width / grid.ColDim;
+        _cellHeight = (float)_original.Height / grid.RowDim;
+        _penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * Math.Min(_cellWidth, _cellHeight)));
+        _arrowSize = ArrowThicknessControl * _penThickness;
+    }
 
-        float penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * Math.Min(cellWidth, cellHeight)));
-        float arrowSize = ArrowThicknessControl * penThickness;
-
-        int arrowInterval = Math.Max(1, 10);
-
-        for (int i = 0; i < mapsWithSolutions.Count; i++)
+    public void DrawSolution(List<PathPoint> solution, string arrowColor)
+    {
+        if (!SKColor.TryParse(arrowColor, out SKColor routeColor))
         {
-            var rgvMap = mapsWithSolutions.ElementAt(i);
-            string hexColor = rgvMap.PathColor;
-
-            if (!SKColor.TryParse(hexColor, out SKColor routeColor))
-            {
-                routeColor = SKColors.Black;
-            }
-
-            var points = new List<SKPoint>();
-            foreach (var p in rgvMap.Solution)
-            {
-                float x = p.ColPos * cellWidth + cellWidth / 2f;
-                float y = p.RowPos * cellHeight + cellHeight / 2f;
-                points.Add(new SKPoint(x, y));
-            }
-
-            if (points.Count < 2) continue;
-
-            using var linePaint = new SKPaint
-            {
-                Style = SKPaintStyle.Stroke,
-                Color = routeColor,
-                StrokeWidth = penThickness,
-                IsAntialias = true,
-                StrokeCap = SKStrokeCap.Round,
-                StrokeJoin = SKStrokeJoin.Round
-            };
-
-            using var path = new SKPath();
-            path.MoveTo(points[0]);
-            for (int j = 1; j < points.Count; j++)
-                path.LineTo(points[j]);
-
-            canvas.DrawPath(path, linePaint);
-
-            using var arrowFill = new SKPaint
-            {
-                Style = SKPaintStyle.Fill,
-                Color = routeColor,
-                IsAntialias = true
-            };
-
-            using var arrowStroke = new SKPaint
-            {
-                Style = SKPaintStyle.Stroke,
-                Color = SKColors.Black.WithAlpha(180),
-                StrokeWidth = Math.Max(1, penThickness * 0.35f),
-                IsAntialias = true
-            };
-
-            // Place arrows more frequently on shorter paths, less on very long ones
-            int dynamicInterval = Math.Max(1, points.Count / 12);
-
-            for (int j = 0; j < points.Count - 1; j += dynamicInterval)
-            {
-                var curr = points[j];
-                var next = points[j + 1];
-                DrawArrow(canvas, curr, next, arrowSize, arrowFill, arrowStroke);
-            }
-
-            if (points.Count >= 2)
-            {
-                DrawArrow(canvas, points[^2], points[^1], arrowSize, arrowFill, arrowStroke);
-            }
+            routeColor = SKColors.Black;
         }
 
-        DrawIntersections(canvas, intersections, firstMap, original.Width, original.Height);
+        var points = new List<SKPoint>();
+        foreach (var p in solution)
+        {
+            float x = p.ColPos * _cellWidth + _cellWidth / 2f;
+            float y = p.RowPos * _cellHeight + _cellHeight / 2f;
+            points.Add(new SKPoint(x, y));
+        }
 
-        using var finalImage = surface.Snapshot();
+        if (points.Count < 2) return;
+
+        using var linePaint = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = routeColor,
+            StrokeWidth = _penThickness,
+            IsAntialias = true,
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round
+        };
+
+        using var path = new SKPath();
+        path.MoveTo(points[0]);
+        for (int j = 1; j < points.Count; j++)
+            path.LineTo(points[j]);
+
+        _canvas.DrawPath(path, linePaint);
+
+        using var arrowFill = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = routeColor,
+            IsAntialias = true
+        };
+
+        using var arrowStroke = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = SKColors.Black.WithAlpha(180),
+            StrokeWidth = Math.Max(1, _penThickness * 0.35f),
+            IsAntialias = true
+        };
+
+        // Place arrows more frequently on shorter paths, less on very long ones
+        int dynamicInterval = Math.Max(1, points.Count / 12);
+
+        for (int j = 0; j < points.Count - 1; j += dynamicInterval)
+        {
+            var curr = points[j];
+            var next = points[j + 1];
+            DrawArrow(curr, next, arrowFill, arrowStroke);
+        }
+
+        if (points.Count >= 2)
+        {
+            DrawArrow(points[^2], points[^1], arrowFill, arrowStroke);
+        }
+    }
+
+    public void DrawStations(IEnumerable<Station> stations, SKColor? starColor = null)
+    {
+        SKColor color = starColor ?? SKColors.Gold;
+        float baseSize = Math.Min(_cellWidth, _cellHeight);
+        float outerRadius = baseSize * 0.35f;
+        float innerRadius = outerRadius * 0.5f;
+
+        using var fillPaint = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = color,
+            IsAntialias = true
+        };
+
+        using var strokePaint = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = SKColors.Black,
+            StrokeWidth = Math.Max(1f, baseSize * 0.04f),
+            IsAntialias = true
+        };
+
+        foreach (var station in stations)
+        {
+            float centerX = station.ColPos * _cellWidth + _cellWidth / 2f;
+            float centerY = station.RowPos * _cellHeight + _cellHeight / 2f;
+
+            using var starPath = BuildStarPath(centerX, centerY, outerRadius, innerRadius);
+            _canvas.DrawPath(starPath, fillPaint);
+            _canvas.DrawPath(starPath, strokePaint);
+        }
+    }
+
+    private static SKPath BuildStarPath(float centerX, float centerY, float outerRadius, float innerRadius)
+    {
+        const int points = 5;
+        const double startAngle = -Math.PI / 2;
+        double angleStep = Math.PI / points;
+
+        var path = new SKPath();
+
+        for (int i = 0; i < points * 2; i++)
+        {
+            float radius = i % 2 == 0 ? outerRadius : innerRadius;
+            double angle = startAngle + i * angleStep;
+            float x = centerX + radius * (float)Math.Cos(angle);
+            float y = centerY + radius * (float)Math.Sin(angle);
+
+            if (i == 0) path.MoveTo(x, y);
+            else path.LineTo(x, y);
+        }
+
+        path.Close();
+        return path;
+    }
+
+    public void DrawIntersections(List<PathPoint> intersections, float circleRadiusMultiplier = 0.38f)
+    {
+        if (intersections.Count == 0)
+            return;
+
+        float baseSize = Math.Min(_cellWidth, _cellHeight);
+        float radius = baseSize * circleRadiusMultiplier;
+        float strokeWidth = Math.Max(2f, baseSize * 0.08f);
+
+        using var strokePaint = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = SKColors.Black,
+            StrokeWidth = strokeWidth,
+            IsAntialias = true
+        };
+
+        foreach (var point in intersections)
+        {
+            float x = point.ColPos * _cellWidth + _cellWidth / 2f;
+            float y = point.RowPos * _cellHeight + _cellHeight / 2f;
+
+            if (x < 0 || y < 0 || x >= _original.Width || y >= _original.Height)
+                continue;
+
+            _canvas.DrawCircle(x, y, radius, strokePaint);
+        }
+    }
+
+    public byte[] Encode()
+    {
+        using var finalImage = _surface.Snapshot();
         using var data = finalImage.Encode(SKEncodedImageFormat.Png, ImageQuality);
 
         return data.ToArray();
     }
 
-    private static void DrawArrow(SKCanvas canvas, SKPoint start, SKPoint end,
-                             float size, SKPaint fillPaint, SKPaint strokePaint)
+    private void DrawArrow(SKPoint start, SKPoint end, SKPaint fillPaint, SKPaint strokePaint)
     {
         float dx = end.X - start.X;
         float dy = end.Y - start.Y;
@@ -124,12 +208,12 @@ public static class RouteDrawer
         SKPoint tip = end;
 
         SKPoint left = new(
-            end.X - dx * size + px * size * 0.5f,
-            end.Y - dy * size + py * size * 0.5f);
+            end.X - dx * _arrowSize + px * _arrowSize * 0.5f,
+            end.Y - dy * _arrowSize + py * _arrowSize * 0.5f);
 
         SKPoint right = new(
-            end.X - dx * size - px * size * 0.5f,
-            end.Y - dy * size - py * size * 0.5f);
+            end.X - dx * _arrowSize - px * _arrowSize * 0.5f,
+            end.Y - dy * _arrowSize - py * _arrowSize * 0.5f);
 
         using var arrowPath = new SKPath();
         arrowPath.MoveTo(tip);
@@ -137,45 +221,13 @@ public static class RouteDrawer
         arrowPath.LineTo(right);
         arrowPath.Close();
 
-        canvas.DrawPath(arrowPath, fillPaint);
-        canvas.DrawPath(arrowPath, strokePaint);
+        _canvas.DrawPath(arrowPath, fillPaint);
+        _canvas.DrawPath(arrowPath, strokePaint);
     }
 
-    private static void DrawIntersections(
-        SKCanvas canvas,
-        List<PathPoint> intersections,
-        RgvMap rgvMap,
-        float imageWidth,
-        float imageHeight,
-        float circleRadiusMultiplier = 0.38f)
+    public void Dispose()
     {
-        if (intersections.Count == 0)
-            return;
-
-        float cellWidth = imageWidth / rgvMap.ColDim;
-        float cellHeight = imageHeight / rgvMap.RowDim;
-        float baseSize = Math.Min(cellWidth, cellHeight);
-        float radius = baseSize * circleRadiusMultiplier;
-
-        float strokeWidth = Math.Max(2f, baseSize * 0.08f);
-
-        using var strokePaint = new SKPaint
-        {
-            Style = SKPaintStyle.Stroke,
-            Color = SKColors.Black,
-            StrokeWidth = strokeWidth,
-            IsAntialias = true
-        };
-
-        foreach (var point in intersections)
-        {
-            float x = point.ColPos * cellWidth + cellWidth / 2f;
-            float y = point.RowPos * cellHeight + cellHeight / 2f;
-
-            if (x < 0 || y < 0 || x >= imageWidth || y >= imageHeight)
-                continue;
-
-            canvas.DrawCircle(x, y, radius, strokePaint);
-        }
+        _surface?.Dispose();
+        _original?.Dispose();
     }
 }

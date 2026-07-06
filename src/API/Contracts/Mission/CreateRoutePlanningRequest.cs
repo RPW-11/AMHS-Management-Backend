@@ -13,7 +13,8 @@ public record RouteMetadata(
     int WidthLength,
     int HeightLength,
     string Algorithm,
-    IEnumerable<RouteFlowDto> RouteFlows,
+    IEnumerable<ClusterDto> Clusters,
+    IEnumerable<ClusterFlowDto> ClusterFlows,
     IEnumerable<IEnumerable<PointPositionDto>> SampleSolutions,
     IEnumerable<PathPointDto> Points
 );

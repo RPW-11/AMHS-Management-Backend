@@ -1,5 +1,4 @@
 using Domain.Missions.ValueObjects;
-using static Domain.Missions.ValueObjects.PathPoint;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
@@ -7,13 +6,13 @@ public static class PostProcessingRoute
 {
     public static List<PathPoint> SmoothAndRasterizeFourDirections(
         List<PathPoint> originalPath,
-        RgvMap map
+        Grid grid
     )
     {
         if (originalPath.Count < 3)
             return originalPath;
 
-        var sparseWaypoints = GetSparseStraightWaypoints(originalPath, map);
+        var sparseWaypoints = GetSparseStraightWaypoints(originalPath, grid);
 
         var densePath = new List<PathPoint>
         {
@@ -25,7 +24,7 @@ public static class PostProcessingRoute
             var start = sparseWaypoints[i];
             var end = sparseWaypoints[i + 1];
 
-            var segment = GetAxisAlignedDensePath(start, end, map);
+            var segment = GetAxisAlignedDensePath(start, end, grid);
 
             for (int k = 1; k < segment.Count; k++)
                 densePath.Add(segment[k]);
@@ -33,7 +32,7 @@ public static class PostProcessingRoute
 
         return densePath;
     }
-    private static List<PathPoint> GetSparseStraightWaypoints(List<PathPoint> path, RgvMap map)
+    private static List<PathPoint> GetSparseStraightWaypoints(List<PathPoint> path, Grid grid)
     {
         var waypoints = new List<PathPoint> { path[0] };
         int lastKeep = 0;
@@ -50,7 +49,7 @@ public static class PostProcessingRoute
                 continue;
             }
 
-            if (!IsAxisAlignedLineClear(path[lastKeep], path[i], map))
+            if (!IsAxisAlignedLineClear(path[lastKeep], path[i], grid))
             {
                 waypoints.Add(path[i - 1]);
                 lastKeep = i - 1;
@@ -62,7 +61,7 @@ public static class PostProcessingRoute
 
         return waypoints;
     }
-    private static List<PathPoint> GetAxisAlignedDensePath(PathPoint start, PathPoint end, RgvMap map)
+    private static List<PathPoint> GetAxisAlignedDensePath(PathPoint start, PathPoint end, Grid grid)
     {
         var points = new List<PathPoint>();
 
@@ -75,7 +74,7 @@ public static class PostProcessingRoute
         while (currentX != end.ColPos)
         {
             currentX += stepX;
-            var p = map.GetPointAt(currentY, currentX);
+            var p = grid.GetPointAt(currentY, currentX);
             if (p is not null) points.Add(p);
         }
 
@@ -86,13 +85,13 @@ public static class PostProcessingRoute
         while (currentY != end.RowPos)
         {
             currentY += stepY;
-            var p = map.GetPointAt(currentY, currentX);
+            var p = grid.GetPointAt(currentY, currentX);
             if (p is not null) points.Add(p);
         }
 
         return points;
     }
-    private static bool IsAxisAlignedLineClear(PathPoint a, PathPoint b, RgvMap map)
+    private static bool IsAxisAlignedLineClear(PathPoint a, PathPoint b, Grid grid)
     {
         if (a.RowPos == b.RowPos) // horizontal
         {
@@ -100,8 +99,8 @@ public static class PostProcessingRoute
             int maxCol = Math.Max(a.ColPos, b.ColPos);
             for (int c = minCol; c <= maxCol; c++)
             {
-                var p = map.GetPointAt(a.RowPos, c);
-                if (p is null || p.Category == PointCategory.Obstacle)
+                var p = grid.GetPointAt(a.RowPos, c);
+                if (p is null || p is Obstacle)
                     return false;
             }
             return true;
@@ -112,8 +111,8 @@ public static class PostProcessingRoute
             int maxRow = Math.Max(a.RowPos, b.RowPos);
             for (int r = minRow; r <= maxRow; r++)
             {
-                var p = map.GetPointAt(r, a.ColPos);
-                if (p is null || p.Category == PointCategory.Obstacle)
+                var p = grid.GetPointAt(r, a.ColPos);
+                if (p is null || p is Obstacle)
                     return false;
             }
             return true;

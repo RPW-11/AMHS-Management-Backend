@@ -1,61 +1,69 @@
 using Domain.Common.Models;
-using FluentResults;
 
 namespace Domain.Missions.ValueObjects;
 
-public sealed class PathPoint : ValueObject
+
+
+public abstract class PathPoint(int rowPos, int colPos) : ValueObject 
 {
-    public enum PointCategory
-    {
-        Obstacle,
-        Path,
-        Station
-    }
-    public string Name { get; }
-    public PointCategory Category { get; }
-    public int RowPos { get; }
-    public int ColPos { get; }
-    public double Time { get; }
+    public int RowPos { get; } = rowPos;
+    public int ColPos { get; } = colPos;
+}
 
-    private PathPoint(string name, PointCategory category, int rowPos, int colPos, double time)
-    {
-        Name = name;
-        Category = category;
-        RowPos = rowPos;
-        ColPos = colPos;
-        Time = time;
-    }
+public class Station(int rowPos, int colPos, string name, double processingTime) : PathPoint(rowPos, colPos)
+{
+    public string Name { get; } = name;
+    public double ProcessingTime { get; } = processingTime;
 
-    public static PathPoint Path(int rowPos, int colPos) => new("Path", PointCategory.Path, rowPos, colPos, 0);
-
-    public static Result<PathPoint> Create(string name, string category, int rowPos, int colPos, double time)
+    public override IEnumerable<object> GetEqualityComponents()
     {
-        return new PathPoint(
-            name,
-            GetPointCategoryFromString(category),
-            rowPos,
-            colPos,
-            time
-        );
+        yield return RowPos;
+        yield return ColPos;
+        yield return Name;
+        yield return ProcessingTime;
     }
+}
 
-    private static PointCategory GetPointCategoryFromString(string pointType)
-    {
-        return pointType.ToLower() switch
-        {
-            "obs" => PointCategory.Obstacle,
-            "st" => PointCategory.Station,
-            _ => PointCategory.Path
-        };
-    }
+public class Obstacle(int rowPos, int colPos) : PathPoint(rowPos, colPos)
+{
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return RowPos;
         yield return ColPos;
     }
+}
 
-    public override string ToString()
+public class Path(int rowPos, int colPos) : PathPoint(rowPos, colPos)
+{
+    public override IEnumerable<object> GetEqualityComponents()
     {
-        return $"({RowPos}, {ColPos})";
+        yield return RowPos;
+        yield return ColPos;
+    }
+}
+
+public enum PointCategory
+{
+    Station,
+    Obstacle,
+    Path
+}
+
+public static class PointFactory
+{
+    public static PathPoint Create(PointCategory pointCategory, int rowPos, int colPos, string? name, double? processingTime)
+    {
+        return pointCategory switch
+        {
+            PointCategory.Station => new Station(
+                rowPos,
+                colPos, 
+                name ?? throw new ArgumentException("Station requires a name."),
+                processingTime ?? throw new ArgumentException("Station requires a name.")
+            ),
+            PointCategory.Obstacle => new Obstacle(rowPos, colPos),
+            PointCategory.Path => new Path(rowPos, colPos),
+            _ => throw new ArgumentException($"Unknown path point category: {pointCategory}")
+        };
     }
 }

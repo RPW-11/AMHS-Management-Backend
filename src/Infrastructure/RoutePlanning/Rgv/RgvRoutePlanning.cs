@@ -8,27 +8,47 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetting) : IRgvRoutePlanning
 {
+    private const int MaxGenerationsNumber = 400;
+
     private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.LocalDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
     public byte[] DrawMultipleFlows(
         byte[] imageBytes,
-        List<RgvMap> mapsWithSolutions,
+        Grid grid,
+        List<(List<PathPoint> Solution, string ArrowColor)> routes,
         List<PathPoint> intersections)
     {
-        if (mapsWithSolutions.Count == 0)
+        if (routes.Count == 0)
             throw new ArgumentException("No route details provided");
 
-        return RouteDrawer.DrawMultipleRoutes(
-            imageBytes,
-            mapsWithSolutions,
-            intersections
-        );
+        using var drawer = new RouteDrawer(imageBytes, grid);
+        foreach (var (solution, arrowColor) in routes)
+        {
+            drawer.DrawSolution(solution, arrowColor);
+        }
+        drawer.DrawStations(GetStations(grid));
+
+        return drawer.Encode();
+    }
+
+    private static IEnumerable<Station> GetStations(Grid grid)
+    {
+        for (int row = 0; row < grid.RowDim; row++)
+        {
+            for (int col = 0; col < grid.ColDim; col++)
+            {
+                if (grid.MapMatrix[row, col] is Station station)
+                {
+                    yield return station;
+                }
+            }
+        }
     }
 
     public string WriteImage(byte[] imageBytes, string fileName)
     {
-        string outputPath = Path.Combine(_localRoutePlanningDirectory, fileName + ".png");
+        string outputPath = System.IO.Path.Combine(_localRoutePlanningDirectory, fileName + ".png");
 
         Directory.CreateDirectory(_localRoutePlanningDirectory);
         File.WriteAllBytes(outputPath, imageBytes);
@@ -37,24 +57,26 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
     }
 
     public (IEnumerable<PathPoint>, IEnumerable<PathPoint>) Solve(
-        RgvMap rgvMap,
+        Grid grid,
+        List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
-        RoutePlanningAlgorithm routePlanningAlgorithm
+        RoutePlanningAlgorithm routePlanningAlgorithm,
+        int generationsNumber
     )
     {
-
-        if (routePlanningAlgorithm == RoutePlanningAlgorithm.Dfs)
+        if (generationsNumber <= 0 || generationsNumber > MaxGenerationsNumber)
         {
-            var result = DfsSolver.FindBestRoute(rgvMap);
-            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, rgvMap);
-
-            return (result, preprocessedResult);
+            throw new ArgumentOutOfRangeException(
+                nameof(generationsNumber),
+                generationsNumber,
+                $"Generations number must be between 1 and {MaxGenerationsNumber}");
         }
+
         if (routePlanningAlgorithm == RoutePlanningAlgorithm.GeneticAlgorithm)
         {
-            var gaSolver = new GeneticAlgorithmSolver(rgvMap, currentRoutePoints);
+            var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber);
             var result = gaSolver.Solve();
-            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, rgvMap);
+            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, grid);
 
             return (result, preprocessedResult);
         }
@@ -67,7 +89,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         try
         {
             string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
-            string path = Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
+            string path = System.IO.Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
             File.WriteAllText(path, stringJson);
             return path;
         }
@@ -94,9 +116,9 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         }
     }
 
-    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, RgvMap rgvMap)
+    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
-        var (throughput, trackLength, numOfRgvs) = RouteEvaluator.GetSolutionScores(solution, rgvMap);
+        var (throughput, trackLength, numOfRgvs) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder);
 
         return new(throughput, trackLength, numOfRgvs);
     }
