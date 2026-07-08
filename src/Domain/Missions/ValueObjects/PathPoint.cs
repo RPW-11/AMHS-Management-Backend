@@ -1,4 +1,5 @@
 using Domain.Common.Models;
+using FluentResults;
 
 namespace Domain.Missions.ValueObjects;
 
@@ -51,19 +52,31 @@ public enum PointCategory
 
 public static class PointFactory
 {
-    public static PathPoint Create(PointCategory pointCategory, int rowPos, int colPos, string? name, double? processingTime)
+    public static Result<PathPoint> Create(PointCategory pointCategory, int rowPos, int colPos, string? name, double? processingTime)
     {
-        return pointCategory switch
+        switch (pointCategory)
         {
-            PointCategory.Station => new Station(
-                rowPos,
-                colPos, 
-                name ?? throw new ArgumentException("Station requires a name."),
-                processingTime ?? throw new ArgumentException("Station requires a name.")
-            ),
-            PointCategory.Obstacle => new Obstacle(rowPos, colPos),
-            PointCategory.Path => new Path(rowPos, colPos),
-            _ => throw new ArgumentException($"Unknown path point category: {pointCategory}")
-        };
+            case PointCategory.Station:
+                if (name is null)
+                {
+                    return Result.Fail<PathPoint>("Station requires a name.");
+                }
+
+                if (processingTime is null)
+                {
+                    return Result.Fail<PathPoint>("Station requires a processing time.");
+                }
+
+                return Result.Ok<PathPoint>(new Station(rowPos, colPos, name, processingTime.Value));
+
+            case PointCategory.Obstacle:
+                return Result.Ok<PathPoint>(new Obstacle(rowPos, colPos));
+
+            case PointCategory.Path:
+                return Result.Ok<PathPoint>(new Path(rowPos, colPos));
+
+            default:
+                return Result.Fail<PathPoint>($"Unknown path point category: {pointCategory}");
+        }
     }
 }

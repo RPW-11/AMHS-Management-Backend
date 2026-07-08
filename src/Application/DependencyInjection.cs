@@ -18,6 +18,8 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationService, AuthenticationService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IRoutePlanningService, RoutePlanningService>();
+        services.AddScoped<IClusterFlowRouteSolver, ClusterFlowRouteSolver>();
+        services.AddScoped<IRouteResultPersister, RouteResultPersister>();
         services.AddScoped<IMissionService, MissionService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDomainDispatcher, DomainDispatcher>();

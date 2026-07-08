@@ -17,11 +17,15 @@ namespace Application.Services.RoutePlanningService;
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
     private readonly IRgvRoutePlanning _rgvRoutePlanning;
+    private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
+    private readonly IRouteResultPersister _routeResultPersister;
     private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
     private readonly ILogger<RoutePlanningService> _logger;
 
     public RoutePlanningService(IRgvRoutePlanning rgvRoutePlanning,
+                                IClusterFlowRouteSolver clusterFlowRouteSolver,
+                                IRouteResultPersister routeResultPersister,
                                 IBackgroundJobHub backgroundJobHub,
                                 IMissionRepository missionRepository,
                                 IUnitOfWork unitOfWork,
@@ -29,22 +33,17 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 : base(unitOfWork)
     {
         _rgvRoutePlanning = rgvRoutePlanning;
+        _clusterFlowRouteSolver = clusterFlowRouteSolver;
+        _routeResultPersister = routeResultPersister;
         _backgroundJobHub = backgroundJobHub;
         _missionRepository = missionRepository;
         _logger = logger;
     }
 
-    public async Task<Result> FindRgvBestRoute(string missionId,
-                                   MemoryStream imageStream,
-                                   string algorithm,
-                                   int rowDim,
-                                   int colDim,
-                                   int widthLength,
-                                   int heightLength,
-                                   IEnumerable<PathPointDto> points,
-                                   IEnumerable<ClusterDto> clusters,
-                                   IEnumerable<ClusterFlowDto> clusterFlows)
+    public async Task<Result> EnqueueRoutePlanning(RoutePlanningRequest request)
     {
+        var (missionId, imageStream, algorithm, rowDim, colDim, widthLength, heightLength, points, clusters, clusterFlows) = request;
+
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["MissionId"] = missionId,
@@ -55,12 +54,10 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         _logger.LogInformation("Route planning request started | Input points: {PointCount}", points.Count());
 
-        var missionIdResult = MissionId.FromString(missionId);
+        var missionIdResult = RequireValid(MissionId.FromString(missionId), "Invalid mission ID format");
         if (missionIdResult.IsFailed)
         {
-            _logger.LogWarning("Invalid mission ID format: {ErrorMessage}",
-                missionIdResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(missionIdResult.Errors[0].Message));
+            return Result.Fail(missionIdResult.Errors);
         }
 
         var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
@@ -80,18 +77,18 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogDebug("Mission validated | Category: {Category} | Name: {Name}",
             missionResult.Value.Category, missionResult.Value.Name ?? "(no name)");
 
-        (bool isError, Result? value) = ToPathPoints(points, out List<PathPoint> pathPoints);
-        if (isError && value is not null)
+        var pathPointsResult = RequireValid(ToPathPoints(points), "Invalid path points");
+        if (pathPointsResult.IsFailed)
         {
-            return value;
+            return Result.Fail(pathPointsResult.Errors);
         }
 
-        var algorithmResult = RoutePlanningAlgorithm.FromString(algorithm);
+        List<PathPoint> pathPoints = pathPointsResult.Value;
+
+        var algorithmResult = RequireValid(RoutePlanningAlgorithm.FromString(algorithm), $"Unsupported or invalid algorithm '{algorithm}'");
         if (algorithmResult.IsFailed)
         {
-            _logger.LogWarning("Unsupported or invalid algorithm: {Algorithm}: {ErrorMessage}",
-                algorithm, algorithmResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(algorithmResult.Errors[0].Message));
+            return Result.Fail(algorithmResult.Errors);
         }
 
         var pointLookup = pathPoints.ToDictionary(p => (p.RowPos, p.ColPos), p => p);
@@ -120,11 +117,10 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 stations.Add(station);
             }
 
-            var clusterResult = Cluster.Create(clusterDto.Name, clusterDto.ArrowColor, stations, []);
+            var clusterResult = RequireValid(Cluster.Create(clusterDto.Name, clusterDto.ArrowColor, stations, []), "Failed to create cluster");
             if (clusterResult.IsFailed)
             {
-                _logger.LogWarning("Failed to create cluster: {ErrorMessage}", clusterResult.Errors[0].Message);
-                return Result.Fail(ApplicationError.Validation(clusterResult.Errors[0].Message));
+                return Result.Fail(clusterResult.Errors);
             }
 
             resolvedClusters.Add(clusterResult.Value);
@@ -146,28 +142,25 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 orderedClusters.Add(resolvedClusters[clusterIdx]);
             }
 
-            var clusterFlowResult = ClusterFlow.Create(clusterFlowDto.ArrowColor, orderedClusters, []);
+            var clusterFlowResult = RequireValid(ClusterFlow.Create(clusterFlowDto.ArrowColor, orderedClusters, []), "Failed to create cluster flow");
             if (clusterFlowResult.IsFailed)
             {
-                _logger.LogWarning("Failed to create cluster flow: {ErrorMessage}", clusterFlowResult.Errors[0].Message);
-                return Result.Fail(ApplicationError.Validation(clusterFlowResult.Errors[0].Message));
+                return Result.Fail(clusterFlowResult.Errors);
             }
 
             resolvedClusterFlows.Add(clusterFlowResult.Value);
         }
 
-        var gridResult = Grid.Create(rowDim, colDim, widthLength, heightLength, pathPoints);
+        var gridResult = RequireValid(Grid.Create(rowDim, colDim, widthLength, heightLength, pathPoints), "Failed to create grid");
         if (gridResult.IsFailed)
         {
-            _logger.LogWarning("Failed to create grid: {ErrorMessage}", gridResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(gridResult.Errors[0].Message));
+            return Result.Fail(gridResult.Errors);
         }
 
-        var rgvMapResult = RgvMap.Create(gridResult.Value, resolvedClusterFlows);
+        var rgvMapResult = RequireValid(RgvMap.Create(gridResult.Value, resolvedClusterFlows), "Failed to create RGV map");
         if (rgvMapResult.IsFailed)
         {
-            _logger.LogWarning("Failed to create RGV map: {ErrorMessage}", rgvMapResult.Errors[0].Message);
-            return Result.Fail(ApplicationError.Validation(rgvMapResult.Errors[0].Message));
+            return Result.Fail(rgvMapResult.Errors);
         }
 
         RgvMap rgvMap = rgvMapResult.Value;
@@ -193,7 +186,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
                 var missionRepository = sp.GetRequiredService<IMissionRepository>();
                 var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
-                await SolveRoute(
+                await ExecuteRoutePlanning(
                     domainDispatcher, unitOfWork, missionRepository, missionResult.Value,
                     rgvMap, algorithmResult.Value, imageStream);
             });
@@ -219,9 +212,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         return Result.Ok();
     }
 
-    private const int GenerationsNumber = 300;
-
-    private async Task SolveRoute(
+    private async Task ExecuteRoutePlanning(
         IDomainDispatcher domainDispatcher,
         IUnitOfWork unitOfWork,
         IMissionRepository missionRepository,
@@ -233,6 +224,10 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         // Solve each cluster's own route once and reuse it wherever the same cluster
         // reappears (e.g. a looping flow like C1 -> C2 -> C1).
         var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
+
+        // Every already-solved segment (cluster loops + connectors) is fed into subsequent
+        // solves so the GA can penalize new routes that traverse an existing one in reverse.
+        List<List<PathPoint>> solvedRouteSegments = [];
 
         List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
         List<PathPoint> combinedSolution = [];
@@ -248,8 +243,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             {
                 if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
                 {
-                    clusterSolution = SolveClusterRoute(rgvMap.Grid, cluster, algorithm);
+                    clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, algorithm, solvedRouteSegments);
                     clusterSolutionCache[cluster] = clusterSolution;
+                    solvedRouteSegments.Add(clusterSolution);
                 }
 
                 var solvedCluster = Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution).Value;
@@ -260,10 +256,10 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 combinedStationsOrder.AddRange(cluster.Stations);
             }
 
-            // Connect each cluster to the next via the closest pair of stations (Manhattan distance).
             for (int i = 0; i < solvedClusters.Count - 1; i++)
             {
-                var connectorSolution = SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm);
+                var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm, solvedRouteSegments);
+                solvedRouteSegments.Add(connectorSolution);
                 flowConnectorSolution.AddRange(connectorSolution);
                 combinedSolution.AddRange(connectorSolution);
             }
@@ -280,30 +276,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         List<RouteSolutionDto> routeSolutions = [new(solvedRgvMap, score)];
 
-        string resourceLink;
-
-        try
-        {
-            var drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(imageStream.ToArray(), rgvMap.Grid, routes, intersections);
-            var imagePath = _rgvRoutePlanning.WriteImage(drawnImageBytes, mission.Id.ToString());
-
-            var routePlanningDetail = ToRoutePlanningDto(
-                mission.Id,
-                algorithm,
-                [imagePath],
-                routeSolutions);
-
-            resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
-            _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
-
-            mission.Finish();
-            mission.SetMissionResourceLink(resourceLink);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to solve, draw or write route planning result");
-            mission.SetMissionStatus(MissionStatus.Failed);
-        }
+        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, intersections, routeSolutions);
 
         var updateResult = missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)
@@ -326,88 +299,39 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
     }
 
-    private List<PathPoint> SolveClusterRoute(Grid grid, Cluster cluster, RoutePlanningAlgorithm algorithm)
+    private static Result<List<PathPoint>> ToPathPoints(IEnumerable<PathPointDto> points)
     {
-        _logger.LogInformation("[32m[SOLVING][0m Solving cluster {ClusterName}", cluster.Name);
-
-        if (cluster.Stations.Count <= 1)
-        {
-            return [.. cluster.Stations];
-        }
-
-        var (result, _) = _rgvRoutePlanning.Solve(
-            grid,
-            [.. cluster.Stations.Cast<PathPoint>()],
-            [],
-            algorithm,
-            GenerationsNumber);
-
-        return [.. result];
-    }
-
-    private List<PathPoint> SolveConnectorRoute(Grid grid, Cluster from, Cluster to, RoutePlanningAlgorithm algorithm)
-    {
-        _logger.LogInformation("[32m[SOLVING][0m Solving connector for cluster {SrcClusterName} to {DstClusterName}", from.Name, to.Name);
-
-        var (start, end) = FindNearestConnector(from.Stations, to.Stations);
-
-        var (result, _) = _rgvRoutePlanning.Solve(
-            grid,
-            [start, end],
-            [],
-            algorithm,
-            GenerationsNumber);
-
-        return [.. result];
-    }
-
-    private static (Station Start, Station End) FindNearestConnector(IReadOnlyList<Station> from, IReadOnlyList<Station> to)
-    {
-        Station bestStart = from[0];
-        Station bestEnd = to[0];
-        int bestDistance = int.MaxValue;
-
-        foreach (var start in from)
-        {
-            foreach (var end in to)
-            {
-                int distance = Math.Abs(start.RowPos - end.RowPos) + Math.Abs(start.ColPos - end.ColPos);
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    bestStart = start;
-                    bestEnd = end;
-                }
-            }
-        }
-
-        return (bestStart, bestEnd);
-    }
-
-    private (bool isError, Result? value) ToPathPoints(IEnumerable<PathPointDto> points, out List<PathPoint> pathPoints)
-    {
-        pathPoints = [];
+        List<PathPoint> pathPoints = [];
         foreach (var point in points)
         {
-            try
+            var pointResult = PointFactory.Create(
+                GetPointCategoryFromString(point.Category),
+                point.Position.RowPos,
+                point.Position.ColPos,
+                point.Name,
+                point.Time
+            );
+
+            if (pointResult.IsFailed)
             {
-                pathPoints.Add(PointFactory.Create(
-                    GetPointCategoryFromString(point.Category),
-                    point.Position.RowPos,
-                    point.Position.ColPos,
-                    point.Name,
-                    point.Time
-                ));
+                return Result.Fail(pointResult.Errors);
             }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning("Invalid path point: {Name} at ({Row},{Col}): {ErrorMessage}",
-                    point.Name, point.Position.RowPos, point.Position.ColPos, ex.Message);
-                return (isError: true, value: Result.Fail(ApplicationError.Validation(ex.Message)));
-            }
+
+            pathPoints.Add(pointResult.Value);
         }
 
-        return (isError: false, value: null);
+        return Result.Ok(pathPoints);
+    }
+
+    private Result<T> RequireValid<T>(Result<T> result, string context)
+    {
+        if (result.IsFailed)
+        {
+            _logger.LogWarning("{Context}: {ErrorMessage}", context, result.Errors[0].Message);
+            return Result.Fail<T>(ApplicationError.Validation(result.Errors[0].Message));
+        }
+
+        return result;
     }
 
     private static PointCategory GetPointCategoryFromString(string category) =>
@@ -418,17 +342,4 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             _ => PointCategory.Path
         };
 
-    private static RoutePlanningDetailDto ToRoutePlanningDto(
-        MissionId missionId,
-        RoutePlanningAlgorithm routePlanningAlgorithm,
-        List<string> imageUrls,
-        List<RouteSolutionDto> routeSolutions)
-    {
-        return new(
-                    missionId.ToString(),
-                    routePlanningAlgorithm.ToString(),
-                    imageUrls,
-                    routeSolutions
-                );
-    }
 }

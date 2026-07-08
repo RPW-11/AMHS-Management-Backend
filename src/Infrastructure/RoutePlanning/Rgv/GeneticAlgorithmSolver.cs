@@ -9,16 +9,16 @@ public class GeneticAlgorithmSolver
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
-    private const double DuplicateRoutePenaltyRate = 20;
-    private const double TurnPenaltyRate = 20;
-    private const double ConflictPenaltyRate = 100;
+    private const double DuplicateRoutePenaltyRate = 1600;
+    private const double TurnPenaltyRate = 10;
+    private const double ConflictPenaltyRate = 4000;
 
     private readonly Random _random;
     private readonly Grid _grid;
     private readonly List<PathPoint> _stationsOrder;
     private readonly List<List<PathPoint>> _currentRoutes;
     private readonly int _generationsNumber;
-    private readonly int _goalCount = 0; // it is possible to have multiple goals in the map (goals visited multiple times)
+    private readonly int _goalCount = 0;
 
     public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber)
     {
@@ -33,6 +33,7 @@ public class GeneticAlgorithmSolver
     public List<PathPoint> Solve()
     {
         var aStarSolutions = ModifiedAStar.GetValidSolutions(_grid, _stationsOrder);
+
         var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder);
         var population = Enumerable.Range(0, PopulationSize)
                         .Select(_ => GenerateIndividual())
@@ -50,6 +51,8 @@ public class GeneticAlgorithmSolver
             })
             .OrderByDescending(x => x.Fitness)
             .ToList();
+
+            Console.WriteLine($"[GA] Generation {i}: best solution count = {evaluated[0].Individual.Count}");
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]
@@ -137,13 +140,13 @@ public class GeneticAlgorithmSolver
         var endPoint = child[endIdx];
 
         // Re-compute alternative path between these points
-        var subPaths = ModifiedAStar.Solve(_grid, startPoint, endPoint, [], maxSolutionsPerConfig: 1, perturbationMax: 10);
-        if (subPaths is null || subPaths.Count == 0)
+        var subPath = ModifiedAStar.SolveWithDecay(_grid, startPoint, endPoint, []);
+        if (subPath is null)
         {
             return child;
         }
 
-        return [.. child.Take(startIdx), .. subPaths[0], .. child.Skip(endIdx + 1)];
+        return [.. child.Take(startIdx), .. subPath, .. child.Skip(endIdx + 1)];
     }
 
     private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
@@ -214,11 +217,15 @@ public class GeneticAlgorithmSolver
             return int.MinValue;
         }
 
-        int numOfDuplicates = CountDuplicates(solution);
-        int numOfTurns = CountPathTurns(solution);
-        int numOfConflicts = CountConflictingDirection(solution);
+        int length = Math.Max(1, solution.Count);
+        double duplicateRate = (double)CountDuplicates(solution) / length;
+        double turnRate = (double)CountPathTurns(solution) / length;
+        double conflictRate = CountConflictingDirectionRate(solution);
 
-        return RouteEvaluator.EvaluateOptimality(solution, _grid, _stationsOrder) - DuplicateRoutePenaltyRate * numOfDuplicates - TurnPenaltyRate * numOfTurns - ConflictPenaltyRate * numOfConflicts;
+        return RouteEvaluator.EvaluateOptimality(solution, _grid, _stationsOrder)
+            - DuplicateRoutePenaltyRate * duplicateRate
+            - TurnPenaltyRate * turnRate
+            - ConflictPenaltyRate * conflictRate;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
@@ -316,16 +323,19 @@ public class GeneticAlgorithmSolver
         return turns;
     }
 
-    private int CountConflictingDirection(List<PathPoint> solution)
+    private double CountConflictingDirectionRate(List<PathPoint> solution)
     {
-        int conflicts = 0;
+        double totalRate = 0;
         var reversedSolution = solution.AsEnumerable().Reverse().ToList();
 
         foreach (var route in _currentRoutes)
         {
-            conflicts += LongestCommonSubsequence(reversedSolution, route);
+            int lcsLength = LongestCommonSubsequence(reversedSolution, route);
+            int normalizingLength = Math.Max(1, Math.Min(reversedSolution.Count, route.Count));
+            totalRate += (double)lcsLength / normalizingLength;
         }
-        return conflicts;
+
+        return totalRate;
     }
 
     private static int LongestCommonSubsequence(List<PathPoint> solution1, List<PathPoint> solution2)

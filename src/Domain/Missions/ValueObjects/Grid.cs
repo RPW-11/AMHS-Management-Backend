@@ -73,7 +73,7 @@ public sealed class Grid : ValueObject
         {
             for (int colPos = 0; colPos < colDim; colPos++)
             {
-                mapMatrix[rowPos, colPos] = PointFactory.Create(PointCategory.Path, rowPos, colPos, null, null);
+                mapMatrix[rowPos, colPos] = PointFactory.Create(PointCategory.Path, rowPos, colPos, null, null).Value;
             }
         }
 

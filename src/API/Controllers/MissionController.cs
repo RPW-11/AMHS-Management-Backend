@@ -4,6 +4,7 @@ using System.Text.Json;
 using API.Contracts.Mission;
 using Application.DTOs.Common;
 using Application.DTOs.Mission;
+using Application.DTOs.RoutePlanning;
 using Application.Services.MissionService;
 using Application.Services.RoutePlanningService;
 using Microsoft.AspNetCore.Authorization;
@@ -237,7 +238,7 @@ namespace API.Controllers
                 createRoutePlanningRequest.Image.CopyTo(imageStream);
                 imageStream.Seek(0, SeekOrigin.Begin);
 
-                var routeResult = await _routePlanningService.FindRgvBestRoute(
+                var routeResult = await _routePlanningService.EnqueueRoutePlanning(new RoutePlanningRequest(
                     id,
                     imageStream,
                     routeMetadata.Algorithm,
@@ -248,7 +249,7 @@ namespace API.Controllers
                     points,
                     clusters,
                     clusterFlows
-                );
+                ));
 
                 if (routeResult.IsFailed)
                 {

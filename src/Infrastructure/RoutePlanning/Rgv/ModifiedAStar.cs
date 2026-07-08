@@ -5,8 +5,9 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public static class ModifiedAStar
 {
-    private const int MaxSolutions = 200;
+    private const int MaxSolutions = 400;
     private const double PerStepCost = 1;
+    private const int BaseDesiredSolutions = 100;
 
     public static List<List<PathPoint>> GetValidSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
@@ -18,13 +19,16 @@ public static class ModifiedAStar
 
     private static List<List<PathPoint>> GetValidSolutionsIntersect(Grid grid, List<PathPoint> stationsOrder)
     {
+        int numSegments = stationsOrder.Count - 1;
+        int desiredSolutionsPerSegment = Math.Max(1, BaseDesiredSolutions / numSegments);
+
         List<List<List<PathPoint>>> segmentPaths = [];
 
         for (int i = 0; i < stationsOrder.Count - 1; i++) // O(n)
         {
             var startPoint = stationsOrder[i];
             var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
-            var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, []);
+            var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, [], desiredSolutionsPerSegment);
             segmentPaths.Add(solutions);
         }
 
@@ -59,8 +63,11 @@ public static class ModifiedAStar
 
     private static List<List<PathPoint>> GetValidSolutionsNoIntersect(Grid grid, List<PathPoint> stationsOrder)
     {
+        int numSegments = stationsOrder.Count - 1;
+        int desiredSolutionsPerSegment = Math.Max(1, BaseDesiredSolutions / numSegments);
+
         // Initial search
-        List<List<PathPoint>> possiblePaths = SolveMultipleTimes(grid, stationsOrder[0], stationsOrder[1], []);
+        List<List<PathPoint>> possiblePaths = SolveMultipleTimes(grid, stationsOrder[0], stationsOrder[1], [], desiredSolutionsPerSegment);
 
         for (int i = 1; i < stationsOrder.Count - 1; i++) // O (n * m * k)
         {
@@ -72,7 +79,7 @@ public static class ModifiedAStar
             {
                 var occupiedPoints = new HashSet<PathPoint>();
                 UpdateOccupiedPoints(occupiedPoints, path);
-                var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, occupiedPoints);
+                var solutions = SolveMultipleTimes(grid, startPoint, goalPoint, occupiedPoints, desiredSolutionsPerSegment);
 
                 foreach (var sol in solutions)
                 {
@@ -106,75 +113,95 @@ public static class ModifiedAStar
         PathPoint startPoint,
         PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
-        int desiredSolutions = 8,
-        double maxCostFactor = 2.5)
+        int desiredSolutions = 8)
     {
         var allSolutions = new List<List<PathPoint>>();
 
+        // Slow-decay configs wander more, so repeated runs yield genuinely different
+        // paths; fast-decay configs converge to nearly the same path regardless of seed.
+        // Runs scale proportionally with desiredSolutions instead of a fixed count, so a
+        // single-segment stationsOrder can generate far more candidates than a many-segment one.
         var configurations = new[]
         {
-            new { Weight = 1.00, Perturbation = 0.15 },
-            new { Weight = 1.35, Perturbation = 0.20 },
-            new { Weight = 1.80, Perturbation = 0.25 },
-            new { Weight = 2.50, Perturbation = 0.30 },
-            new { Weight = 3.50, Perturbation = 0.40 },
+            new { DecayRate = 0.05, Perturbation = 50.0, Weight = 0.25 },   // Long wandering paths
+            new { DecayRate = 1.0, Perturbation = 20.0, Weight = 0.25 },   // Moderate exploration
+            new { DecayRate = 3.0, Perturbation = 10.0, Weight = 0.25 },   // Balanced
+            new { DecayRate = 10.0, Perturbation = 5.0, Weight = 0.125 },  // Near-optimal with slight variation
+            new { DecayRate = 50.0, Perturbation = 0.5, Weight = 0.125 }, // Essentially pure A*
         };
 
         foreach (var config in configurations)
         {
-            var solutionsFromThisRun = Solve(
-                grid, startPoint, goalPoint, occupiedPoints,
-                config.Weight, config.Perturbation,
-                maxCostFactor, maxSolutionsPerConfig: 3);
+            int runs = Math.Max(1, (int)Math.Round(desiredSolutions * config.Weight));
+            List<int> lengths = [];
 
-            allSolutions.AddRange(solutionsFromThisRun);
-
-            if (allSolutions.Count >= desiredSolutions)
+            for (int i = 0; i < runs; i++)
             {
-                var random = new Random();
-                allSolutions = [.. allSolutions.OrderBy(x => random.Next()).Take(desiredSolutions)];
+                var solution = SolveWithDecay(
+                    grid, startPoint, goalPoint, occupiedPoints,
+                    decayRate: config.DecayRate,
+                    initialPerturbation: config.Perturbation);
+
+                if (solution is not null)
+                {
+                    allSolutions.Add(solution);
+                    lengths.Add(solution.Count);
+                }
+
+                if (allSolutions.Count >= desiredSolutions)
+                {
+                    return allSolutions;
+                }
             }
         }
 
         return allSolutions;
     }
 
-    public static List<List<PathPoint>> Solve(
+    public static List<PathPoint>? SolveWithDecay(
         Grid grid,
         PathPoint startPoint,
         PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
-        double heuristicWeight = 0.1,
-        double perturbationMax = 0.5,
-        double maxCostFactor = 2.5,
-        int maxSolutionsPerConfig = 2
-    )
+        double initialWeight = 0.05,
+        double finalWeight = 1.5,
+        double initialPerturbation = 10.0,
+        double decayRate = 2.0)
     {
-        var solutions = new List<List<PathPoint>>();
+        double baseManhattan = ManhattanDistanceHeuristic(startPoint, goalPoint);
+
+        if (baseManhattan == 0)
+        {
+            return [startPoint];
+        }
+
         var random = new Random();
 
         var openSet = new PriorityQueue<(PathPoint point, double gCost), double>();
         var gCosts = new Dictionary<PathPoint, double>();
         var parents = new Dictionary<PathPoint, PathPoint?>();
 
-        double bestSolutionCost = double.MaxValue;
-
         openSet.Enqueue((startPoint, 0), 0);
         gCosts[startPoint] = 0;
         parents[startPoint] = null;
 
-        while (openSet.Count > 0 && solutions.Count < maxSolutionsPerConfig)
+        while (openSet.Count > 0)
         {
             var (current, gCost) = openSet.Dequeue();
 
             if (current == goalPoint)
             {
-                var path = ReconstructPath(current, parents);
-                solutions.Add(path);
-                bestSolutionCost = Math.Min(bestSolutionCost, gCost);
-
-                continue;
+                return ReconstructPath(current, parents);
             }
+
+            // Exponential decay tied to search progress: early on the search behaves like
+            // broad, Dijkstra-like exploration with high randomness; as gCost approaches
+            // (or exceeds) the Manhattan distance it converges to a deterministic greedy
+            // beeline toward the goal, guaranteeing the search terminates.
+            double progress = gCost / baseManhattan;
+            double decay = Math.Exp(-decayRate * progress);
+            double currentWeight = initialWeight + (finalWeight - initialWeight) * (1 - decay);
+            double currentPerturbation = initialPerturbation * decay;
 
             foreach (var direction in MapTrajectory.AllDirections)
             {
@@ -192,28 +219,23 @@ public static class ModifiedAStar
 
                 double tentativeGCost = gCost + PerStepCost;
 
-                if (tentativeGCost > bestSolutionCost * maxCostFactor)
-                {
-                    continue;
-                }
-
                 double heuristicScore = ManhattanDistanceHeuristic(neighbor, goalPoint);
-                double weightedHeuristic = heuristicWeight * heuristicScore;
-                double randomPert = (random.NextDouble() * 2 - 1) * perturbationMax;
+                double perturbation = (random.NextDouble() * 2 - 1) * currentPerturbation;
+                double fCost = tentativeGCost + currentWeight * heuristicScore + perturbation;
 
-                double fCost = tentativeGCost + weightedHeuristic + randomPert;
-
-                if (!gCosts.TryGetValue(neighbor, out double value) || tentativeGCost < value || neighbor == goalPoint)
+                // First-visit-wins: once a node is claimed, it is never re-parented even if a
+                // shorter route is found later. This lets the perturbed frontier order itself
+                // shape the resulting path, instead of always collapsing to the shortest route.
+                if (!gCosts.ContainsKey(neighbor))
                 {
-                    value = tentativeGCost;
-                    gCosts[neighbor] = value;
+                    gCosts[neighbor] = tentativeGCost;
                     parents[neighbor] = current;
                     openSet.Enqueue((neighbor, tentativeGCost), fCost);
                 }
             }
         }
 
-        return solutions;
+        return null;
     }
 
     private static List<PathPoint> ReconstructPath(PathPoint current, Dictionary<PathPoint, PathPoint?> parents)

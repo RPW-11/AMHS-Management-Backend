@@ -56,7 +56,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         return outputPath;
     }
 
-    public (IEnumerable<PathPoint>, IEnumerable<PathPoint>) Solve(
+    public (IEnumerable<PathPoint> RawPath, IEnumerable<PathPoint> SmoothedPath) Solve(
         Grid grid,
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,

@@ -5,16 +5,5 @@ namespace Application.Services.RoutePlanningService;
 
 public interface IRoutePlanningService
 {
-    Task<Result> FindRgvBestRoute(
-        string missionId,
-        MemoryStream imageSteam,
-        string algorithm,
-        int rowDim,
-        int colDim,
-        int widthLength,
-        int heightLength,
-        IEnumerable<PathPointDto> points,
-        IEnumerable<ClusterDto> clusters,
-        IEnumerable<ClusterFlowDto> clusterFlows
-    );
+    Task<Result> EnqueueRoutePlanning(RoutePlanningRequest request);
 }
