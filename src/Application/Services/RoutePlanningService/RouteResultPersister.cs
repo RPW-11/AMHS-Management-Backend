@@ -17,15 +17,14 @@ public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<Ro
         RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        List<PathPoint> intersections,
-        List<RouteSolutionDto> routeSolutions)
+        RouteSolutionDto routeSolution)
     {
         try
         {
-            var drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(imageStream.ToArray(), grid, routes, intersections);
+            var drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(imageStream.ToArray(), grid, routes);
             var imagePath = _rgvRoutePlanning.WriteImage(drawnImageBytes, mission.Id.ToString());
 
-            var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], routeSolutions);
+            var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], routeSolution);
 
             var resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
             _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
@@ -44,13 +43,13 @@ public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<Ro
         MissionId missionId,
         RoutePlanningAlgorithm routePlanningAlgorithm,
         List<string> imageUrls,
-        List<RouteSolutionDto> routeSolutions)
+        RouteSolutionDto routeSolution)
     {
         return new(
                     missionId.ToString(),
                     routePlanningAlgorithm.ToString(),
                     imageUrls,
-                    routeSolutions
+                    routeSolution
                 );
     }
 }

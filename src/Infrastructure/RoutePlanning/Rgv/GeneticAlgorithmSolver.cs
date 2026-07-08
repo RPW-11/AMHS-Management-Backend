@@ -10,7 +10,7 @@ public class GeneticAlgorithmSolver
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 1600;
-    private const double TurnPenaltyRate = 10;
+    private const double TurnPenaltyRate = 40;
     private const double ConflictPenaltyRate = 4000;
 
     private readonly Random _random;
@@ -222,7 +222,7 @@ public class GeneticAlgorithmSolver
         double turnRate = (double)CountPathTurns(solution) / length;
         double conflictRate = CountConflictingDirectionRate(solution);
 
-        return RouteEvaluator.EvaluateOptimality(solution, _grid, _stationsOrder)
+        return RouteEvaluator.GetSolutionScores(solution, _grid, _stationsOrder).optimality
             - DuplicateRoutePenaltyRate * duplicateRate
             - TurnPenaltyRate * turnRate
             - ConflictPenaltyRate * conflictRate;

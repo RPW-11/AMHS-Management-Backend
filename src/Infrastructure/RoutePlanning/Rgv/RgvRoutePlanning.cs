@@ -16,8 +16,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
     public byte[] DrawMultipleFlows(
         byte[] imageBytes,
         Grid grid,
-        List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        List<PathPoint> intersections)
+        List<(List<PathPoint> Solution, string ArrowColor)> routes)
     {
         if (routes.Count == 0)
             throw new ArgumentException("No route details provided");
@@ -118,8 +117,8 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
 
     public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
-        var (throughput, trackLength, numOfRgvs) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder);
+        var (throughput, trackLength, numOfRgvs, optimality) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder);
 
-        return new(throughput, trackLength, numOfRgvs);
+        return new(throughput, trackLength, numOfRgvs, optimality);
     }
 }

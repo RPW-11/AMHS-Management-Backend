@@ -4,5 +4,5 @@ public record RoutePlanningDetailDto(
     string Id,
     string Algorithm,
     IEnumerable<string> ImageUrls,
-    List<RouteSolutionDto> RouteSolutions
+    RouteSolutionDto RouteSolution
 );

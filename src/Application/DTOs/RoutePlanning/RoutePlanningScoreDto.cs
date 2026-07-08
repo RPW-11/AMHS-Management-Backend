@@ -3,5 +3,6 @@ namespace Application.DTOs.RoutePlanning;
 public record RoutePlanningScoreDto(
     double Throughput,
     double TrackLength,
-    int NumOfRgvs
+    int NumOfRgvs,
+    double Optimality
 );

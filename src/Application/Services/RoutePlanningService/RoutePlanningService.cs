@@ -3,7 +3,6 @@ using Application.Common.Interfaces;
 using Application.Common.Interfaces.BackgroundJobHub;
 using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
-using Application.Common.Utilities;
 using Application.DTOs.RoutePlanning;
 using Domain.Missions;
 using Domain.Missions.Events;
@@ -271,12 +270,11 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
-        var intersections = RouteIntersection.GetIntersectionPathPoints([.. routes.Select(r => r.Solution)]);
         var score = _rgvRoutePlanning.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
 
-        List<RouteSolutionDto> routeSolutions = [new(solvedRgvMap, score)];
+        var routeSolution = new RouteSolutionDto(solvedRgvMap, score);
 
-        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, intersections, routeSolutions);
+        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, routeSolution);
 
         var updateResult = missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)

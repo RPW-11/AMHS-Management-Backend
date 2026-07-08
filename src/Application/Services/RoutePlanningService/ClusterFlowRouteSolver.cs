@@ -41,7 +41,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
             List<PathPoint> candidateResult = [.. solveResult.RawPath];
             var score = _rgvRoutePlanning.GetRouteScore(candidateResult, grid, loopStationsOrder);
 
-            if (bestScore is null || IsBetterScore(score, bestScore))
+            if (bestScore is null || score.Optimality > bestScore.Optimality)
             {
                 bestScore = score;
                 bestResult = candidateResult;
@@ -121,21 +121,6 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
         }
 
         return permutations;
-    }
-
-    private static bool IsBetterScore(RoutePlanningScoreDto candidate, RoutePlanningScoreDto current)
-    {
-        if (candidate.Throughput != current.Throughput)
-        {
-            return candidate.Throughput > current.Throughput;
-        }
-
-        if (candidate.NumOfRgvs != current.NumOfRgvs)
-        {
-            return candidate.NumOfRgvs < current.NumOfRgvs;
-        }
-
-        return candidate.TrackLength < current.TrackLength;
     }
 
     private static (Station Start, Station End) FindNearestConnector(IReadOnlyList<Station> from, IReadOnlyList<Station> to)

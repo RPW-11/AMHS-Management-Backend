@@ -16,8 +16,7 @@ public interface IRgvRoutePlanning
     byte[] DrawMultipleFlows(
         byte[] imageBytes,
         Grid grid,
-        List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        List<PathPoint> intersections);
+        List<(List<PathPoint> Solution, string ArrowColor)> routes);
     string WriteImage(byte[] imageBytes, string fileName);
     string WriteToJson(RoutePlanningDetailDto routePlanningMission);
     RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl);

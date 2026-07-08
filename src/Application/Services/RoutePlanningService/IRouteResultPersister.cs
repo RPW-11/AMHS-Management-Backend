@@ -12,6 +12,5 @@ public interface IRouteResultPersister
         RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        List<PathPoint> intersections,
-        List<RouteSolutionDto> routeSolutions);
+        RouteSolutionDto routeSolution);
 }

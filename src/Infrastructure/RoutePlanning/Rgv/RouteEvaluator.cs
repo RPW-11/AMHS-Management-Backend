@@ -10,16 +10,9 @@ internal static class RouteEvaluator
     private const double NumOfRgvsWeight = 0.1;
     private const double LoadingUnloadingTime = 15;
     private const int HourInSeconds = 3600;
+    private const double ThroughputEfficiencyFactor = 0.90;
 
-    public static double EvaluateOptimality(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
-    {
-        var (totalThroughput, trackLength, maxRgvs) = GetSolutionScores(solution, grid, stationsOrder);
-        var finalScore = ThroughputWeight * totalThroughput + LengthWeight * 1 / trackLength + NumOfRgvsWeight * 1 / maxRgvs;
-
-        return finalScore;
-    }
-
-    public static (double throughput, double trackLength, int numOfRgvs) GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
+    public static (double throughput, double trackLength, int numOfRgvs, double optimality) GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
         // BOTTLENECK FOCUS
         double trackLength = solution.Count * grid.GetSquareLength();
@@ -42,46 +35,10 @@ internal static class RouteEvaluator
         int maxRgvs = (int)Math.Floor(cycleTimeForPipeline / minHeadwayTime) + 1;
 
         double bottleneckThroughputPerRgv = HourInSeconds / maxStationTime;
-        double totalThroughput = maxRgvs * bottleneckThroughputPerRgv;
+        double totalThroughput = maxRgvs * bottleneckThroughputPerRgv * ThroughputEfficiencyFactor;
 
-        totalThroughput *= 0.90;
+        double optimality = ThroughputWeight * totalThroughput + LengthWeight * 1 / trackLength + NumOfRgvsWeight * 1 / maxRgvs;
 
-        return (totalThroughput, trackLength, maxRgvs);
-    }
-
-    public static List<PathPoint> GetBestRoute(List<List<PathPoint>> possibleRoutes, List<PathPoint> stationsOrder, Grid grid)
-    {
-        List<double> routesQ = []; // product per hour
-        List<int> routesMaxRgvs = []; // max Rgvs
-        List<double> routesTrackLength = []; // routes length
-
-        double totalStationsTime = stationsOrder.Sum(s => s is Station station ? station.ProcessingTime : 0);
-
-        foreach (var route in possibleRoutes)
-        {
-            double trackLength = route.Count * grid.GetSquareLength();
-            double timePerLoop = (trackLength / RgvSpeed) + totalStationsTime;
-            double perRgvQ = 3600 / timePerLoop;
-
-            double rgvAvgSpeed = trackLength / timePerLoop;
-
-            double intermedSpace = totalStationsTime * rgvAvgSpeed;
-
-            int maxRgvs = (int)Math.Floor(trackLength / intermedSpace);
-
-            double totalQ = maxRgvs * perRgvQ; // N product per hour
-
-            routesQ.Add(totalQ);
-            routesMaxRgvs.Add(maxRgvs);
-            routesTrackLength.Add(trackLength);
-        }
-
-        var bestRouteIdx = Enumerable.Range(0, routesQ.Count)
-                           .OrderByDescending(i => routesQ[i])
-                           .ThenBy(i => routesMaxRgvs[i])
-                           .ThenBy(i => routesTrackLength[i])
-                           .Take(1).ToArray()[0];
-
-        return possibleRoutes[bestRouteIdx];
+        return (totalThroughput, trackLength, maxRgvs, optimality);
     }
 }

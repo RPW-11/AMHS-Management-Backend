@@ -153,35 +153,6 @@ public sealed class RouteDrawer : IDisposable
         return path;
     }
 
-    public void DrawIntersections(List<PathPoint> intersections, float circleRadiusMultiplier = 0.38f)
-    {
-        if (intersections.Count == 0)
-            return;
-
-        float baseSize = Math.Min(_cellWidth, _cellHeight);
-        float radius = baseSize * circleRadiusMultiplier;
-        float strokeWidth = Math.Max(2f, baseSize * 0.08f);
-
-        using var strokePaint = new SKPaint
-        {
-            Style = SKPaintStyle.Stroke,
-            Color = SKColors.Black,
-            StrokeWidth = strokeWidth,
-            IsAntialias = true
-        };
-
-        foreach (var point in intersections)
-        {
-            float x = point.ColPos * _cellWidth + _cellWidth / 2f;
-            float y = point.RowPos * _cellHeight + _cellHeight / 2f;
-
-            if (x < 0 || y < 0 || x >= _original.Width || y >= _original.Height)
-                continue;
-
-            _canvas.DrawCircle(x, y, radius, strokePaint);
-        }
-    }
-
     public byte[] Encode()
     {
         using var finalImage = _surface.Snapshot();
