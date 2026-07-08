@@ -230,19 +230,18 @@ public class MissionService : BaseService, IMissionService
         var leader = leaderResult.Value;
 
         if (mission.Category == MissionCategory.RoutePlanning
-            && mission.ResourceLink is not null)
+            && mission.Status == MissionStatus.Finished)
         {
             _logger.LogDebug("Mission is of type RoutePlanning - loading summary from JSON");
 
             RoutePlanningSummaryDto routePlanningSummary;
             try
             {
-                routePlanningSummary = _rgvRoutePlanning.ReadFromJson(mission.ResourceLink);
+                routePlanningSummary = _rgvRoutePlanning.GetRoutePlanningSummary(mission.Id.ToString());
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to read route planning summary from JSON. Path: {ResourceLink}",
-                    mission.ResourceLink);
+                _logger.LogError(ex, "Failed to read route planning summary for mission {MissionId}", mission.Id);
                 return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
             }
 
@@ -838,7 +837,6 @@ public class MissionService : BaseService, IMissionService
                         mission.Category.ToString(),
                         mission.Status.ToString(),
                         mission.FinishedAt,
-                        mission.ResourceLink,
                         mission.CreatedAt,
                         mission.UpdatedAt
                     );
@@ -857,7 +855,6 @@ public class MissionService : BaseService, IMissionService
                                         leader.ImgUrl,
                                         MissionRole.Leader.ToString()),
                                     mission.FinishedAt,
-                                    mission.ResourceLink,
                                     mission.CreatedAt,
                                     mission.UpdatedAt,
                                     mission.AssignedEmployees.Count,

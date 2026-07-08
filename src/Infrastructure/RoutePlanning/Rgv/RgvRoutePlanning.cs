@@ -80,19 +80,20 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         return gaSolver.Solve();
     }
 
-    public string WriteToJson(RoutePlanningDetailDto routePlanningDetailDto)
+    public void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail)
     {
-        string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
-        string path = System.IO.Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
+        string stringJson = JsonSerializer.Serialize(routePlanningDetail, _jsonSerializerOptions);
+        string path = System.IO.Path.Combine(_localRoutePlanningDirectory, routePlanningDetail.Id) + ".json";
         File.WriteAllText(path, stringJson);
-        return path;
     }
 
-    public RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl)
+    public RoutePlanningSummaryDto GetRoutePlanningSummary(string missionId)
     {
-        string jsonString = File.ReadAllText(jsonFileUrl);
+        string path = System.IO.Path.Combine(_localRoutePlanningDirectory, missionId) + ".json";
+        string jsonString = File.ReadAllText(path);
+
         return JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString)
-            ?? throw new InvalidOperationException($"Route planning JSON at '{jsonFileUrl}' deserialized to null");
+            ?? throw new InvalidOperationException($"Route planning JSON for mission '{missionId}' deserialized to null");
     }
 
     public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)

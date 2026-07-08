@@ -11,7 +11,6 @@ public class MissionDetailDto
                             string status,
                             AssignedEmployeeDto leader,
                             DateTime finishedAt,
-                            string? resourceLink,
                             DateTime createdAt,
                             DateTime updatedAt,
                             int numberOfMembers,
@@ -24,7 +23,6 @@ public class MissionDetailDto
         Status = status;
         Leader = leader;
         FinishedAt = finishedAt;
-        ResourceLink = resourceLink;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         NumberOfMembers = numberOfMembers;
@@ -38,7 +36,6 @@ public class MissionDetailDto
     public string Status { get; set; }
     public AssignedEmployeeDto Leader { get; set; }
     public DateTime FinishedAt { get; set; }
-    public string? ResourceLink { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int NumberOfMembers { get; set; }

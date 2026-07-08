@@ -18,7 +18,7 @@ public interface IRgvRoutePlanning
         Grid grid,
         List<(List<PathPoint> Solution, string ArrowColor)> routes);
     string WriteImage(byte[] imageBytes, string fileName);
-    string WriteToJson(RoutePlanningDetailDto routePlanningMission);
-    RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl);
+    void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail);
+    RoutePlanningSummaryDto GetRoutePlanningSummary(string missionId);
     RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder);
 }

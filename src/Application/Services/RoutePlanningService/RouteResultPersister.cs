@@ -26,11 +26,10 @@ public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<Ro
 
             var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], routeSolution);
 
-            var resourceLink = _rgvRoutePlanning.WriteToJson(routePlanningDetail);
-            _logger.LogInformation("Route planning data saved to JSON: {ResourceLink}", resourceLink);
+            _rgvRoutePlanning.SaveRoutePlanningDetail(routePlanningDetail);
+            _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
 
             mission.Finish();
-            mission.SetMissionResourceLink(resourceLink);
         }
         catch (Exception ex)
         {

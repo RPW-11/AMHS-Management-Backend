@@ -20,7 +20,6 @@ public class MissionBase : AggregateRoot<MissionId>
     public MissionCategory Category { get; private set; }
     public MissionStatus Status { get; private set; }
     public DateTime FinishedAt { get; private set; }
-    public string? ResourceLink { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -84,12 +83,6 @@ public class MissionBase : AggregateRoot<MissionId>
     public void SetMissionDescription(string description)
     {
         Description = description;
-    }
-
-    public void SetMissionResourceLink(string resourceLink)
-    {
-        ResourceLink = resourceLink;
-        UpdatedAt = DateTime.UtcNow;
     }
 
     public Result AddMember(EmployeeId employeeId, MissionRole missionRole)

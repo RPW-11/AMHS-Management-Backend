@@ -8,7 +8,6 @@ public record MissionDto
     string Category,
     string Status,
     DateTime FinishedAt,
-    string? ResourceLink,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );
