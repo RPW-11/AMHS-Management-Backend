@@ -47,7 +47,8 @@ public static class DependencyInjection
         // Register dependencies
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
-        services.AddSingleton<IRgvRoutePlanning, RgvRoutePlanning>();
+        services.AddSingleton<IRouteSolver, RouteSolver>();
+        services.AddSingleton<IRoutePlanningResultStore, RoutePlanningResultStore>();
         services.AddSingleton<INotificationHub, NotificationHub>();
         services.AddSingleton<IBackgroundJobHub, BackgroundJobHub>();
         services.AddHostedService(sp => (BackgroundJobHub)sp.GetRequiredService<IBackgroundJobHub>());

@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
 
-public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<RouteResultPersister> logger) : IRouteResultPersister
+public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultStore, ILogger<RouteResultPersister> logger) : IRouteResultPersister
 {
-    private readonly IRgvRoutePlanning _rgvRoutePlanning = rgvRoutePlanning;
+    private readonly IRoutePlanningResultStore _routePlanningResultStore = routePlanningResultStore;
     private readonly ILogger<RouteResultPersister> _logger = logger;
 
     public void Persist(
@@ -17,16 +17,17 @@ public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<Ro
         RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        RouteSolutionDto routeSolution)
+        RgvMapDetailDto rgvMap,
+        RoutePlanningScoreDto score)
     {
         try
         {
-            var drawnImageBytes = _rgvRoutePlanning.DrawMultipleFlows(imageStream.ToArray(), grid, routes);
-            var imagePath = _rgvRoutePlanning.WriteImage(drawnImageBytes, mission.Id.ToString());
+            var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageStream.ToArray(), grid, routes);
+            var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, mission.Id.ToString());
 
-            var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], routeSolution);
+            var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, score);
 
-            _rgvRoutePlanning.SaveRoutePlanningDetail(routePlanningDetail);
+            _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
             _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
 
             mission.Finish();
@@ -42,13 +43,15 @@ public class RouteResultPersister(IRgvRoutePlanning rgvRoutePlanning, ILogger<Ro
         MissionId missionId,
         RoutePlanningAlgorithm routePlanningAlgorithm,
         List<string> imageUrls,
-        RouteSolutionDto routeSolution)
+        RgvMapDetailDto rgvMap,
+        RoutePlanningScoreDto score)
     {
         return new(
                     missionId.ToString(),
                     routePlanningAlgorithm.ToString(),
                     imageUrls,
-                    routeSolution
+                    rgvMap,
+                    score
                 );
     }
 }

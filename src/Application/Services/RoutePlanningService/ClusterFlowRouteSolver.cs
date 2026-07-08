@@ -5,13 +5,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
 
-public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<ClusterFlowRouteSolver> logger) : IClusterFlowRouteSolver
+public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlowRouteSolver> logger) : IClusterFlowRouteSolver
 {
     private const int ClusterGenerationsNumber = 100;
     private const int ConnectorGenerationsNumber = 300;
     private static readonly int? ClusterPermutationSampleSize = 6;
 
-    private readonly IRgvRoutePlanning _rgvRoutePlanning = rgvRoutePlanning;
+    private readonly IRouteSolver _routeSolver = routeSolver;
     private readonly ILogger<ClusterFlowRouteSolver> _logger = logger;
 
     public List<PathPoint> SolveClusterRoute(Grid grid, Cluster cluster, RoutePlanningAlgorithm algorithm, List<List<PathPoint>> currentRoutes)
@@ -31,7 +31,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
             // Close the loop by returning to the first station of this permutation.
             List<PathPoint> loopStationsOrder = [.. permutation.Cast<PathPoint>(), permutation[0]];
 
-            var solveResult = _rgvRoutePlanning.Solve(
+            var solveResult = _routeSolver.Solve(
                 grid,
                 loopStationsOrder,
                 currentRoutes,
@@ -39,7 +39,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
                 ClusterGenerationsNumber);
 
             List<PathPoint> candidateResult = [.. solveResult];
-            var score = _rgvRoutePlanning.GetRouteScore(candidateResult, grid, loopStationsOrder);
+            var score = _routeSolver.GetRouteScore(candidateResult, grid, loopStationsOrder);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
             {
@@ -57,7 +57,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
 
         var (start, end) = FindNearestConnector(from.Stations, to.Stations);
 
-        var solveResult = _rgvRoutePlanning.Solve(
+        var solveResult = _routeSolver.Solve(
             grid,
             [start, end],
             currentRoutes,

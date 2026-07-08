@@ -1,15 +1,13 @@
 using System.Text.Json;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.RoutePlanning;
-using Microsoft.Extensions.Options;
 using Domain.Missions.ValueObjects;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
-public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetting) : IRgvRoutePlanning
+public class RoutePlanningResultStore(IOptions<RoutePlanningSettings> routePlanningSetting) : IRoutePlanningResultStore
 {
-    private const int MaxGenerationsNumber = 400;
-
     private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.LocalDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
@@ -55,31 +53,6 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         return outputPath;
     }
 
-    public IEnumerable<PathPoint> Solve(
-        Grid grid,
-        List<PathPoint> stationsOrder,
-        List<List<PathPoint>> currentRoutePoints,
-        RoutePlanningAlgorithm routePlanningAlgorithm,
-        int generationsNumber
-    )
-    {
-        if (generationsNumber <= 0 || generationsNumber > MaxGenerationsNumber)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(generationsNumber),
-                generationsNumber,
-                $"Generations number must be between 1 and {MaxGenerationsNumber}");
-        }
-
-        if (routePlanningAlgorithm == RoutePlanningAlgorithm.ReinforcementLearning)
-        {
-            throw new NotImplementedException("Reinforcement learning route planning is not implemented yet");
-        }
-
-        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber);
-        return gaSolver.Solve();
-    }
-
     public void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail)
     {
         string stringJson = JsonSerializer.Serialize(routePlanningDetail, _jsonSerializerOptions);
@@ -92,14 +65,11 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         string path = System.IO.Path.Combine(_localRoutePlanningDirectory, missionId) + ".json";
         string jsonString = File.ReadAllText(path);
 
-        return JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString)
+        var detail = JsonSerializer.Deserialize<RoutePlanningDetailDto>(jsonString)
             ?? throw new InvalidOperationException($"Route planning JSON for mission '{missionId}' deserialized to null");
-    }
 
-    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
-    {
-        var (throughput, trackLength, numOfRgvs, optimality) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder);
+        var rgvMapSummary = new RgvMapSummaryDto(detail.RgvMap.RowDim, detail.RgvMap.ColDim, detail.RgvMap.WidthLength, detail.RgvMap.HeightLength);
 
-        return new(throughput, trackLength, numOfRgvs, optimality);
+        return new RoutePlanningSummaryDto(detail.Algorithm, detail.ImageUrls, rgvMapSummary, detail.Score);
     }
 }

@@ -15,14 +15,14 @@ namespace Application.Services.RoutePlanningService;
 
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
-    private readonly IRgvRoutePlanning _rgvRoutePlanning;
+    private readonly IRouteSolver _routeSolver;
     private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
     private readonly IRouteResultPersister _routeResultPersister;
     private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
     private readonly ILogger<RoutePlanningService> _logger;
 
-    public RoutePlanningService(IRgvRoutePlanning rgvRoutePlanning,
+    public RoutePlanningService(IRouteSolver routeSolver,
                                 IClusterFlowRouteSolver clusterFlowRouteSolver,
                                 IRouteResultPersister routeResultPersister,
                                 IBackgroundJobHub backgroundJobHub,
@@ -31,7 +31,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 ILogger<RoutePlanningService> logger)
                                 : base(unitOfWork)
     {
-        _rgvRoutePlanning = rgvRoutePlanning;
+        _routeSolver = routeSolver;
         _clusterFlowRouteSolver = clusterFlowRouteSolver;
         _routeResultPersister = routeResultPersister;
         _backgroundJobHub = backgroundJobHub;
@@ -270,11 +270,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
-        var score = _rgvRoutePlanning.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
+        var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
 
-        var routeSolution = new RouteSolutionDto(solvedRgvMap, score);
-
-        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, routeSolution);
+        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), score);
 
         var updateResult = missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)
@@ -296,6 +294,30 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
     }
+
+    private static RgvMapDetailDto ToRgvMapDetailDto(Grid grid)
+    {
+        List<List<PathPointDto>> mapMatrix = [];
+        for (int row = 0; row < grid.RowDim; row++)
+        {
+            List<PathPointDto> rowPoints = [];
+            for (int col = 0; col < grid.ColDim; col++)
+            {
+                rowPoints.Add(ToPathPointDto(grid.MapMatrix[row, col]));
+            }
+            mapMatrix.Add(rowPoints);
+        }
+
+        return new RgvMapDetailDto(grid.RowDim, grid.ColDim, grid.WidthLength, grid.HeightLength, mapMatrix);
+    }
+
+    private static PathPointDto ToPathPointDto(PathPoint point) =>
+        point switch
+        {
+            Station station => new PathPointDto(station.Name, "st", new(station.RowPos, station.ColPos), station.ProcessingTime),
+            Obstacle => new PathPointDto("", "obs", new(point.RowPos, point.ColPos), 0),
+            _ => new PathPointDto("", "path", new(point.RowPos, point.ColPos), 0)
+        };
 
     private static Result<List<PathPoint>> ToPathPoints(IEnumerable<PathPointDto> points)
     {

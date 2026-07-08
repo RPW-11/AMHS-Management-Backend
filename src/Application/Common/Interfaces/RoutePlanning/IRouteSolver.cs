@@ -3,7 +3,7 @@ using Domain.Missions.ValueObjects;
 
 namespace Application.Common.Interfaces.RoutePlanning;
 
-public interface IRgvRoutePlanning
+public interface IRouteSolver
 {
     IEnumerable<PathPoint> Solve(
         Grid grid,
@@ -13,12 +13,5 @@ public interface IRgvRoutePlanning
         int generationsNumber
     );
 
-    byte[] DrawMultipleFlows(
-        byte[] imageBytes,
-        Grid grid,
-        List<(List<PathPoint> Solution, string ArrowColor)> routes);
-    string WriteImage(byte[] imageBytes, string fileName);
-    void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail);
-    RoutePlanningSummaryDto GetRoutePlanningSummary(string missionId);
     RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder);
 }

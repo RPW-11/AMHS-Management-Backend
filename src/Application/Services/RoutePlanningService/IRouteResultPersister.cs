@@ -12,5 +12,6 @@ public interface IRouteResultPersister
         RoutePlanningAlgorithm algorithm,
         MemoryStream imageStream,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
-        RouteSolutionDto routeSolution);
+        RgvMapDetailDto rgvMap,
+        RoutePlanningScoreDto score);
 }

@@ -18,20 +18,20 @@ public class MissionService : BaseService, IMissionService
 {
     private readonly IMissionRepository _missionRepository;
     private readonly IEmployeeRepository _employeeRepository;
-    private readonly IRgvRoutePlanning _rgvRoutePlanning;
+    private readonly IRoutePlanningResultStore _routePlanningResultStore;
     private readonly ILogger<MissionService> _logger;
 
     public MissionService(IMissionRepository missionRepository,
                           IEmployeeRepository employeeRepository,
                           INotificationRepository notificationRepository,
-                          IRgvRoutePlanning rgvRoutePlanning,
+                          IRoutePlanningResultStore routePlanningResultStore,
                           IUnitOfWork unitOfWork,
                           ILogger<MissionService> logger)
     : base(unitOfWork)
     {
         _missionRepository = missionRepository;
         _employeeRepository = employeeRepository;
-        _rgvRoutePlanning = rgvRoutePlanning;
+        _routePlanningResultStore = routePlanningResultStore;
         _logger = logger;
     }
 
@@ -237,7 +237,9 @@ public class MissionService : BaseService, IMissionService
             RoutePlanningSummaryDto routePlanningSummary;
             try
             {
-                routePlanningSummary = _rgvRoutePlanning.GetRoutePlanningSummary(mission.Id.ToString());
+                routePlanningSummary = _routePlanningResultStore.GetRoutePlanningSummary(mission.Id.ToString());
+                Console.WriteLine(routePlanningSummary.RgvMap);
+                Console.WriteLine(routePlanningSummary.Algorithm);
             }
             catch (Exception ex)
             {
@@ -262,7 +264,8 @@ public class MissionService : BaseService, IMissionService
 
             routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
                                                                base64Images,
-                                                               routePlanningSummary.RouteSolution);
+                                                               routePlanningSummary.RgvMap,
+                                                               routePlanningSummary.Score);
 
             _logger.LogInformation("Successfully loaded route planning summary with {ImageCount} images",
                 base64Images.Count);

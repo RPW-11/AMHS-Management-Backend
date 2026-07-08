@@ -49,7 +49,7 @@ namespace API.Controllers
         /// Get a mission by id
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<MissionDto>> GetMission(string id)
+        public async Task<ActionResult<MissionDetailDto>> GetMission(string id)
         {
             var missionResult = await _missionService.GetMission(id);
 

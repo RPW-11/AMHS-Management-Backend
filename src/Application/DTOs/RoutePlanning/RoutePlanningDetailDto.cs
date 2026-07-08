@@ -4,5 +4,6 @@ public record RoutePlanningDetailDto(
     string Id,
     string Algorithm,
     IEnumerable<string> ImageUrls,
-    RouteSolutionDto RouteSolution
+    RgvMapDetailDto RgvMap,
+    RoutePlanningScoreDto Score
 );
