@@ -55,7 +55,7 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
         return outputPath;
     }
 
-    public (IEnumerable<PathPoint> RawPath, IEnumerable<PathPoint> SmoothedPath) Solve(
+    public IEnumerable<PathPoint> Solve(
         Grid grid,
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
@@ -71,48 +71,28 @@ public class RgvRoutePlanning(IOptions<RoutePlanningSettings> routePlanningSetti
                 $"Generations number must be between 1 and {MaxGenerationsNumber}");
         }
 
-        if (routePlanningAlgorithm == RoutePlanningAlgorithm.GeneticAlgorithm)
+        if (routePlanningAlgorithm == RoutePlanningAlgorithm.ReinforcementLearning)
         {
-            var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber);
-            var result = gaSolver.Solve();
-            var preprocessedResult = PostProcessingRoute.SmoothAndRasterizeFourDirections(result, grid);
-
-            return (result, preprocessedResult);
+            throw new NotImplementedException("Reinforcement learning route planning is not implemented yet");
         }
 
-        throw new Exception($"Algorithm '{routePlanningAlgorithm}' is not implemented");
+        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber);
+        return gaSolver.Solve();
     }
 
     public string WriteToJson(RoutePlanningDetailDto routePlanningDetailDto)
     {
-        try
-        {
-            string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
-            string path = System.IO.Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
-            File.WriteAllText(path, stringJson);
-            return path;
-        }
-        catch (Exception error)
-        {
-            Console.WriteLine(error);
-            throw new Exception(error.Message);
-        }
+        string stringJson = JsonSerializer.Serialize(routePlanningDetailDto, _jsonSerializerOptions);
+        string path = System.IO.Path.Combine(_localRoutePlanningDirectory, routePlanningDetailDto.Id) + ".json";
+        File.WriteAllText(path, stringJson);
+        return path;
     }
 
     public RoutePlanningSummaryDto ReadFromJson(string jsonFileUrl)
     {
-        try
-        {
-            string jsonString = File.ReadAllText(jsonFileUrl);
-            RoutePlanningSummaryDto? routePlanningDetail = JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString) ?? throw new Exception("Error serializing the resource file");
-
-            return routePlanningDetail;
-        }
-        catch (Exception error)
-        {
-            Console.WriteLine(error);
-            throw new Exception(error.Message);
-        }
+        string jsonString = File.ReadAllText(jsonFileUrl);
+        return JsonSerializer.Deserialize<RoutePlanningSummaryDto>(jsonString)
+            ?? throw new InvalidOperationException($"Route planning JSON at '{jsonFileUrl}' deserialized to null");
     }
 
     public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)

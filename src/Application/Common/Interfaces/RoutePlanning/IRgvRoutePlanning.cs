@@ -5,7 +5,7 @@ namespace Application.Common.Interfaces.RoutePlanning;
 
 public interface IRgvRoutePlanning
 {
-    (IEnumerable<PathPoint> RawPath, IEnumerable<PathPoint> SmoothedPath) Solve(
+    IEnumerable<PathPoint> Solve(
         Grid grid,
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,

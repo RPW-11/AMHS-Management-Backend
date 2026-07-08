@@ -8,7 +8,6 @@ public class RoutePlanningAlgorithm : ValueObject
 {
     private enum Algorithm
     {
-        DFS,
         GeneticAlgorithm,
         ReinforcementLearning
     }
@@ -20,7 +19,6 @@ public class RoutePlanningAlgorithm : ValueObject
         _value = value;
     }
 
-    public static RoutePlanningAlgorithm Dfs => new(Algorithm.DFS);
     public static RoutePlanningAlgorithm GeneticAlgorithm => new(Algorithm.GeneticAlgorithm);
     public static RoutePlanningAlgorithm ReinforcementLearning => new(Algorithm.ReinforcementLearning);
 
@@ -33,7 +31,6 @@ public class RoutePlanningAlgorithm : ValueObject
 
         return algorithm.ToLower() switch
         {
-            "dfs" => Dfs,
             "geneticalgorithm" => GeneticAlgorithm,
             "reinforcementlearning" => ReinforcementLearning,
             _ => Result.Fail<RoutePlanningAlgorithm>(new InvalidAlgorithmError(algorithm))

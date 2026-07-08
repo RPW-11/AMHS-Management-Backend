@@ -38,7 +38,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
                 algorithm,
                 ClusterGenerationsNumber);
 
-            List<PathPoint> candidateResult = [.. solveResult.RawPath];
+            List<PathPoint> candidateResult = [.. solveResult];
             var score = _rgvRoutePlanning.GetRouteScore(candidateResult, grid, loopStationsOrder);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
@@ -64,7 +64,7 @@ public class ClusterFlowRouteSolver(IRgvRoutePlanning rgvRoutePlanning, ILogger<
             algorithm,
             ConnectorGenerationsNumber);
 
-        return [.. solveResult.RawPath];
+        return [.. solveResult];
     }
 
     private static List<List<Station>> GetStationPermutations(IReadOnlyList<Station> stations, int? maxPermutations)
