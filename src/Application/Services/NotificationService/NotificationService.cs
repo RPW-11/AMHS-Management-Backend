@@ -212,6 +212,7 @@ public class NotificationService : BaseService, INotificationService
                     Message: notification.Payload,
                     TargetId: notification.NotificationTarget.Id.ToString(),
                     TargetType: notification.NotificationTarget.Type,
+                    NotificationType: notification.NotificationType.ToString(),
                     IsRead: notification.ReadAt.HasValue,
                     CreatedAt: notification.CreatedAt
                 );

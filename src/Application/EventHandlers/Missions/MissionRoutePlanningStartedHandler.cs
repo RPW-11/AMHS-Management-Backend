@@ -8,16 +8,16 @@ using Domain.Notifications.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 namespace Application.EventHandlers.Missions;
-public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
+public class MissionRoutePlanningStartedHandler : IDomainEventHandler<MissionRoutePlanningStartedEvent>
 {
     private readonly INotificationRepository _notificationRepository;
-    private readonly ILogger<MissionFinishedHandler> _logger;
+    private readonly ILogger<MissionRoutePlanningStartedHandler> _logger;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly IUnitOfWork _unitOfWork;
 
-    public MissionFinishedHandler(
+    public MissionRoutePlanningStartedHandler(
         INotificationRepository notificationRepository,
-        ILogger<MissionFinishedHandler> logger,
+        ILogger<MissionRoutePlanningStartedHandler> logger,
         INotificationPublisher notificationPublisher,
         IUnitOfWork unitOfWork
     )
@@ -28,7 +28,7 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
         _unitOfWork = unitOfWork;
     }
 
-    public async Task Handle(MissionFinishedEvent evt)
+    public async Task Handle(MissionRoutePlanningStartedEvent evt)
     {
         List<Notification> notifications = [];
         foreach (var memberId in evt.AssignedEmployeeIds)
@@ -39,15 +39,16 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
                 "System",
                 null,
                 NotificationTarget.Create(evt.MissionId.Value, "MISSION"),
-                NotificationType.MissionFinished,
-                $"Mission '{evt.MissionName}' has been finished"
+                NotificationType.MissionRoutePlanningStarted,
+                $"Route planning for mission '{evt.MissionName}' has started"
             );
             notifications.Add(notification.Value);
         }
 
         var notificationsAddResult = await _notificationRepository.AddNotificationsAsync(notifications);
-        if (notificationsAddResult.IsFailed){
-            _logger.LogError("Failed to add notifications for mission finished event | MissionId: {MissionId} | Errors: {Errors}", evt.MissionId, notificationsAddResult.Errors);
+        if (notificationsAddResult.IsFailed)
+        {
+            _logger.LogError("Failed to add notifications for mission route planning started event | MissionId: {MissionId} | Errors: {Errors}", evt.MissionId, notificationsAddResult.Errors);
         }
 
         try
@@ -56,13 +57,13 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add notifications for mission finished event | MissionId: {MissionId}", evt.MissionId);
+            _logger.LogError(ex, "Failed to add notifications for mission route planning started event | MissionId: {MissionId}", evt.MissionId);
         }
 
         // publish
         await _notificationPublisher.PublishToUsersAsync([.. evt.AssignedEmployeeIds], ToNotificationDto(notifications.First()));
 
-        _logger.LogInformation("Successfully added notifications for mission finished event | MissionId: {MissionId}", evt.MissionId);
+        _logger.LogInformation("Successfully added notifications for mission route planning started event | MissionId: {MissionId}", evt.MissionId);
     }
 
     private static NotificationDto ToNotificationDto(Notification notification)
@@ -78,5 +79,5 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
             notification.ReadAt is not null,
             notification.CreatedAt
         );
-    }   
+    }
 }

@@ -15,28 +15,20 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
         MissionBase mission,
         Grid grid,
         RoutePlanningAlgorithm algorithm,
-        MemoryStream imageStream,
+        byte[] imageBytes,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
         RgvMapDetailDto rgvMap,
         RoutePlanningScoreDto score)
     {
-        try
-        {
-            var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageStream.ToArray(), grid, routes);
-            var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, mission.Id.ToString());
+        var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
+        var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, mission.Id.ToString());
 
-            var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, score);
+        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, score);
 
-            _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
-            _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
+        _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
+        _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
 
-            mission.Finish();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to draw, write image, or write route planning JSON result");
-            mission.SetMissionStatus(MissionStatus.Failed);
-        }
+        mission.Finish();
     }
 
     private static RoutePlanningDetailDto ToRoutePlanningDto(

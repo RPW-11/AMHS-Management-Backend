@@ -5,7 +5,6 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.RoutePlanning;
 using Domain.Missions;
-using Domain.Missions.Events;
 using Domain.Missions.ValueObjects;
 using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +19,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private readonly IRouteResultPersister _routeResultPersister;
     private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
+    private readonly IDomainDispatcher _domainDispatcher;
     private readonly ILogger<RoutePlanningService> _logger;
 
     public RoutePlanningService(IRouteSolver routeSolver,
@@ -27,6 +27,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 IRouteResultPersister routeResultPersister,
                                 IBackgroundJobHub backgroundJobHub,
                                 IMissionRepository missionRepository,
+                                IDomainDispatcher domainDispatcher,
                                 IUnitOfWork unitOfWork,
                                 ILogger<RoutePlanningService> logger)
                                 : base(unitOfWork)
@@ -36,12 +37,13 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _routeResultPersister = routeResultPersister;
         _backgroundJobHub = backgroundJobHub;
         _missionRepository = missionRepository;
+        _domainDispatcher = domainDispatcher;
         _logger = logger;
     }
 
     public async Task<Result> EnqueueRoutePlanning(RoutePlanningRequest request)
     {
-        var (missionId, imageStream, algorithm, rowDim, colDim, widthLength, heightLength, points, clusters, clusterFlows) = request;
+        var (missionId, imageBytes, algorithm, rowDim, colDim, widthLength, heightLength, points, clusters, clusterFlows) = request;
 
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
@@ -168,12 +170,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 rgvMap.ClusterFlows.Count, rowDim, colDim);
 
         // Update status to Processing
-        missionResult.Value.ProcessRoutePlanning(new MissionRoutePlanningStartedEvent(
-            missionResult.Value.Id,
-            [],
-            algorithmResult.Value,
-            imageStream
-        ));
+        missionResult.Value.ProcessRoutePlanning();
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
 
@@ -187,7 +184,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
                 await ExecuteRoutePlanning(
                     domainDispatcher, unitOfWork, missionRepository, missionResult.Value,
-                    rgvMap, algorithmResult.Value, imageStream);
+                    rgvMap, algorithmResult.Value, imageBytes);
             });
         }
         catch (Exception ex)
@@ -206,6 +203,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
+        await _domainDispatcher.DispatchAsync(missionResult.Value.DomainEvents);
+        missionResult.Value.ClearDomainEvents();
+
         _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
 
         return Result.Ok();
@@ -218,61 +218,71 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         MissionBase mission,
         RgvMap rgvMap,
         RoutePlanningAlgorithm algorithm,
-        MemoryStream imageStream)
+        byte[] imageBytes)
     {
-        // Solve each cluster's own route once and reuse it wherever the same cluster
-        // reappears (e.g. a looping flow like C1 -> C2 -> C1).
-        var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
-
-        // Every already-solved segment (cluster loops + connectors) is fed into subsequent
-        // solves so the GA can penalize new routes that traverse an existing one in reverse.
-        List<List<PathPoint>> solvedRouteSegments = [];
-
-        List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
-        List<PathPoint> combinedSolution = [];
-        List<PathPoint> combinedStationsOrder = [];
-        List<ClusterFlow> solvedClusterFlows = [];
-
-        foreach (var clusterFlow in rgvMap.ClusterFlows)
+        try
         {
-            List<Cluster> solvedClusters = [];
-            List<PathPoint> flowConnectorSolution = [];
+            // Solve each cluster's own route once and reuse it wherever the same cluster
+            // reappears (e.g. a looping flow like C1 -> C2 -> C1).
+            var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
 
-            foreach (var cluster in clusterFlow.Clusters)
+            // Every already-solved segment (cluster loops + connectors) is fed into subsequent
+            // solves so the GA can penalize new routes that traverse an existing one in reverse.
+            List<List<PathPoint>> solvedRouteSegments = [];
+
+            List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
+            List<PathPoint> combinedSolution = [];
+            List<PathPoint> combinedStationsOrder = [];
+            List<ClusterFlow> solvedClusterFlows = [];
+
+            foreach (var clusterFlow in rgvMap.ClusterFlows)
             {
-                if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
+                List<Cluster> solvedClusters = [];
+                List<PathPoint> flowConnectorSolution = [];
+
+                foreach (var cluster in clusterFlow.Clusters)
                 {
-                    clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, algorithm, solvedRouteSegments);
-                    clusterSolutionCache[cluster] = clusterSolution;
-                    solvedRouteSegments.Add(clusterSolution);
+                    if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
+                    {
+                        clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, algorithm, solvedRouteSegments);
+                        clusterSolutionCache[cluster] = clusterSolution;
+                        solvedRouteSegments.Add(clusterSolution);
+                    }
+
+                    var solvedCluster = Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution).Value;
+                    solvedClusters.Add(solvedCluster);
+
+                    routes.Add((clusterSolution, cluster.PathColor));
+                    combinedSolution.AddRange(clusterSolution);
+                    combinedStationsOrder.AddRange(cluster.Stations);
                 }
 
-                var solvedCluster = Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution).Value;
-                solvedClusters.Add(solvedCluster);
+                for (int i = 0; i < solvedClusters.Count - 1; i++)
+                {
+                    var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm, solvedRouteSegments);
+                    solvedRouteSegments.Add(connectorSolution);
+                    flowConnectorSolution.AddRange(connectorSolution);
+                    combinedSolution.AddRange(connectorSolution);
+                }
 
-                routes.Add((clusterSolution, cluster.PathColor));
-                combinedSolution.AddRange(clusterSolution);
-                combinedStationsOrder.AddRange(cluster.Stations);
+                var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, flowConnectorSolution).Value;
+                solvedClusterFlows.Add(solvedClusterFlow);
+
+                routes.Add((flowConnectorSolution, clusterFlow.PathColor));
             }
 
-            for (int i = 0; i < solvedClusters.Count - 1; i++)
-            {
-                var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm, solvedRouteSegments);
-                solvedRouteSegments.Add(connectorSolution);
-                flowConnectorSolution.AddRange(connectorSolution);
-                combinedSolution.AddRange(connectorSolution);
-            }
+            var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
+            var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
 
-            var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, flowConnectorSolution).Value;
-            solvedClusterFlows.Add(solvedClusterFlow);
+            _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageBytes, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), score);
 
-            routes.Add((flowConnectorSolution, clusterFlow.PathColor));
+            _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
         }
-
-        var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
-        var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
-
-        _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageStream, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), score);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Route planning failed for mission {MissionId}", mission.Id);
+            mission.SetMissionStatus(MissionStatus.Failed);
+        }
 
         var updateResult = missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)
@@ -291,8 +301,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         await domainDispatcher.DispatchAsync(mission.DomainEvents);
         mission.ClearDomainEvents();
-
-        _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
     }
 
     private static RgvMapDetailDto ToRgvMapDetailDto(Grid grid)

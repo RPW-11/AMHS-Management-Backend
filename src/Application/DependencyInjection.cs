@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDomainDispatcher, DomainDispatcher>();
         services.AddScoped<IDomainEventHandler<MissionFinishedEvent>, MissionFinishedHandler>();
+        services.AddScoped<IDomainEventHandler<MissionRoutePlanningStartedEvent>, MissionRoutePlanningStartedHandler>();
 
         return services;
     }

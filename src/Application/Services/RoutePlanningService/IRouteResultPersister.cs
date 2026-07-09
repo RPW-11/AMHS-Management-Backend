@@ -10,7 +10,7 @@ public interface IRouteResultPersister
         MissionBase mission,
         Grid grid,
         RoutePlanningAlgorithm algorithm,
-        MemoryStream imageStream,
+        byte[] imageBytes,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
         RgvMapDetailDto rgvMap,
         RoutePlanningScoreDto score);

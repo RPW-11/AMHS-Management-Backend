@@ -11,6 +11,7 @@ public sealed class NotificationType : ValueObject
         Add,
         Remove,
         MissionFinished,
+        MissionRoutePlanningStarted,
         Info
     }
     private readonly TypeValue _value;
@@ -24,6 +25,7 @@ public sealed class NotificationType : ValueObject
     public static NotificationType Remove => new(TypeValue.Remove);
     public static NotificationType Info => new(TypeValue.Info);
     public static NotificationType MissionFinished => new(TypeValue.MissionFinished);
+    public static NotificationType MissionRoutePlanningStarted => new(TypeValue.MissionRoutePlanningStarted);
     public static Result<NotificationType> FromString(string notificationType)
     {
         if (string.IsNullOrEmpty(notificationType))
@@ -37,6 +39,7 @@ public sealed class NotificationType : ValueObject
             "remove" => Remove,
             "info" => Info,
             "missionfinished" => MissionFinished,
+            "missionrouteplanningstarted" => MissionRoutePlanningStarted,
             _ => Result.Fail<NotificationType>(new InvalidNotificationType(notificationType))
         };
     }

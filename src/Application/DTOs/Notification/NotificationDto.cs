@@ -7,6 +7,7 @@ public record class NotificationDto(
     string Message,
     string TargetType,
     string TargetId,
+    string NotificationType,
     bool IsRead,
     DateTime CreatedAt
 );

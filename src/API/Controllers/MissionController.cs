@@ -233,33 +233,34 @@ namespace API.Controllers
             var clusters = routeMetadata.Clusters;
             var clusterFlows = routeMetadata.ClusterFlows;
 
+            byte[] imageBytes;
             using (var imageStream = new MemoryStream())
             {
                 createRoutePlanningRequest.Image.CopyTo(imageStream);
-                imageStream.Seek(0, SeekOrigin.Begin);
+                imageBytes = imageStream.ToArray();
+            }
 
-                var routeResult = await _routePlanningService.EnqueueRoutePlanning(new RoutePlanningRequest(
-                    id,
-                    imageStream,
-                    routeMetadata.Algorithm,
-                    routeMetadata.RowDim,
-                    routeMetadata.ColDim,
-                    routeMetadata.WidthLength,
-                    routeMetadata.HeightLength,
-                    points,
-                    clusters,
-                    clusterFlows
-                ));
+            var routeResult = await _routePlanningService.EnqueueRoutePlanning(new RoutePlanningRequest(
+                id,
+                imageBytes,
+                routeMetadata.Algorithm,
+                routeMetadata.RowDim,
+                routeMetadata.ColDim,
+                routeMetadata.WidthLength,
+                routeMetadata.HeightLength,
+                points,
+                clusters,
+                clusterFlows
+            ));
 
-                if (routeResult.IsFailed)
-                {
-                    var error = routeResult.Errors[0];
-                    return Problem(
-                        title: error.Message,
-                        statusCode: (int)HttpStatusCode.BadRequest,
-                        detail: (string)error.Metadata["detail"]
-                    );
-                }
+            if (routeResult.IsFailed)
+            {
+                var error = routeResult.Errors[0];
+                return Problem(
+                    title: error.Message,
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    detail: (string)error.Metadata["detail"]
+                );
             }
 
             return Created();

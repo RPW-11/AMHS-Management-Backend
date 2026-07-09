@@ -169,8 +169,9 @@ public class MissionBase : AggregateRoot<MissionId>
         AddDomainEvent(new MissionFinishedEvent(Id, Name, [.. AssignedEmployees.Select(ae => ae.EmployeeId)], FinishedAt));
     }
 
-    public void ProcessRoutePlanning(MissionRoutePlanningStartedEvent evt){
+    public void ProcessRoutePlanning()
+    {
         SetMissionStatus(MissionStatus.Processing);
-        AddDomainEvent(evt);
+        AddDomainEvent(new MissionRoutePlanningStartedEvent(Id, Name, [.. AssignedEmployees.Select(ae => ae.EmployeeId)]));
     }
 }
