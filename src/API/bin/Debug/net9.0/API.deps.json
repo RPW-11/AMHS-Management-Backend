@@ -18,6 +18,25 @@
           "API.dll": {}
         }
       },
+      "AWSSDK.Core/4.0.100.3": {
+        "runtime": {
+          "lib/net8.0/AWSSDK.Core.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.100.3"
+          }
+        }
+      },
+      "AWSSDK.S3/4.0.100.3": {
+        "dependencies": {
+          "AWSSDK.Core": "4.0.100.3"
+        },
+        "runtime": {
+          "lib/net8.0/AWSSDK.S3.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.100.3"
+          }
+        }
+      },
       "BCrypt.Net-Next/4.0.3": {
         "runtime": {
           "lib/net6.0/BCrypt.Net-Next.dll": {
@@ -1304,6 +1323,7 @@
       },
       "Infrastructure/1.0.0": {
         "dependencies": {
+          "AWSSDK.S3": "4.0.100.3",
           "Application": "1.0.0",
           "BCrypt.Net-Next": "4.0.3",
           "Domain": "1.0.0",
@@ -1332,6 +1352,20 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AWSSDK.Core/4.0.100.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-KU+8IlwHqh68J82FXvsNgehAuG0Z++Ul62oD5sg5Iyj4RgSdUKer3nbLBJbW31DAM7mgEuckhsEcJW+2wYpSVA==",
+      "path": "awssdk.core/4.0.100.3",
+      "hashPath": "awssdk.core.4.0.100.3.nupkg.sha512"
+    },
+    "AWSSDK.S3/4.0.100.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-bHe+BZRyC/TnyPw3/l6N96V/hqtBHyjtXINVrVxVl8LTYx2fxNI1HTwknm0jslSkOiOKeHRZ/oduxMcJXBbtsg==",
+      "path": "awssdk.s3/4.0.100.3",
+      "hashPath": "awssdk.s3.4.0.100.3.nupkg.sha512"
     },
     "BCrypt.Net-Next/4.0.3": {
       "type": "package",

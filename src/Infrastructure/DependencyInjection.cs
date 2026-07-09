@@ -1,4 +1,6 @@
 using System.Text;
+using Amazon.Runtime;
+using Amazon.S3;
 using Application.Common.Interfaces;
 using Application.Common.Interfaces.Authentication;
 using Application.Common.Interfaces.BackgroundJobHub;
@@ -35,7 +37,19 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
         // Route Planning config
-        services.Configure<RoutePlanningSettings>(configuration.GetSection(RoutePlanningSettings.SectionName));
+        IConfigurationSection routePlanningSection = configuration.GetSection(RoutePlanningSettings.SectionName);
+        services.Configure<RoutePlanningSettings>(routePlanningSection);
+
+        //  AWS S3 client
+        services.AddSingleton<IAmazonS3>(sp =>
+        {
+            S3RoutePlanningSettings s3Settings = sp.GetRequiredService<IOptions<RoutePlanningSettings>>().Value.S3;
+
+            var awsCredentials = new BasicAWSCredentials(s3Settings.AccessKeyId, s3Settings.SecretAccessKey);
+            var s3Config = new AmazonS3Config { ServiceURL = s3Settings.EndPointUrl, ForcePathStyle = true };
+
+            return new AmazonS3Client(awsCredentials, s3Config);
+        });
 
         //  Postgres config
         string? postgresConnectionStr = configuration.GetConnectionString("PostgresConnectionString") ?? throw new Exception("Postgres connection string is not found");
@@ -48,7 +62,7 @@ public static class DependencyInjection
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IRouteSolver, RouteSolver>();
-        services.AddSingleton<IRoutePlanningResultStore, RoutePlanningResultStore>();
+        services.AddSingleton<IRoutePlanningResultStore, S3RoutePlanningResultStore>();
         services.AddSingleton<INotificationHub, NotificationHub>();
         services.AddSingleton<IBackgroundJobHub, BackgroundJobHub>();
         services.AddHostedService(sp => (BackgroundJobHub)sp.GetRequiredService<IBackgroundJobHub>());

@@ -238,8 +238,6 @@ public class MissionService : BaseService, IMissionService
             try
             {
                 routePlanningSummary = _routePlanningResultStore.GetRoutePlanningSummary(mission.Id.ToString());
-                Console.WriteLine(routePlanningSummary.RgvMap);
-                Console.WriteLine(routePlanningSummary.Algorithm);
             }
             catch (Exception ex)
             {
@@ -247,28 +245,8 @@ public class MissionService : BaseService, IMissionService
                 return Result.Fail<MissionDetailDto>(ApplicationError.Internal);
             }
 
-            var base64Images = new List<string>();
-            foreach (var imgPath in routePlanningSummary.ImageUrls)
-            {
-                try
-                {
-                    var bytes = await File.ReadAllBytesAsync(imgPath);
-                    base64Images.Add(Convert.ToBase64String(bytes));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to read or convert image to base64. Path: {ImagePath}", imgPath);
-                }
-            }
-
-
-            routePlanningSummary = new RoutePlanningSummaryDto(routePlanningSummary.Algorithm,
-                                                               base64Images,
-                                                               routePlanningSummary.RgvMap,
-                                                               routePlanningSummary.Score);
-
             _logger.LogInformation("Successfully loaded route planning summary with {ImageCount} images",
-                base64Images.Count);
+                routePlanningSummary.ImageUrls.Count());
 
             return MapToMissionDetailDto(mission, leaderResult.Value, routePlanningSummary);
         }

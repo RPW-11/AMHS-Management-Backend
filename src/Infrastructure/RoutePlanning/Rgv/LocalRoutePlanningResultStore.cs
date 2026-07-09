@@ -6,9 +6,9 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
-public class RoutePlanningResultStore(IOptions<RoutePlanningSettings> routePlanningSetting) : IRoutePlanningResultStore
+public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> routePlanningSetting) : IRoutePlanningResultStore
 {
-    private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.LocalDirectory;
+    private readonly string _localRoutePlanningDirectory = routePlanningSetting.Value.Local.LocalDirectory;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
 
     public byte[] DrawMultipleFlows(

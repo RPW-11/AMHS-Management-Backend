@@ -3,5 +3,6 @@ namespace Infrastructure.RoutePlanning;
 public class RoutePlanningSettings
 {
     public const string SectionName = "RoutePlanningSettings";
-    public string LocalDirectory { get; set; } = ".";
+    public LocalRoutePlanningSettings Local { get; set; } = new();
+    public S3RoutePlanningSettings S3 { get; set; } = new();
 }
