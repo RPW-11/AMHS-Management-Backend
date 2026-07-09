@@ -16,7 +16,16 @@ dotnet user-secrets set --project src/API "JwtSettings:Secret" "YOUR_SECRET"
 dotnet user-secrets set --project src/API "ConnectionStrings:PostgresConnectionString" "Host=HOSTNAME;Database=DBNAME;Username=USERNAME;Password=PASSWORD;SslMode=Require; ChannelBinding=Require"
 ```
 
-- Go to `appsettings.json`, and fill in the route planning result store settings. `Local` is used if the store is not overridden to use S3; make sure to create the directory first. `S3` settings (bucket name, endpoint, credentials) are only required if the S3 store is registered in `DependencyInjection.cs`.
+- If the S3 route planning result store is registered (see `S3RoutePlanningResultStore` in `Infrastructure/DependencyInjection.cs`), also set its credentials via user secrets rather than `appsettings.json`:
+
+``` bash
+dotnet user-secrets set --project src/API "RoutePlanningSettings:S3:AccessKeyId" "YOUR_AWS_ACCESS_KEY_ID"
+dotnet user-secrets set --project src/API "RoutePlanningSettings:S3:SecretAccessKey" "YOUR_AWS_SECRET_ACCESS_KEY"
+dotnet user-secrets set --project src/API "RoutePlanningSettings:S3:BucketName" "YOUR_BUCKET_NAME"
+dotnet user-secrets set --project src/API "RoutePlanningSettings:S3:EndPointUrl" "YOUR_S3_ENDPOINT_URL"
+```
+
+- Go to `appsettings.json`, and fill in the route planning result store settings. `Local` is used if the store is not overridden to use S3; make sure to create the directory first. The `S3` section only needs the empty placeholder keys here (the actual values come from user secrets above) so configuration binding picks them up.
 
 ``` json
 ...
