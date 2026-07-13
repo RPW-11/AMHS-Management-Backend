@@ -10,8 +10,9 @@ public class GeneticAlgorithmSolver
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 1600;
-    private const double TurnPenaltyRate = 40;
+    private const double TurnPenaltyRate = 1000;
     private const double ConflictPenaltyRate = 4000;
+    private const int EarlyStoppingPatience = 50;
 
     private readonly Random _random;
     private readonly Grid _grid;
@@ -42,6 +43,9 @@ public class GeneticAlgorithmSolver
         population.AddRange(aStarSolutions);
         population.AddRange(rrtSolutions);
 
+        double bestFitnessSoFar = double.MinValue;
+        int generationsSinceImprovement = 0;
+
         for (int i = 0; i < _generationsNumber; i++)
         {
             var evaluated = population.Select(ind => new
@@ -52,7 +56,19 @@ public class GeneticAlgorithmSolver
             .OrderByDescending(x => x.Fitness)
             .ToList();
 
-            Console.WriteLine($"[GA] Generation {i}: best solution count = {evaluated[0].Individual.Count}");
+            Console.WriteLine($"[GA] Generation {i}: best solution count = {evaluated[0].Individual.Count}, fitness = {evaluated[0].Fitness}");
+
+            if (evaluated[0].Fitness > bestFitnessSoFar)
+            {
+                bestFitnessSoFar = evaluated[0].Fitness;
+                generationsSinceImprovement = 0;
+            }
+            else if (++generationsSinceImprovement >= EarlyStoppingPatience)
+            {
+                Console.WriteLine($"[GA] Early stopping at generation {i}: no improvement for {EarlyStoppingPatience} generations");
+                population = [.. evaluated.Select(x => x.Individual)];
+                break;
+            }
 
             List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
                 [.. evaluated.Select(x => x.Individual)]
@@ -68,6 +84,8 @@ public class GeneticAlgorithmSolver
         })
             .OrderByDescending(x => x.Fitness)
             .First();
+
+        Console.WriteLine($"[GA] Best solution: count = {bestIndividual.Individual.Count}, fitness = {bestIndividual.Fitness}");
 
         return bestIndividual.Individual;
     }
