@@ -172,6 +172,11 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         missionResult.Value.ProcessRoutePlanning();
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
+        if (updateResult.IsFailed)
+        {
+            _logger.LogError("Failed to update mission in repository: {ErrorMessage}", updateResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Internal);
+        }
 
         try
         {
