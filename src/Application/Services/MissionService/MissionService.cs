@@ -257,6 +257,57 @@ public class MissionService : BaseService, IMissionService
         return MapToMissionDetailDto(mission, leaderResult.Value);
     }
 
+    public async Task<Result<string>> DownloadRouteImage(string missionId)
+    {
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["MissionId"] = missionId
+        });
+
+        _logger.LogInformation("Download route planning image request started");
+
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            _logger.LogWarning("Invalid mission ID format: {ErrorMessage}",
+                missionIdResult.Errors[0].Message);
+            return Result.Fail<string>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            _logger.LogError("Failed to retrieve mission from repository: {ErrorMessage}", missionResult.Errors[0].Message);
+            return Result.Fail<string>(ApplicationError.Internal);
+        }
+
+        if (missionResult.Value is null)
+        {
+            _logger.LogInformation("Mission not found");
+            return Result.Fail<string>(ApplicationError.NotFound("The mission is not found"));
+        }
+
+        var mission = missionResult.Value;
+
+        if (mission.Category != MissionCategory.RoutePlanning || mission.Status != MissionStatus.Finished)
+        {
+            _logger.LogInformation("Mission has no finished route planning result to download");
+            return Result.Fail<string>(ApplicationError.NotFound("This mission has no route planning result image"));
+        }
+
+        try
+        {
+            var imageUrl = _routePlanningResultStore.GetResultImageUrl(mission.Id.ToString());
+            _logger.LogInformation("Successfully generated route planning image URL");
+            return Result.Ok(imageUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get route planning image URL for mission {MissionId}", mission.Id);
+            return Result.Fail<string>(ApplicationError.Internal);
+        }
+    }
+
     public async Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId)
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>

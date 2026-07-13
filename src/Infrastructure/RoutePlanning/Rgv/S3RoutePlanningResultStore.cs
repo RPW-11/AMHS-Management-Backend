@@ -56,6 +56,11 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
         return key;
     }
 
+    public string GetResultImageUrl(string missionId)
+    {
+        return GetPresignedUrl($"{missionId}/{missionId}.png");
+    }
+
     public void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail)
     {
         string stringJson = JsonSerializer.Serialize(routePlanningDetail, _jsonSerializerOptions);
@@ -107,4 +112,5 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
         using var reader = new StreamReader(response.ResponseStream);
         return await reader.ReadToEndAsync();
     }
+
 }

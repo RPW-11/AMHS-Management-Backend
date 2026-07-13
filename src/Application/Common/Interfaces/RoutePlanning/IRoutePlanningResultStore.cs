@@ -12,6 +12,8 @@ public interface IRoutePlanningResultStore
 
     string WriteImage(byte[] imageBytes, string fileName);
 
+    string GetResultImageUrl(string missionId);
+
     void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail);
 
     RoutePlanningSummaryDto GetRoutePlanningSummary(string missionId);

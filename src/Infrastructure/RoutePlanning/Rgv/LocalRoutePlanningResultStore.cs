@@ -53,6 +53,11 @@ public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> route
         return outputPath;
     }
 
+    public string GetResultImageUrl(string missionId)
+    {
+        throw new NotImplementedException("Downloading via a URL is not supported by the local route planning result store");
+    }
+
     public void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail)
     {
         string stringJson = JsonSerializer.Serialize(routePlanningDetail, _jsonSerializerOptions);
