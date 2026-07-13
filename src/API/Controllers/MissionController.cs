@@ -216,7 +216,7 @@ namespace API.Controllers
         /// Download the result image of a finished route planning task
         /// </summary>
         [HttpGet("{id}/route-planning/image")]
-        public async Task<ActionResult> DownloadRouteImage(string id)
+        public async Task<ActionResult<RouteImageUrlDto>> DownloadRouteImage(string id)
         {
             var imageUrlResult = await _missionService.DownloadRouteImage(id);
             if (imageUrlResult.IsFailed)
@@ -224,7 +224,7 @@ namespace API.Controllers
                 return HandleResult(imageUrlResult);
             }
 
-            return Redirect(imageUrlResult.Value);
+            return Ok(new RouteImageUrlDto(imageUrlResult.Value));
         }
 
         /// <summary>

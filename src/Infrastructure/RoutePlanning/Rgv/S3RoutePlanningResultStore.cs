@@ -58,7 +58,7 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
 
     public string GetResultImageUrl(string missionId)
     {
-        return GetPresignedUrl($"{missionId}/{missionId}.png");
+        return GetPresignedUrl($"{missionId}/{missionId}.png", $"attachment; filename=\"{missionId}.png\"");
     }
 
     public void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail)
@@ -78,20 +78,30 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
             ?? throw new InvalidOperationException($"Route planning JSON for mission '{missionId}' deserialized to null");
 
         var rgvMapSummary = new RgvMapSummaryDto(detail.RgvMap.RowDim, detail.RgvMap.ColDim, detail.RgvMap.WidthLength, detail.RgvMap.HeightLength);
-        var presignedImageUrls = detail.ImageUrls.Select(GetPresignedUrl).ToList();
+        var presignedImageUrls = detail.ImageUrls.Select(key => GetPresignedUrl(key)).ToList();
 
         return new RoutePlanningSummaryDto(detail.Algorithm, presignedImageUrls, rgvMapSummary, detail.Score);
     }
 
-    private string GetPresignedUrl(string key)
+    private string GetPresignedUrl(string key, string? contentDisposition = null)
     {
-        return _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+        var request = new GetPreSignedUrlRequest
         {
             BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.GET,
             Expires = DateTime.UtcNow.AddHours(1)
-        });
+        };
+
+        if (contentDisposition is not null)
+        {
+            request.ResponseHeaderOverrides = new ResponseHeaderOverrides
+            {
+                ContentDisposition = contentDisposition
+            };
+        }
+
+        return _s3Client.GetPreSignedURL(request);
     }
 
     private async Task UploadAsync(string key, byte[] content, string contentType)
