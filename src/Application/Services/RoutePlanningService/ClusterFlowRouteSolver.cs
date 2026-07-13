@@ -9,7 +9,8 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
 {
     private const int ClusterGenerationsNumber = 100;
     private const int ConnectorGenerationsNumber = 300;
-    private static readonly int? ClusterPermutationSampleSize = 6;
+    private const int ClusterPermutationSampleSize = 10;
+    private const int MaxPermutationAttemptsMultiplier = 20;
 
     private readonly IRouteSolver _routeSolver = routeSolver;
     private readonly ILogger<ClusterFlowRouteSolver> _logger = logger;
@@ -67,45 +68,13 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
         return [.. solveResult];
     }
 
-    private static List<List<Station>> GetStationPermutations(IReadOnlyList<Station> stations, int? maxPermutations)
-    {
-        if (maxPermutations is null)
-        {
-            return GetAllPermutations([.. stations]);
-        }
-
-        return GetRandomDistinctPermutations([.. stations], maxPermutations.Value);
-    }
-
-    private static List<List<Station>> GetAllPermutations(List<Station> stations)
-    {
-        if (stations.Count <= 1)
-        {
-            return [stations];
-        }
-
-        List<List<Station>> permutations = [];
-        for (int i = 0; i < stations.Count; i++)
-        {
-            var remaining = new List<Station>(stations);
-            remaining.RemoveAt(i);
-
-            foreach (var subPermutation in GetAllPermutations(remaining))
-            {
-                permutations.Add([stations[i], .. subPermutation]);
-            }
-        }
-
-        return permutations;
-    }
-
-    private static List<List<Station>> GetRandomDistinctPermutations(List<Station> stations, int count)
+    private static List<List<Station>> GetStationPermutations(IReadOnlyList<Station> stations, int count)
     {
         var random = new Random();
         var seen = new HashSet<string>();
         List<List<Station>> permutations = [];
 
-        int maxAttempts = count * 20;
+        int maxAttempts = count * MaxPermutationAttemptsMultiplier;
         int attempts = 0;
 
         while (permutations.Count < count && attempts < maxAttempts)

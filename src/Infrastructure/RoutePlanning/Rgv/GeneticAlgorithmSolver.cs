@@ -13,6 +13,10 @@ public class GeneticAlgorithmSolver
     private const double TurnPenaltyRate = 1000;
     private const double ConflictPenaltyRate = 4000;
     private const int EarlyStoppingPatience = 50;
+    private const double ElitismRate = 0.1;
+    private const int TournamentSize = 5;
+    private const int MutationStartIndexMargin = 10;
+    private const int MutationMinSegmentLength = 5;
 
     private readonly Random _random;
     private readonly Grid _grid;
@@ -94,15 +98,13 @@ public class GeneticAlgorithmSolver
     {
         List<List<PathPoint>> newPopulation = [];
 
-        // Keep 10% best individuals
-        newPopulation.AddRange(sortedParents.Take(PopulationSize / 10));
+        newPopulation.AddRange(sortedParents.Take((int)(PopulationSize * ElitismRate)));
 
         while (newPopulation.Count < PopulationSize)
         {
             List<PathPoint> parent1 = TournamentSelection(sortedParents);
             List<PathPoint> parent2 = TournamentSelection(sortedParents);
 
-            // Crossover
             List<PathPoint> child;
 
             if (_random.NextDouble() < CrossoverRate)
@@ -151,13 +153,12 @@ public class GeneticAlgorithmSolver
 
     private List<PathPoint> Mutate(List<PathPoint> child)
     {
-        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count - 10));
-        int endIdx = (int)_random.NextInt64(Math.Min(child.Count - 1, startIdx + 5), child.Count - 1);
+        int startIdx = (int)_random.NextInt64(0, Math.Max(0, child.Count - MutationStartIndexMargin));
+        int endIdx = (int)_random.NextInt64(Math.Min(child.Count - 1, startIdx + MutationMinSegmentLength), child.Count - 1);
 
         var startPoint = child[startIdx];
         var endPoint = child[endIdx];
 
-        // Re-compute alternative path between these points
         var subPath = ModifiedAStar.SolveWithDecay(_grid, startPoint, endPoint, []);
         if (subPath is null)
         {
@@ -170,7 +171,7 @@ public class GeneticAlgorithmSolver
     private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
     {
         return population.OrderBy(x => _random.Next())
-        .Take(5)
+        .Take(TournamentSize)
         .OrderByDescending(EvaluateFitness)
         .First();
     }
@@ -226,8 +227,7 @@ public class GeneticAlgorithmSolver
 
     private double EvaluateFitness(List<PathPoint> solution)
     {
-        // Fitness formula is defined based on the throughput and validity of the path
-        // Check if the solution has the correct order, if not return -INF
+        // Invalid solutions are disqualified via a minimum fitness so ranking never selects them.
         if (!IsOrderCorrect(solution)
             || !IsPathConnected(solution)
             || IsPathUsingObstacles(solution))

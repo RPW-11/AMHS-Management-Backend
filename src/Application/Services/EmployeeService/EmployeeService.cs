@@ -15,6 +15,9 @@ namespace Application.Services.EmployeeService;
 
 public class EmployeeService : BaseService, IEmployeeService
 {
+    private const int MinPageSize = 5;
+    private const int MaxPageSize = 100;
+
     private readonly IEmployeeRepository _employeeRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -100,7 +103,6 @@ public class EmployeeService : BaseService, IEmployeeService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        // Notify the new user
         var notification = Notification.Create(
             recipientId: newEmployee.Id,
             actorId: null,
@@ -180,7 +182,7 @@ public class EmployeeService : BaseService, IEmployeeService
         });
 
         page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 5, 100);
+        pageSize = Math.Clamp(pageSize, MinPageSize, MaxPageSize);
 
         _logger.LogDebug("Pagination adjusted → Page: {Page}, PageSize: {PageSize}", page, pageSize);
 

@@ -11,6 +11,8 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanningSettings> routePlanningSettings) : IRoutePlanningResultStore
 {
+    private const int PresignedUrlExpirationHours = 1;
+
     private readonly IAmazonS3 _s3Client = s3Client;
     private readonly string _bucketName = routePlanningSettings.Value.S3.BucketName;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
@@ -90,7 +92,7 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
             BucketName = _bucketName,
             Key = key,
             Verb = HttpVerb.GET,
-            Expires = DateTime.UtcNow.AddHours(1)
+            Expires = DateTime.UtcNow.AddHours(PresignedUrlExpirationHours)
         };
 
         if (contentDisposition is not null)

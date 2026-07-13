@@ -169,14 +169,14 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogDebug("RGV map created with {FlowCount} cluster flows | Grid size: {RowDim}x{ColDim}",
                 rgvMap.ClusterFlows.Count, rowDim, colDim);
 
-        // Update status to Processing
         missionResult.Value.ProcessRoutePlanning();
 
         var updateResult = _missionRepository.UpdateMission(missionResult.Value);
 
         try
         {
-            // Solve the mission in the background
+            // This returns once the job is enqueued, not once it's solved — the actual
+            // solve+persist runs later in its own DI scope inside the background job hub.
             await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
             {
                 var unitOfWork = sp.GetRequiredService<IUnitOfWork>();

@@ -24,7 +24,7 @@ public static class ModifiedAStar
 
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < stationsOrder.Count - 1; i++) // O(n)
+        for (int i = 0; i < stationsOrder.Count - 1; i++)
         {
             var startPoint = stationsOrder[i];
             var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
@@ -34,7 +34,7 @@ public static class ModifiedAStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < stationsOrder.Count - 1; i++) // O(n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -66,10 +66,9 @@ public static class ModifiedAStar
         int numSegments = stationsOrder.Count - 1;
         int desiredSolutionsPerSegment = Math.Max(1, BaseDesiredSolutions / numSegments);
 
-        // Initial search
         List<List<PathPoint>> possiblePaths = SolveMultipleTimes(grid, stationsOrder[0], stationsOrder[1], [], desiredSolutionsPerSegment);
 
-        for (int i = 1; i < stationsOrder.Count - 1; i++) // O (n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
             var startPoint = stationsOrder[i];
             var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
@@ -102,7 +101,9 @@ public static class ModifiedAStar
 
     private static void UpdateOccupiedPoints(HashSet<PathPoint> occupiedPoints, List<PathPoint> addedPath)
     {
-        for (int i = 1; i < addedPath.Count - 1; i++) // ignore the last element
+        // Skip both endpoints: they're shared with the adjacent segment's start/end,
+        // so only interior points need to be marked occupied.
+        for (int i = 1; i < addedPath.Count - 1; i++)
         {
             occupiedPoints.Add(addedPath[i]);
         }
@@ -113,7 +114,7 @@ public static class ModifiedAStar
         PathPoint startPoint,
         PathPoint goalPoint,
         HashSet<PathPoint> occupiedPoints,
-        int desiredSolutions = 8)
+        int desiredSolutions)
     {
         var allSolutions = new List<List<PathPoint>>();
 

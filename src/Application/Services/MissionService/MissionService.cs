@@ -520,7 +520,6 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.NotFound("Mission is not found"));
         }
 
-        // Check if the requester is valid
         bool isRequesterValid = missionResult.Value.AssignedEmployees
         .Any(m =>
             (m.MissionRole == MissionRole.Leader || m.MissionRole == MissionRole.CoLeader) &&
@@ -532,7 +531,6 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.Forbidden("The employee is not a leader nor a co-leader"));
         }
 
-        // Check if the added member exists
         var memberIdResult = EmployeeId.FromString(memberId);
         if (memberIdResult.IsFailed)
         {
@@ -567,7 +565,6 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.NotFound("The added member is not found"));
         }
 
-        // Check if the added member is already part of the mission
         if (missionResult.Value.AssignedEmployees.Any(m => m.EmployeeId == memberIdResult.Value))
         {
             _logger.LogInformation("Member is already assigned to the mission");
@@ -646,7 +643,6 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.NotFound("Mission is not found"));
         }
 
-        // Check if the requester is valid
         bool isRequesterValid = missionResult.Value.AssignedEmployees
         .Any(m =>
             (m.MissionRole == MissionRole.Leader || m.MissionRole == MissionRole.CoLeader) &&
@@ -740,7 +736,6 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail(ApplicationError.NotFound("Mission is not found"));
         }
 
-        // Check if the requester is valid
         bool isRequesterLeader = missionResult.Value.AssignedEmployees
             .Any(m => m.MissionRole == MissionRole.Leader &&
                     m.EmployeeId == employeeIdResult.Value);

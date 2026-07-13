@@ -9,6 +9,16 @@ public sealed class RouteDrawer : IDisposable
     private const float ArrowSizeRatio = 0.3f;
     private const float StarOuterRadiusRatio = 0.35f;
     private const int ImageQuality = 92;
+    private const float MinPenThickness = 2f;
+    private const float MinArrowStrokeWidth = 1f;
+    private const float ArrowStrokeWidthRatio = 0.35f;
+    private const byte ArrowStrokeAlpha = 180;
+    private const int ArrowIntervalDivisor = 12;
+    private const float ArrowWidthRatio = 0.5f;
+    private const float MinArrowLength = 0.001f;
+    private const float StarInnerRadiusRatio = 0.5f;
+    private const float MinStarStrokeWidth = 1f;
+    private const float StarStrokeWidthRatio = 0.04f;
 
     private readonly SKBitmap _original;
     private readonly SKSurface _surface;
@@ -31,7 +41,7 @@ public sealed class RouteDrawer : IDisposable
         _cellWidth = (float)_original.Width / grid.ColDim;
         _cellHeight = (float)_original.Height / grid.RowDim;
         _baseSize = Math.Min(_cellWidth, _cellHeight);
-        _penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * _baseSize));
+        _penThickness = Math.Max(MinPenThickness, MathF.Round(ThicknessMultiplier * _baseSize));
         _arrowSize = _baseSize * ArrowSizeRatio;
     }
 
@@ -79,13 +89,13 @@ public sealed class RouteDrawer : IDisposable
         using var arrowStroke = new SKPaint
         {
             Style = SKPaintStyle.Stroke,
-            Color = SKColors.Black.WithAlpha(180),
-            StrokeWidth = Math.Max(1, _penThickness * 0.35f),
+            Color = SKColors.Black.WithAlpha(ArrowStrokeAlpha),
+            StrokeWidth = Math.Max(MinArrowStrokeWidth, _penThickness * ArrowStrokeWidthRatio),
             IsAntialias = true
         };
 
         // Place arrows more frequently on shorter paths, less on very long ones
-        int dynamicInterval = Math.Max(1, points.Count / 12);
+        int dynamicInterval = Math.Max(1, points.Count / ArrowIntervalDivisor);
 
         for (int j = 0; j < points.Count - 1; j += dynamicInterval)
         {
@@ -104,7 +114,7 @@ public sealed class RouteDrawer : IDisposable
     {
         SKColor color = starColor ?? SKColors.Gold;
         float outerRadius = _baseSize * StarOuterRadiusRatio;
-        float innerRadius = outerRadius * 0.5f;
+        float innerRadius = outerRadius * StarInnerRadiusRatio;
 
         using var fillPaint = new SKPaint
         {
@@ -117,7 +127,7 @@ public sealed class RouteDrawer : IDisposable
         {
             Style = SKPaintStyle.Stroke,
             Color = SKColors.Black,
-            StrokeWidth = Math.Max(1f, _baseSize * 0.04f),
+            StrokeWidth = Math.Max(MinStarStrokeWidth, _baseSize * StarStrokeWidthRatio),
             IsAntialias = true
         };
 
@@ -169,24 +179,23 @@ public sealed class RouteDrawer : IDisposable
         float dy = end.Y - start.Y;
         float len = MathF.Sqrt(dx * dx + dy * dy);
 
-        if (len < 0.001f) return;
+        if (len < MinArrowLength) return;
 
         dx /= len;
         dy /= len;
 
-        // Perpendicular vector
-        float px = -dy;
-        float py = dx;
+        float perpX = -dy;
+        float perpY = dx;
 
         SKPoint tip = end;
 
         SKPoint left = new(
-            end.X - dx * _arrowSize + px * _arrowSize * 0.5f,
-            end.Y - dy * _arrowSize + py * _arrowSize * 0.5f);
+            end.X - dx * _arrowSize + perpX * _arrowSize * ArrowWidthRatio,
+            end.Y - dy * _arrowSize + perpY * _arrowSize * ArrowWidthRatio);
 
         SKPoint right = new(
-            end.X - dx * _arrowSize - px * _arrowSize * 0.5f,
-            end.Y - dy * _arrowSize - py * _arrowSize * 0.5f);
+            end.X - dx * _arrowSize - perpX * _arrowSize * ArrowWidthRatio,
+            end.Y - dy * _arrowSize - perpY * _arrowSize * ArrowWidthRatio);
 
         using var arrowPath = new SKPath();
         arrowPath.MoveTo(tip);

@@ -14,11 +14,9 @@ internal static class RouteEvaluator
 
     public static (double throughput, double trackLength, int numOfRgvs, double optimality) GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
     {
-        // BOTTLENECK FOCUS
         double trackLength = solution.Count * grid.GetSquareLength();
         double travelTime = trackLength / RgvSpeed;
 
-        // Find the station with maximum occupation time
         double maxStationTime = 0;
         foreach (var point in stationsOrder)
         {

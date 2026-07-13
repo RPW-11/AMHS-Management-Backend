@@ -10,12 +10,14 @@ public static class RandomTreeStar
     private const double StepSize = 3.0;
     private const double RewireRadius = 5.0;
     private const double GoalBias = 0.15;
+    private const double GoalReachRadiusMultiplier = 1.5;
+    private const int MaxPathReconstructionSteps = 10000;
 
     public static List<List<PathPoint>> GenerateRRTSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
-        for (int i = 0; i < stationsOrder.Count - 1; i++) // O(n)
+        for (int i = 0; i < stationsOrder.Count - 1; i++)
         {
             var startPoint = stationsOrder[i];
             var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
@@ -25,7 +27,7 @@ public static class RandomTreeStar
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
 
-        for (int i = 1; i < stationsOrder.Count - 1; i++) // O(n * m * k)
+        for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
             List<List<PathPoint>> tempPaths = [];
             List<PathPoint> completePath;
@@ -80,7 +82,6 @@ public static class RandomTreeStar
                 else
                     sample = GetRandomFreePoint(grid, variationRand);
 
-                // Find nearest node in tree
                 PathPoint nearest = treeNodes[0];
                 double minDist = Distance(nearest, sample);
                 foreach (var node in treeNodes)
@@ -93,7 +94,6 @@ public static class RandomTreeStar
                     }
                 }
 
-                // Steer: extend toward sample (up to stepSize)
                 PathPoint newNode = ExtendToward(nearest, sample, StepSize, grid);
 
                 if (newNode is null || occupiedPoints.Contains(newNode) && !newNode.Equals(goal))
@@ -102,7 +102,6 @@ public static class RandomTreeStar
                 if (!IsLineFree(grid, nearest, newNode))
                     continue;
 
-                // Find best parent in rewire radius
                 double newCost = costMap[nearest] + Distance(nearest, newNode);
                 PathPoint bestParent = nearest;
 
@@ -133,10 +132,8 @@ public static class RandomTreeStar
                     }
                 }
 
-                // Check if close to goal
-                if (Distance(newNode, goal) <= StepSize * 1.5)
+                if (Distance(newNode, goal) <= StepSize * GoalReachRadiusMultiplier)
                 {
-                    // Reconnect to goal if better
                     if (IsLineFree(grid, newNode, goal))
                     {
                         double goalCost = costMap[newNode] + Distance(newNode, goal);
@@ -238,9 +235,8 @@ public static class RandomTreeStar
         var path = new List<PathPoint>();
         var current = end;
         int step = 0;
-        const int MAX_STEPS = 10000;
 
-        while (current is not null && step < MAX_STEPS)
+        while (current is not null && step < MaxPathReconstructionSteps)
         {
             path.Add(current);
 
