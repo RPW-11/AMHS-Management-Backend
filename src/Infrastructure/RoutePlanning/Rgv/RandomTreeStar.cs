@@ -72,8 +72,6 @@ public static class RandomTreeStar
             var parentMap = new Dictionary<PathPoint, PathPoint?> { { start, null } };
             var costMap = new Dictionary<PathPoint, double> { { start, 0.0 } };
 
-            bool found = false;
-
             for (int iter = 0; iter < MaxIterations; iter++)
             {
                 PathPoint sample;
@@ -149,15 +147,9 @@ public static class RandomTreeStar
                     {
                         var path = ReconstructRRTPath(parentMap, goal);
                         allPaths.Add(path);
-                        found = true;
                         break;
                     }
                 }
-            }
-
-            if (!found)
-            {
-                Console.WriteLine($"No path is found for variation: {i}");
             }
         }
 
