@@ -22,6 +22,9 @@ namespace API.Controllers
         /// <summary>
         /// Get all employees
         /// </summary>
+        /// <param name="page">1-based page number.</param>
+        /// <param name="pageSize">Number of employees per page (clamped between 5 and 100).</param>
+        /// <param name="searchTerm">Optional filter matched against employee name/email.</param>
         [HttpGet]
         public async Task<ActionResult<PagedResult<EmployeeDto>>> GetAllEmployees(
             [FromQuery] int page = 1,
@@ -37,6 +40,7 @@ namespace API.Controllers
         /// <summary>
         /// Get employees by name (starts with First Name or Last Name)
         /// </summary>
+        /// <param name="name">The name prefix to search for.</param>
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<EmployeeSearchDto>>> GetEmployeesByName(string name)
         {
@@ -48,6 +52,7 @@ namespace API.Controllers
         /// <summary>
         /// Get an employee by id
         /// </summary>
+        /// <param name="id">The employee id.</param>
         [HttpGet("{id}")]
         public async Task<ActionResult<EmployeeDto>> GetEmployeeById(string id)
         {
@@ -76,6 +81,8 @@ namespace API.Controllers
         ///     }
         ///
         /// </remarks>
+        /// <param name="addEmployeeRequest">The new employee's details.</param>
+        /// <returns>201 Created on success.</returns>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<object>> AddEmploye(AddEmployeeRequest addEmployeeRequest)

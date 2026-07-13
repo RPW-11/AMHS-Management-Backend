@@ -18,6 +18,13 @@ namespace API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Open a Server-Sent Events (SSE) stream of real-time notifications for the current user.
+        /// </summary>
+        /// <remarks>
+        /// The employee id is resolved from the JWT claims, not a request parameter. The connection
+        /// sends a heartbeat comment every 20 seconds and stays open until the client disconnects.
+        /// </remarks>
         [HttpGet("stream")]
         public async Task StreamNotifications()
         {
@@ -86,6 +93,12 @@ namespace API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get a paginated list of notifications for the current user.
+        /// </summary>
+        /// <param name="page">1-based page number.</param>
+        /// <param name="pageSize">Number of notifications per page.</param>
+        /// <param name="type">Optional notification type filter (e.g. "MissionFinished", "MissionRoutePlanningStarted").</param>
         [HttpGet]
         public async Task<ActionResult<PagedResult<NotificationDto>>> Get(
             [FromQuery] int page = 1,
@@ -104,6 +117,10 @@ namespace API.Controllers
             return HandleResult(notificationsResult);
         }
 
+        /// <summary>
+        /// Delete a notification belonging to the current user.
+        /// </summary>
+        /// <param name="id">The notification id.</param>
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(string id)
         {
@@ -118,6 +135,10 @@ namespace API.Controllers
             return HandleResult(deleteResult);
         }
 
+        /// <summary>
+        /// Mark a notification belonging to the current user as read.
+        /// </summary>
+        /// <param name="id">The notification id.</param>
         [HttpPatch("{id}/mark-as-read")]
         public async Task<ActionResult> MarkAsRead(string id)
         {

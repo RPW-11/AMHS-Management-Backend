@@ -30,6 +30,11 @@ namespace API.Controllers
         /// <summary>
         /// Get all missions
         /// </summary>
+        /// <param name="page">1-based page number.</param>
+        /// <param name="pageSize">Number of missions per page.</param>
+        /// <param name="status">Optional mission status filter.</param>
+        /// <param name="employeeId">Optional filter to missions assigned to a specific employee.</param>
+        /// <param name="name">Optional filter matched against mission name.</param>
         [HttpGet]
         public async Task<ActionResult<PagedResult<MissionDto>>> GetAllMissions(
             [FromQuery] int page = 1,
@@ -48,6 +53,7 @@ namespace API.Controllers
         /// <summary>
         /// Get a mission by id
         /// </summary>
+        /// <param name="id">The mission id.</param>
         [HttpGet("{id}")]
         public async Task<ActionResult<MissionDetailDto>> GetMission(string id)
         {
@@ -59,6 +65,10 @@ namespace API.Controllers
         /// <summary>
         /// Get all missions associated with the current logged-in user.
         /// </summary>
+        /// <param name="page">1-based page number.</param>
+        /// <param name="pageSize">Number of missions per page.</param>
+        /// <param name="status">Optional mission status filter.</param>
+        /// <param name="name">Optional filter matched against mission name.</param>
         [HttpGet("me")]
         public async Task<ActionResult<PagedResult<MissionDto>>> GetMyMissions(
             [FromQuery] int page = 1,
@@ -82,6 +92,7 @@ namespace API.Controllers
         /// <summary>
         /// Get the mission members
         /// </summary>
+        /// <param name="id">The mission id.</param>
         [HttpGet("{id}/members")]
         public async Task<ActionResult<IEnumerable<MissionDto>>> GetMissionMembers(string id)
         {
@@ -93,6 +104,11 @@ namespace API.Controllers
         /// <summary>
         /// Add a mission
         /// </summary>
+        /// <remarks>
+        /// The current logged-in user (from the JWT claims) is set as the mission's owner/leader.
+        /// </remarks>
+        /// <param name="addMissionRequest">The new mission's details.</param>
+        /// <returns>The created mission on success.</returns>
         [HttpPost]
         public async Task<ActionResult<AddMissionDto>> AddMission(AddMissionRequest addMissionRequest)
         {
@@ -122,6 +138,8 @@ namespace API.Controllers
         /// <summary>
         /// Update mission
         /// </summary>
+        /// <param name="updateMissionRequest">The fields to update.</param>
+        /// <param name="id">The mission id.</param>
         [HttpPatch("{id}")]
         public async Task<ActionResult> UpdateMission(UpdateMissionRequest updateMissionRequest, string id)
         {
@@ -139,6 +157,7 @@ namespace API.Controllers
         /// <summary>
         /// Delete mission
         /// </summary>
+        /// <param name="id">The mission id.</param>
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteMission(string id)
         {
@@ -150,6 +169,7 @@ namespace API.Controllers
         /// <summary>
         /// Delete missions in bulk
         /// </summary>
+        /// <param name="deleteMissionsRequest">The ids of the missions to delete.</param>
         [HttpDelete]
         public async Task<ActionResult> DeleteMissions(DeleteMissionsRequest deleteMissionsRequest)
         {
@@ -160,6 +180,11 @@ namespace API.Controllers
         /// <summary>
         /// Add a member to a mission
         /// </summary>
+        /// <remarks>
+        /// The current logged-in user must be the mission's leader or co-leader.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <param name="memberId">The employee id to add.</param>
         [HttpPatch("{id}/members/add/{memberId}")]
         public async Task<ActionResult> AddMemberToMissionHandler(string id, string memberId)
         {
@@ -176,8 +201,13 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Delete a member to a mission
+        /// Delete a member from a mission
         /// </summary>
+        /// <remarks>
+        /// The current logged-in user must be the mission's leader or co-leader, and cannot remove themselves.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <param name="memberId">The employee id to remove.</param>
         [HttpPatch("{id}/members/delete/{memberId}")]
         public async Task<ActionResult> DeleteMemberToMissionHandler(string id, string memberId)
         {
@@ -196,6 +226,13 @@ namespace API.Controllers
         /// <summary>
         /// Change the role of a member in a mission
         /// </summary>
+        /// <remarks>
+        /// The current logged-in user must be the mission's leader (co-leaders cannot change roles),
+        /// and cannot change their own role.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <param name="memberId">The employee id whose role is being changed.</param>
+        /// <param name="changeMemberRoleRequest">The new role to assign.</param>
         [HttpPatch("{id}/members/changeRole/{memberId}")]
         public async Task<ActionResult> ChangeRoleMemberHandler(string id, string memberId, ChangeMemberRoleRequest changeMemberRoleRequest)
         {
@@ -213,8 +250,16 @@ namespace API.Controllers
 
 
         /// <summary>
-        /// Download the result image of a finished route planning task
+        /// Get a downloadable URL for the result image of a finished route planning task
         /// </summary>
+        /// <remarks>
+        /// Only supported when the server is configured with the S3 route planning result store —
+        /// the returned URL is a presigned S3 GET URL (valid for 1 hour) with a
+        /// Content-Disposition: attachment override, so opening it downloads rather than renders
+        /// the image. Not available when the local disk result store is configured.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <returns>A JSON object containing the downloadable image URL.</returns>
         [HttpGet("{id}/route-planning/image")]
         public async Task<ActionResult<RouteImageUrlDto>> DownloadRouteImage(string id)
         {
@@ -228,9 +273,20 @@ namespace API.Controllers
         }
 
         /// <summary>
-        /// Update the created route planning task with the required data
+        /// Enqueue a route planning solve for a mission
         /// </summary>
-
+        /// <remarks>
+        /// This request returns as soon as the solve job is enqueued, not once it has finished
+        /// solving — the mission is flipped to "Processing" and the actual GA/A* solve runs
+        /// asynchronously in the background. Poll <c>GET /api/missions/{id}</c> or listen for the
+        /// "MissionFinished"/"MissionRoutePlanningStarted" notifications to know when it's done.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <param name="createRoutePlanningRequest">
+        /// The source factory layout image plus route metadata (points, clusters, cluster flows,
+        /// algorithm) as multipart form data.
+        /// </param>
+        /// <returns>201 Created once the solve job has been enqueued.</returns>
         [HttpPatch("{id}/route-planning")]
         public async Task<ActionResult> CreateRoutePlanningTask(
             string id,

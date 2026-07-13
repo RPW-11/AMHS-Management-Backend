@@ -16,6 +16,11 @@ namespace API.Controllers
             _authenticationService = authenticationService;
         }
 
+        /// <summary>
+        /// Authenticate with an email and password and receive a JWT access token.
+        /// </summary>
+        /// <param name="request">The login email and password.</param>
+        /// <returns>The issued access token and associated authentication details.</returns>
         [HttpPost("login")]
         public async Task<ActionResult<AuthenticationDto>> Login(LoginRequest request)
         {
