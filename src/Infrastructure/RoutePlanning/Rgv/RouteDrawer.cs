@@ -6,7 +6,8 @@ namespace Infrastructure.RoutePlanning.Rgv;
 public sealed class RouteDrawer : IDisposable
 {
     private const float ThicknessMultiplier = 0.02f;
-    private const float ArrowThicknessControl = 6f;
+    private const float ArrowSizeRatio = 0.3f;
+    private const float StarOuterRadiusRatio = 0.35f;
     private const int ImageQuality = 92;
 
     private readonly SKBitmap _original;
@@ -14,6 +15,7 @@ public sealed class RouteDrawer : IDisposable
     private readonly SKCanvas _canvas;
     private readonly float _cellWidth;
     private readonly float _cellHeight;
+    private readonly float _baseSize;
     private readonly float _penThickness;
     private readonly float _arrowSize;
 
@@ -28,8 +30,9 @@ public sealed class RouteDrawer : IDisposable
 
         _cellWidth = (float)_original.Width / grid.ColDim;
         _cellHeight = (float)_original.Height / grid.RowDim;
-        _penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * Math.Min(_cellWidth, _cellHeight)));
-        _arrowSize = ArrowThicknessControl * _penThickness;
+        _baseSize = Math.Min(_cellWidth, _cellHeight);
+        _penThickness = Math.Max(2f, MathF.Round(ThicknessMultiplier * _baseSize));
+        _arrowSize = _baseSize * ArrowSizeRatio;
     }
 
     public void DrawSolution(List<PathPoint> solution, string arrowColor)
@@ -100,8 +103,7 @@ public sealed class RouteDrawer : IDisposable
     public void DrawStations(IEnumerable<Station> stations, SKColor? starColor = null)
     {
         SKColor color = starColor ?? SKColors.Gold;
-        float baseSize = Math.Min(_cellWidth, _cellHeight);
-        float outerRadius = baseSize * 0.35f;
+        float outerRadius = _baseSize * StarOuterRadiusRatio;
         float innerRadius = outerRadius * 0.5f;
 
         using var fillPaint = new SKPaint
@@ -115,7 +117,7 @@ public sealed class RouteDrawer : IDisposable
         {
             Style = SKPaintStyle.Stroke,
             Color = SKColors.Black,
-            StrokeWidth = Math.Max(1f, baseSize * 0.04f),
+            StrokeWidth = Math.Max(1f, _baseSize * 0.04f),
             IsAntialias = true
         };
 
