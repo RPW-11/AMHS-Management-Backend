@@ -18,12 +18,13 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
         byte[] imageBytes,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
         RgvMapDetailDto rgvMap,
+        IEnumerable<ClusterFlowSolutionDto> routeSolutions,
         RoutePlanningScoreDto score)
     {
         var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
         var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, mission.Id.ToString());
 
-        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, score);
+        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, routeSolutions, score);
 
         _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
         _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
@@ -36,6 +37,7 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
         RoutePlanningAlgorithm routePlanningAlgorithm,
         List<string> imageUrls,
         RgvMapDetailDto rgvMap,
+        IEnumerable<ClusterFlowSolutionDto> routeSolutions,
         RoutePlanningScoreDto score)
     {
         return new(
@@ -43,6 +45,7 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
                     routePlanningAlgorithm.ToString(),
                     imageUrls,
                     rgvMap,
+                    routeSolutions,
                     score
                 );
     }

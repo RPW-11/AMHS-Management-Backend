@@ -8,16 +8,19 @@ public class ClusterFlow : ValueObject
 {
     public string PathColor { get; }
     public IReadOnlyList<Cluster> Clusters { get; }
-    public IReadOnlyList<PathPoint> Solutions { get; }
 
-    private ClusterFlow(string pathColor, IReadOnlyList<Cluster> clusters, IReadOnlyList<PathPoint> solutions)
+    // One entry per connector between two adjacent clusters (Clusters.Count - 1 entries); kept
+    // separate rather than flattened so consumers don't join unrelated connectors into one path.
+    public IReadOnlyList<IReadOnlyList<PathPoint>> ConnectorSolutions { get; }
+
+    private ClusterFlow(string pathColor, IReadOnlyList<Cluster> clusters, IReadOnlyList<IReadOnlyList<PathPoint>> connectorSolutions)
     {
         PathColor = pathColor;
         Clusters = clusters;
-        Solutions = solutions;
+        ConnectorSolutions = connectorSolutions;
     }
 
-    public static Result<ClusterFlow> Create(string pathColor, IReadOnlyList<Cluster> clusters, IReadOnlyList<PathPoint> solutions)
+    public static Result<ClusterFlow> Create(string pathColor, IReadOnlyList<Cluster> clusters, IReadOnlyList<IReadOnlyList<PathPoint>> connectorSolutions)
     {
         for (int i = 0; i < clusters.Count - 1; i++)
         {
@@ -27,14 +30,14 @@ public class ClusterFlow : ValueObject
             }
         }
 
-        return Result.Ok(new ClusterFlow(pathColor, clusters, solutions));
+        return Result.Ok(new ClusterFlow(pathColor, clusters, connectorSolutions));
     }
 
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return PathColor;
         yield return Clusters;
-        yield return Solutions;
+        yield return ConnectorSolutions;
     }
 }
 

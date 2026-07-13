@@ -238,7 +238,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             foreach (var clusterFlow in rgvMap.ClusterFlows)
             {
                 List<Cluster> solvedClusters = [];
-                List<PathPoint> flowConnectorSolution = [];
+                List<List<PathPoint>> connectorSolutions = [];
 
                 foreach (var cluster in clusterFlow.Clusters)
                 {
@@ -261,20 +261,22 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 {
                     var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm, solvedRouteSegments);
                     solvedRouteSegments.Add(connectorSolution);
-                    flowConnectorSolution.AddRange(connectorSolution);
+                    connectorSolutions.Add(connectorSolution);
                     combinedSolution.AddRange(connectorSolution);
+
+                    // Draw each connector as its own polyline so unrelated connectors in a
+                    // multi-hop flow don't get joined by an unsolved straight line.
+                    routes.Add((connectorSolution, clusterFlow.PathColor));
                 }
 
-                var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, flowConnectorSolution).Value;
+                var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, connectorSolutions).Value;
                 solvedClusterFlows.Add(solvedClusterFlow);
-
-                routes.Add((flowConnectorSolution, clusterFlow.PathColor));
             }
 
             var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
             var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
 
-            _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageBytes, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), score);
+            _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageBytes, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), ToClusterFlowSolutionDtos(solvedClusterFlows), score);
 
             _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
         }
@@ -318,6 +320,17 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         return new RgvMapDetailDto(grid.RowDim, grid.ColDim, grid.WidthLength, grid.HeightLength, mapMatrix);
     }
+
+    private static List<ClusterFlowSolutionDto> ToClusterFlowSolutionDtos(IEnumerable<ClusterFlow> clusterFlows) =>
+        [.. clusterFlows.Select(clusterFlow => new ClusterFlowSolutionDto(
+            clusterFlow.PathColor,
+            [.. clusterFlow.Clusters.Select(cluster => new ClusterSolutionDto(
+                cluster.Name,
+                cluster.PathColor,
+                [.. cluster.Solution.Select(ToPathPointDto)]
+            ))],
+            [.. clusterFlow.ConnectorSolutions.Select(connectorSolution => new List<PathPointDto>([.. connectorSolution.Select(ToPathPointDto)]))]
+        ))];
 
     private static PathPointDto ToPathPointDto(PathPoint point) =>
         point switch

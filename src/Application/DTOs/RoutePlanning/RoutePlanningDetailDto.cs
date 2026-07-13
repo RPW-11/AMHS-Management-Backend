@@ -5,5 +5,6 @@ public record RoutePlanningDetailDto(
     string Algorithm,
     IEnumerable<string> ImageUrls,
     RgvMapDetailDto RgvMap,
+    IEnumerable<ClusterFlowSolutionDto> Routes,
     RoutePlanningScoreDto Score
 );
