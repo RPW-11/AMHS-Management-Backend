@@ -6,16 +6,19 @@ using Domain.Missions;
 using Domain.Missions.ValueObjects;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Persistence.Repositories;
 
 public class MissionRepository : IMissionRepository
 {
     private readonly AppDbContext _dbContext;
+    private readonly ILogger<MissionRepository> _logger;
 
-    public MissionRepository(AppDbContext dbContext)
+    public MissionRepository(AppDbContext dbContext, ILogger<MissionRepository> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<Result> AddMissionAsync(MissionBase mission)
@@ -27,7 +30,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to add a mission to the database");
             return Result.Fail(new Error("Fail to add a mission to the database").CausedBy(error));
         }
     }
@@ -68,7 +71,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to get all missions from the database");
             return Result.Fail(new Error("Fail to get all missions from the database").CausedBy(error));
         }
     }
@@ -84,7 +87,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to get the mission from the database");
             return Result.Fail(new Error("Fail to get the mission from the database").CausedBy(error));
 
         }
@@ -99,7 +102,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to update the mission");
             return Result.Fail(new Error("Fail to update the mission").CausedBy(error));
         }
     }
@@ -115,7 +118,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to update the mission");
             return Result.Fail(new Error("Fail to update the mission").CausedBy(error));
         }
     }
@@ -137,7 +140,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to count the number of missions");
             return Result.Fail(new Error("Fail to count the number of missions").CausedBy(error));
         }
     }
@@ -157,7 +160,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to get all missions from the database");
             return Result.Fail(new Error("Fail to get all missions from the database").CausedBy(error));
         }
     }
@@ -171,7 +174,7 @@ public class MissionRepository : IMissionRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to delete missions");
             return Result.Fail(new Error("Fail to delete missions").CausedBy(error));
         }
     }

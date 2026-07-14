@@ -6,15 +6,18 @@ using Domain.Notifications;
 using Domain.Notifications.ValueObjects;
 using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Persistence.Repositories;
 
 public class NotificationRepository : INotificationRepository
 {
     private readonly AppDbContext _dbContext;
-    public NotificationRepository(AppDbContext dbContext)
+    private readonly ILogger<NotificationRepository> _logger;
+    public NotificationRepository(AppDbContext dbContext, ILogger<NotificationRepository> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
     public async Task<Result> AddNotificationAsync(Notification notification)
     {
@@ -25,8 +28,8 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
-            return Result.Fail(new Error("Fail to insert the employee to the database").CausedBy(error));
+            _logger.LogError(error, "Fail to insert the notification to the database");
+            return Result.Fail(new Error("Fail to insert the notification to the database").CausedBy(error));
         }
     }
 
@@ -39,7 +42,7 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to insert the notifications to the database");
             return Result.Fail(new Error("Fail to insert the notifications to the database").CausedBy(error));
         }
     }
@@ -53,7 +56,7 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to delete the notification from the database");
             return Result.Fail(new Error("Fail to delete the notification from the database").CausedBy(error));
         }
     }
@@ -67,7 +70,7 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to get the notification from the database");
             return Result.Fail(new Error("Fail to get the notification from the database").CausedBy(error));
         }
     }
@@ -103,7 +106,7 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to get the notification from the database");
             return Result.Fail(new Error("Fail to get the notification from the database").CausedBy(error));
         }
     }
@@ -117,7 +120,7 @@ public class NotificationRepository : INotificationRepository
         }
         catch (Exception error)
         {
-            Console.WriteLine(error);
+            _logger.LogError(error, "Fail to update the notification");
             return Result.Fail(new Error("Fail to update the notification").CausedBy(error));
         }
     }
