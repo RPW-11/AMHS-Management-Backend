@@ -1,7 +1,6 @@
 using Application.Common.Interfaces.Persistence;
 using Application.DTOs.Common;
 using Application.DTOs.Notification;
-using Domain.Employees.ValueObjects;
 using Domain.Notifications;
 using Domain.Notifications.ValueObjects;
 using FluentResults;
@@ -65,7 +64,7 @@ public class NotificationRepository : INotificationRepository
     {
         try
         {
-            var notification = await _dbContext.Notifications.FirstAsync(n => n.Id == notificationId);
+            var notification = await _dbContext.Notifications.FirstOrDefaultAsync(n => n.Id == notificationId);
             return notification;
         }
         catch (Exception error)
@@ -79,7 +78,8 @@ public class NotificationRepository : INotificationRepository
     {
         try
         {
-            IQueryable<Notification> query = _dbContext.Notifications;
+            IQueryable<Notification> query = _dbContext.Notifications
+                .Where(n => n.RecipientId == notificationFilterDto.EmployeeId);
 
             if (notificationFilterDto.IsRead is not null)
             {

@@ -112,10 +112,10 @@ public class EmployeeRepository : IEmployeeRepository
     {
         try
         {
-            var pattern = $"{name.ToLower()}%";
-            var employees = await _dbContext.Employees.Where(e => EF.Functions.Like(e.FirstName.ToLower(), pattern)
+            var pattern = $"{name}%";
+            var employees = await _dbContext.Employees.Where(e => EF.Functions.ILike(e.FirstName, pattern)
                                     ||
-                                    EF.Functions.Like(e.LastName.ToLower(), pattern))
+                                    EF.Functions.ILike(e.LastName, pattern))
                                     .ToListAsync();
             return employees;
         }
