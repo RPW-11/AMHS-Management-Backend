@@ -169,9 +169,12 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _logger.LogDebug("RGV map created with {FlowCount} cluster flows | Grid size: {RowDim}x{ColDim}",
                 rgvMap.ClusterFlows.Count, rowDim, colDim);
 
-        missionResult.Value.ProcessRoutePlanning();
+        MissionBase mission = missionResult.Value;
+        MissionId parsedMissionId = missionIdResult.Value;
 
-        var updateResult = _missionRepository.UpdateMission(missionResult.Value);
+        mission.ProcessRoutePlanning();
+
+        var updateResult = _missionRepository.UpdateMission(mission);
         if (updateResult.IsFailed)
         {
             _logger.LogError("Failed to update mission in repository: {ErrorMessage}", updateResult.Errors[0].Message);
@@ -180,20 +183,56 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         try
         {
-            await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
-            {
-                var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-                var missionRepository = sp.GetRequiredService<IMissionRepository>();
-                var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
-                await ExecuteRoutePlanning(
-                    domainDispatcher, unitOfWork, missionRepository, missionResult.Value,
-                    rgvMap, algorithmResult.Value, imageBytes);
-            });
+            await _unitOfWork.SaveChangesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Full queue");
-            return Result.Fail(ApplicationError.Validation("Full queue"));
+            _logger.LogError(ex, "Database commit failed before enqueueing route planning");
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        await _domainDispatcher.DispatchAsync(mission.DomainEvents);
+        mission.ClearDomainEvents();
+
+        bool enqueued = _backgroundJobHub.TryEnqueue(async (sp, ct) =>
+        {
+            var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+            var missionRepository = sp.GetRequiredService<IMissionRepository>();
+            var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
+
+            var jobMissionResult = await missionRepository.GetMissionByIdAsync(parsedMissionId);
+            if (jobMissionResult.Value is null)
+            {
+                _logger.LogError("Mission {MissionId} no longer exists, abandoning its route planning job", parsedMissionId);
+                return;
+            }
+
+            await ExecuteRoutePlanning(
+                domainDispatcher, unitOfWork, missionRepository, jobMissionResult.Value,
+                rgvMap, algorithmResult.Value, imageBytes);
+        }, out _);
+
+        if (!enqueued)
+        {
+            _logger.LogWarning("Route planning queue is full, mission {MissionId} was not enqueued", parsedMissionId);
+            await RevertProcessingStatus(mission);
+            return Result.Fail(ApplicationError.Validation("The route planning queue is full, please try again later"));
+        }
+
+        _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
+
+        return Result.Ok();
+    }
+
+    private async Task RevertProcessingStatus(MissionBase mission)
+    {
+        mission.SetMissionStatus(MissionStatus.Failed);
+
+        var revertResult = _missionRepository.UpdateMission(mission);
+        if (revertResult.IsFailed)
+        {
+            _logger.LogError("Failed to revert mission status after a rejected enqueue: {ErrorMessage}", revertResult.Errors[0].Message);
+            return;
         }
 
         try
@@ -202,16 +241,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Database commit failed after route planning");
-            return Result.Fail(ApplicationError.Internal);
+            _logger.LogError(ex, "Failed to commit the reverted mission status after a rejected enqueue");
         }
-
-        await _domainDispatcher.DispatchAsync(missionResult.Value.DomainEvents);
-        missionResult.Value.ClearDomainEvents();
-
-        _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
-
-        return Result.Ok();
     }
 
     private async Task ExecuteRoutePlanning(

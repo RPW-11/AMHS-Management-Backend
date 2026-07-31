@@ -8,9 +8,6 @@ public class ClusterFlow : ValueObject
 {
     public string PathColor { get; }
     public IReadOnlyList<Cluster> Clusters { get; }
-
-    // One entry per connector between two adjacent clusters (Clusters.Count - 1 entries); kept
-    // separate rather than flattened so consumers don't join unrelated connectors into one path.
     public IReadOnlyList<IReadOnlyList<PathPoint>> ConnectorSolutions { get; }
 
     private ClusterFlow(string pathColor, IReadOnlyList<Cluster> clusters, IReadOnlyList<IReadOnlyList<PathPoint>> connectorSolutions)
@@ -58,6 +55,21 @@ public class Cluster : ValueObject
 
     public static Result<Cluster> Create(string name, string pathColor, IReadOnlyList<Station> stations, IReadOnlyList<PathPoint> solution)
     {
+        if (stations.Count == 0)
+        {
+            return Result.Fail(new EmptyClusterError(name));
+        }
+
+        HashSet<string> seenStationNames = [];
+
+        foreach (var station in stations)
+        {
+            if (!seenStationNames.Add(station.Name))
+            {
+                return Result.Fail(new DuplicateStationInClusterError(station.Name));
+            }
+        }
+
         return Result.Ok(new Cluster(name, pathColor, stations, solution));
     }
 

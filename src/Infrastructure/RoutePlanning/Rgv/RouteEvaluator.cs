@@ -11,7 +11,7 @@ internal static class RouteEvaluator
 
     // Derived from the grid and the stations being visited, never from the candidate route, so a
     // caller scoring many solutions against one map builds this once instead of per solution.
-    public sealed record RouteMetrics(int SquareLength, double MaxStationTime);
+    public sealed record RouteMetrics(double SquareLength, double MaxStationTime);
 
     public static RouteMetrics GetRouteMetrics(Grid grid, List<PathPoint> stationsOrder)
     {

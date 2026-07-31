@@ -104,10 +104,10 @@ public sealed class Grid : ValueObject
         return MapMatrix[rowPos, colPos];
     }
 
-    public int GetSquareLength()
+    public double GetSquareLength()
     {
-        var perSquareArea = WidthLength * HeightLength / (RowDim * ColDim);
-        return (int)Math.Sqrt(perSquareArea);
+        double perSquareArea = (double)WidthLength * HeightLength / ((double)RowDim * ColDim);
+        return Math.Sqrt(perSquareArea);
     }
 
     public override IEnumerable<object> GetEqualityComponents()

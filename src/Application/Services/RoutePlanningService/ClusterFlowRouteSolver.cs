@@ -9,7 +9,7 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
 {
     private const int ClusterGenerationsNumber = 100;
     private const int ConnectorGenerationsNumber = 300;
-    private const int ClusterPermutationSampleSize = 4;
+    private const int ClusterPermutationSampleSize = 6;
     private const int MaxPermutationAttemptsMultiplier = 20;
 
     private readonly IRouteSolver _routeSolver = routeSolver;

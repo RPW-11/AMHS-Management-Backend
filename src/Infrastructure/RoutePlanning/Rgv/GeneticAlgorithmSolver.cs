@@ -10,7 +10,7 @@ public class GeneticAlgorithmSolver
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 1600;
-    private const double TurnPenaltyRate = 1000;
+    private const double TurnPenaltyRate = 2000;
     private const double ConflictPenaltyRate = 4000;
     private const double ForeignStationPenalty = 25;
     private const int EarlyStoppingPatience = 50;
@@ -413,10 +413,6 @@ public class GeneticAlgorithmSolver
         return turns;
     }
 
-    // Direction only exists between two consecutive cells, so overlap is compared step by step
-    // rather than cell by cell: a step the solution shares with an already-solved route is a
-    // head-on conflict if that route walks it the other way, and an alignment if it walks it the
-    // same way. Conflict wins when a looping route traverses the same step in both directions.
     private (double conflictRate, double alignmentRate) EvaluateRouteOverlap(List<PathPoint> solution)
     {
         double conflictTotal = 0;

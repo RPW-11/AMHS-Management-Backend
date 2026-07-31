@@ -2,5 +2,5 @@ namespace Application.Common.Interfaces.BackgroundJobHub;
 
 public interface IBackgroundJobHub
 {
-    Task<Guid> EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> work);
+    bool TryEnqueue(Func<IServiceProvider, CancellationToken, Task> work, out Guid jobId);
 }

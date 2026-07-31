@@ -20,19 +20,17 @@ public class BackgroundJobHub : BackgroundService, IBackgroundJobHub
     private readonly ConcurrentDictionary<Guid, string> _statuses;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly int _maxConcurrentWorkers;
-    private readonly int _maxQueueSize;
 
     public BackgroundJobHub(
         ILogger<BackgroundJobHub> logger,
         IServiceScopeFactory scopeFactory,
         int maxConcurrentWorkers = 4,
-        int maxQueueSize = 1)
+        int maxQueueSize = 16)
     {
         _statuses = new();
         _logger = logger;
         _scopeFactory = scopeFactory;
         _maxConcurrentWorkers = maxConcurrentWorkers;
-        _maxQueueSize = maxQueueSize;
 
         var options = new BoundedChannelOptions(maxQueueSize)
         {
@@ -49,24 +47,29 @@ public class BackgroundJobHub : BackgroundService, IBackgroundJobHub
         var workers = new List<Task>();
         for (int i = 0; i < _maxConcurrentWorkers; i++)
         {
-            workers.Add(Task.Factory.StartNew(
-                () => WorkerLoopAsync(stoppingToken),
-                CancellationToken.None,
-                TaskCreationOptions.LongRunning,
-                TaskScheduler.Default));
+            workers.Add(Task.Run(() => WorkerLoopAsync(stoppingToken), CancellationToken.None));
         }
 
-        await Task.WhenAll(workers);
+        try
+        {
+            await Task.WhenAll(workers);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Background job workers stopped");
+        }
     }
 
     private async Task WorkerLoopAsync(CancellationToken ct)
     {
         await foreach (var job in _channel.Reader.ReadAllAsync(ct))
         {
+            using var scope = _scopeFactory.CreateScope();
+
             try
             {
                 _statuses[job.Id] = "Processing...";
-                await job.Work(_scopeFactory.CreateScope().ServiceProvider, ct);             
+                await job.Work(scope.ServiceProvider, ct);
                 _statuses[job.Id] = "Completed";
             }
             catch (OperationCanceledException)
@@ -76,19 +79,22 @@ public class BackgroundJobHub : BackgroundService, IBackgroundJobHub
             catch (Exception ex)
             {
                 _statuses[job.Id] = $"Failed: {ex.Message}";
-                _logger.LogError("Error processing the job: {Error}", ex);
+                _logger.LogError(ex, "Error processing job {JobId}", job.Id);
             }
         }
     }
 
-    public async Task<Guid> EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> work)
+    public bool TryEnqueue(Func<IServiceProvider, CancellationToken, Task> work, out Guid jobId)
     {
-        var id = Guid.NewGuid();
-        _statuses[id] = "Queued";
+        jobId = Guid.NewGuid();
 
-        var item = new JobItem(id, work);
+        if (!_channel.Writer.TryWrite(new JobItem(jobId, work)))
+        {
+            _logger.LogWarning("Job queue is full, rejected job {JobId}", jobId);
+            return false;
+        }
 
-        await _channel.Writer.WriteAsync(item);
-        return id;
+        _statuses[jobId] = "Queued";
+        return true;
     }
 }
