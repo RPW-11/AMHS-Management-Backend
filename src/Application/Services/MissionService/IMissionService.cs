@@ -21,4 +21,5 @@ public interface IMissionService
     Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole);
     Task<Result<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string missionId);
     Task<Result<string>> DownloadRouteImage(string missionId);
+    Task<Result<string>> DownloadRouteJson(string missionId);
 }

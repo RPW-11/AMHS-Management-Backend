@@ -13,6 +13,8 @@ public interface IRouteResultPersister
         byte[] imageBytes,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
         RgvMapDetailDto rgvMap,
+        IEnumerable<ClusterDefinitionDto> clusters,
+        IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
         IEnumerable<ClusterFlowSolutionDto> routeSolutions,
         RoutePlanningScoreDto score);
 }

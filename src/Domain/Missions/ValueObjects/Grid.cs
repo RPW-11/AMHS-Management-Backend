@@ -46,14 +46,14 @@ public sealed class Grid : ValueObject
         List<PathPoint> points
         )
     {
-        if (rowDim < MinRowDim && colDim < MinColDim)
+        if (rowDim < MinRowDim || colDim < MinColDim)
         {
-            return Result.Fail($"Row and Column dimension must be at least {MinColDim}");
+            return Result.Fail($"Row dimension must be at least {MinRowDim} and column dimension at least {MinColDim}");
         }
 
-        if (widthLength < MinWidthLength && heightLength < MinHeightLength)
+        if (widthLength < MinWidthLength || heightLength < MinHeightLength)
         {
-            return Result.Fail($"Width and Height dimension must be at least {MinHeightLength}");
+            return Result.Fail($"Width must be at least {MinWidthLength} and height at least {MinHeightLength}");
         }
 
         var mapMatrixResult = CreateMapMatrix(rowDim, colDim, points);

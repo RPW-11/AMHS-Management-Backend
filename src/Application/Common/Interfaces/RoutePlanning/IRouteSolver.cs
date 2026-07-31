@@ -10,8 +10,9 @@ public interface IRouteSolver
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
         RoutePlanningAlgorithm routePlanningAlgorithm,
-        int generationsNumber
+        int generationsNumber,
+        RouteSolvePurpose purpose
     );
 
-    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder);
+    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteSolvePurpose purpose);
 }

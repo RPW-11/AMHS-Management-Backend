@@ -9,7 +9,7 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
 {
     private const int ClusterGenerationsNumber = 100;
     private const int ConnectorGenerationsNumber = 300;
-    private const int ClusterPermutationSampleSize = 10;
+    private const int ClusterPermutationSampleSize = 4;
     private const int MaxPermutationAttemptsMultiplier = 20;
 
     private readonly IRouteSolver _routeSolver = routeSolver;
@@ -37,10 +37,11 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
                 loopStationsOrder,
                 currentRoutes,
                 algorithm,
-                ClusterGenerationsNumber);
+                ClusterGenerationsNumber,
+                RouteSolvePurpose.ClusterLoop);
 
             List<PathPoint> candidateResult = [.. solveResult];
-            var score = _routeSolver.GetRouteScore(candidateResult, grid, loopStationsOrder);
+            var score = _routeSolver.GetRouteScore(candidateResult, grid, loopStationsOrder, RouteSolvePurpose.ClusterLoop);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
             {
@@ -63,7 +64,8 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
             [start, end],
             currentRoutes,
             algorithm,
-            ConnectorGenerationsNumber);
+            ConnectorGenerationsNumber,
+            RouteSolvePurpose.Connector);
 
         return [.. solveResult];
     }

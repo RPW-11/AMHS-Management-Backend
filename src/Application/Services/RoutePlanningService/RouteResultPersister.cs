@@ -18,13 +18,19 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
         byte[] imageBytes,
         List<(List<PathPoint> Solution, string ArrowColor)> routes,
         RgvMapDetailDto rgvMap,
+        IEnumerable<ClusterDefinitionDto> clusters,
+        IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
         IEnumerable<ClusterFlowSolutionDto> routeSolutions,
         RoutePlanningScoreDto score)
     {
-        var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
-        var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, mission.Id.ToString());
+        string missionId = mission.Id.ToString();
 
-        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, [imagePath], rgvMap, routeSolutions, score);
+        var inputImagePath = _routePlanningResultStore.WriteImage(imageBytes, missionId, $"{missionId}-input");
+
+        var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
+        var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, missionId, missionId);
+
+        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, inputImagePath, [imagePath], rgvMap, clusters, clusterFlows, routeSolutions, score);
 
         _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
         _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
@@ -35,16 +41,22 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
     private static RoutePlanningDetailDto ToRoutePlanningDto(
         MissionId missionId,
         RoutePlanningAlgorithm routePlanningAlgorithm,
+        string inputImageUrl,
         List<string> imageUrls,
         RgvMapDetailDto rgvMap,
+        IEnumerable<ClusterDefinitionDto> clusters,
+        IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
         IEnumerable<ClusterFlowSolutionDto> routeSolutions,
         RoutePlanningScoreDto score)
     {
         return new(
                     missionId.ToString(),
                     routePlanningAlgorithm.ToString(),
+                    inputImageUrl,
                     imageUrls,
                     rgvMap,
+                    clusters,
+                    clusterFlows,
                     routeSolutions,
                     score
                 );

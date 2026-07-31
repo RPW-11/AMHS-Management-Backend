@@ -13,7 +13,8 @@ public class RouteSolver : IRouteSolver
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
         RoutePlanningAlgorithm routePlanningAlgorithm,
-        int generationsNumber
+        int generationsNumber,
+        RouteSolvePurpose purpose
     )
     {
         if (generationsNumber <= 0 || generationsNumber > MaxGenerationsNumber)
@@ -29,13 +30,13 @@ public class RouteSolver : IRouteSolver
             throw new NotImplementedException("Reinforcement learning route planning is not implemented yet");
         }
 
-        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber);
+        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber, RouteFitnessWeights.For(purpose));
         return gaSolver.Solve();
     }
 
-    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder)
+    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteSolvePurpose purpose)
     {
-        var (throughput, trackLength, numOfRgvs, optimality) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder);
+        var (throughput, trackLength, numOfRgvs, optimality) = RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder, RouteFitnessWeights.For(purpose));
 
         return new(throughput, trackLength, numOfRgvs, optimality);
     }

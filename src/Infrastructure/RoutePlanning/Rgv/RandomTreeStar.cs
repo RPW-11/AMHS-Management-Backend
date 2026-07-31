@@ -12,6 +12,8 @@ public static class RandomTreeStar
     private const double GoalBias = 0.15;
     private const double GoalReachRadiusMultiplier = 1.5;
     private const int MaxPathReconstructionSteps = 10000;
+    private const double DensifyPerturbation = 0.5;
+    private const double DensifyDecayRate = 50.0;
 
     public static List<List<PathPoint>> GenerateRRTSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
@@ -146,7 +148,13 @@ public static class RandomTreeStar
                     if (parentMap.ContainsKey(goal))
                     {
                         var path = ReconstructRRTPath(parentMap, goal);
-                        allPaths.Add(path);
+                        var densifiedPath = DensifyPath(grid, path);
+
+                        if (densifiedPath is not null)
+                        {
+                            allPaths.Add(densifiedPath);
+                        }
+
                         break;
                     }
                 }
@@ -220,6 +228,37 @@ public static class RandomTreeStar
                 nearby.Add(n);
         }
         return nearby;
+    }
+
+    // RRT tree nodes are up to StepSize cells apart, but a solution is only usable if every
+    // consecutive pair of points is a single orthogonal step - otherwise it is rejected outright
+    // as disconnected. Fill in the gaps with a near-deterministic A* so the tree's overall shape
+    // is preserved while the result becomes a genuine cell-by-cell route.
+    private static List<PathPoint>? DensifyPath(Grid grid, List<PathPoint> nodePath)
+    {
+        if (nodePath.Count == 0)
+        {
+            return null;
+        }
+
+        List<PathPoint> densifiedPath = [nodePath[0]];
+
+        for (int i = 1; i < nodePath.Count; i++)
+        {
+            var subPath = ModifiedAStar.SolveWithDecay(
+                grid, nodePath[i - 1], nodePath[i], [],
+                initialPerturbation: DensifyPerturbation,
+                decayRate: DensifyDecayRate);
+
+            if (subPath is null)
+            {
+                return null;
+            }
+
+            densifiedPath.AddRange(subPath.Skip(1));
+        }
+
+        return densifiedPath;
     }
 
     private static List<PathPoint> ReconstructRRTPath(Dictionary<PathPoint, PathPoint?> parentMap, PathPoint end)

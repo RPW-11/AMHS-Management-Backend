@@ -308,6 +308,57 @@ public class MissionService : BaseService, IMissionService
         }
     }
 
+    public async Task<Result<string>> DownloadRouteJson(string missionId)
+    {
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["MissionId"] = missionId
+        });
+
+        _logger.LogInformation("Download route planning JSON request started");
+
+        var missionIdResult = MissionId.FromString(missionId);
+        if (missionIdResult.IsFailed)
+        {
+            _logger.LogWarning("Invalid mission ID format: {ErrorMessage}",
+                missionIdResult.Errors[0].Message);
+            return Result.Fail<string>(ApplicationError.Validation(missionIdResult.Errors[0].Message));
+        }
+
+        var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
+        if (missionResult.IsFailed)
+        {
+            _logger.LogError("Failed to retrieve mission from repository: {ErrorMessage}", missionResult.Errors[0].Message);
+            return Result.Fail<string>(ApplicationError.Internal);
+        }
+
+        if (missionResult.Value is null)
+        {
+            _logger.LogInformation("Mission not found");
+            return Result.Fail<string>(ApplicationError.NotFound("The mission is not found"));
+        }
+
+        var mission = missionResult.Value;
+
+        if (mission.Category != MissionCategory.RoutePlanning || mission.Status != MissionStatus.Finished)
+        {
+            _logger.LogInformation("Mission has no finished route planning result to download");
+            return Result.Fail<string>(ApplicationError.NotFound("This mission has no route planning result JSON"));
+        }
+
+        try
+        {
+            var jsonUrl = _routePlanningResultStore.GetResultJsonUrl(mission.Id.ToString());
+            _logger.LogInformation("Successfully generated route planning JSON URL");
+            return Result.Ok(jsonUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get route planning JSON URL for mission {MissionId}", mission.Id);
+            return Result.Fail<string>(ApplicationError.Internal);
+        }
+    }
+
     public async Task<Result> UpdateMission(UpdateMissionDto updateMissionDto, string missionId)
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>

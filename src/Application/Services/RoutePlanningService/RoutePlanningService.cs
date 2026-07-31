@@ -180,8 +180,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         try
         {
-            // This returns once the job is enqueued, not once it's solved — the actual
-            // solve+persist runs later in its own DI scope inside the background job hub.
             await _backgroundJobHub.EnqueueAsync(async (sp, ct) =>
             {
                 var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
@@ -279,9 +277,15 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             }
 
             var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
-            var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder);
+            var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
 
-            _routeResultPersister.Persist(mission, rgvMap.Grid, algorithm, imageBytes, routes, ToRgvMapDetailDto(solvedRgvMap.Grid), ToClusterFlowSolutionDtos(solvedClusterFlows), score);
+            _routeResultPersister.Persist(
+                mission, rgvMap.Grid, algorithm, imageBytes, routes,
+                ToRgvMapDetailDto(solvedRgvMap.Grid),
+                ToClusterDefinitionDtos(rgvMap),
+                ToClusterFlowDefinitionDtos(rgvMap),
+                ToClusterFlowSolutionDtos(solvedClusterFlows),
+                score);
 
             _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
         }
@@ -325,6 +329,22 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         return new RgvMapDetailDto(grid.RowDim, grid.ColDim, grid.WidthLength, grid.HeightLength, mapMatrix);
     }
+
+    private static List<ClusterDefinitionDto> ToClusterDefinitionDtos(RgvMap rgvMap) =>
+        [.. rgvMap.ClusterFlows
+            .SelectMany(clusterFlow => clusterFlow.Clusters)
+            .DistinctBy(cluster => cluster.Name)
+            .Select(cluster => new ClusterDefinitionDto(
+                cluster.Name,
+                cluster.PathColor,
+                [.. cluster.Stations.Select(ToPathPointDto)]
+            ))];
+
+    private static List<ClusterFlowDefinitionDto> ToClusterFlowDefinitionDtos(RgvMap rgvMap) =>
+        [.. rgvMap.ClusterFlows.Select(clusterFlow => new ClusterFlowDefinitionDto(
+            clusterFlow.PathColor,
+            [.. clusterFlow.Clusters.Select(cluster => cluster.Name)]
+        ))];
 
     private static List<ClusterFlowSolutionDto> ToClusterFlowSolutionDtos(IEnumerable<ClusterFlow> clusterFlows) =>
         [.. clusterFlows.Select(clusterFlow => new ClusterFlowSolutionDto(

@@ -5,105 +5,115 @@ namespace Infrastructure.RoutePlanning.Rgv;
 
 public class GeneticAlgorithmSolver
 {
-    private const int PopulationSize = 400;
+    private const int PopulationSize = 1000;
     private const double MutationRate = 0.05;
     private const double CrossoverRate = 0.7;
     private const int ChromosomeLength = 1000;
     private const double DuplicateRoutePenaltyRate = 1600;
     private const double TurnPenaltyRate = 1000;
     private const double ConflictPenaltyRate = 4000;
+    private const double ForeignStationPenalty = 25;
     private const int EarlyStoppingPatience = 50;
     private const double ElitismRate = 0.1;
     private const int TournamentSize = 5;
     private const int MutationStartIndexMargin = 10;
     private const int MutationMinSegmentLength = 5;
+    private const double InvalidSolutionFitness = int.MinValue;
 
     private readonly Random _random;
     private readonly Grid _grid;
     private readonly List<PathPoint> _stationsOrder;
-    private readonly List<List<PathPoint>> _currentRoutes;
+    private readonly List<SolvedRoute> _solvedRoutes;
     private readonly int _generationsNumber;
-    private readonly int _goalCount = 0;
+    private readonly PathPoint _goalStation;
+    private readonly int _goalCount;
+    private readonly bool _isClosedLoop;
+    private readonly HashSet<Cell> _foreignStations;
+    private readonly RouteEvaluator.RouteMetrics _routeMetrics;
+    private readonly RouteFitnessWeights _fitnessWeights;
 
-    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber)
+    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights)
     {
         _random = new Random();
         _grid = grid;
         _stationsOrder = stationsOrder;
-        _currentRoutes = currentRoutes;
+        _solvedRoutes = [.. currentRoutes.Select(ToSolvedRoute)];
         _generationsNumber = generationsNumber;
-        _goalCount = _stationsOrder.Count(point => point == _stationsOrder.Last());
+        _goalStation = stationsOrder[^1];
+        _goalCount = stationsOrder.Count(point => point == _goalStation);
+        _isClosedLoop = stationsOrder[0] == _goalStation;
+        _foreignStations = GetForeignStations(grid, stationsOrder);
+        _routeMetrics = RouteEvaluator.GetRouteMetrics(grid, stationsOrder);
+        _fitnessWeights = fitnessWeights;
     }
+
+    private sealed class Individual(List<PathPoint> path, double fitness)
+    {
+        public List<PathPoint> Path { get; } = path;
+        public double Fitness { get; } = fitness;
+    }
+
+    private Individual CreateIndividual(List<PathPoint> path) => new(path, EvaluateFitness(path));
 
     public List<PathPoint> Solve()
     {
-        var aStarSolutions = ModifiedAStar.GetValidSolutions(_grid, _stationsOrder);
+        Console.WriteLine($"[GA] Seeding A* and RRT");
+        List<Individual> population = [
+            .. ModifiedAStar.GetValidSolutions(_grid, _stationsOrder).Select(CreateIndividual),
+            .. RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder).Select(CreateIndividual)
+        ];
 
-        var rrtSolutions = RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder);
-        var population = Enumerable.Range(0, PopulationSize)
-                        .Select(_ => GenerateIndividual())
-                        .ToList();
-
-        population.AddRange(aStarSolutions);
-        population.AddRange(rrtSolutions);
+        while (population.Count < PopulationSize)
+        {
+            population.Add(CreateIndividual(GenerateRandomWalkPath()));
+        }
 
         double bestFitnessSoFar = double.MinValue;
         int generationsSinceImprovement = 0;
 
         for (int i = 0; i < _generationsNumber; i++)
         {
-            var evaluated = population.Select(ind => new
-            {
-                Individual = ind,
-                Fitness = EvaluateFitness(ind),
-            })
-            .OrderByDescending(x => x.Fitness)
-            .ToList();
+            population.Sort((left, right) => right.Fitness.CompareTo(left.Fitness));
 
-            Console.WriteLine($"[GA] Generation {i}: best solution count = {evaluated[0].Individual.Count}, fitness = {evaluated[0].Fitness}");
+            Console.WriteLine($"[GA] Generation {i}: best solution count = {population[0].Path.Count}, fitness = {population[0].Fitness}");
 
-            if (evaluated[0].Fitness > bestFitnessSoFar)
+            if (population[0].Fitness > bestFitnessSoFar)
             {
-                bestFitnessSoFar = evaluated[0].Fitness;
+                bestFitnessSoFar = population[0].Fitness;
                 generationsSinceImprovement = 0;
             }
             else if (++generationsSinceImprovement >= EarlyStoppingPatience)
             {
                 Console.WriteLine($"[GA] Early stopping at generation {i}: no improvement for {EarlyStoppingPatience} generations");
-                population = [.. evaluated.Select(x => x.Individual)];
                 break;
             }
 
-            List<List<PathPoint>> newPopulation = GenerateNewPopulationFromParents(
-                [.. evaluated.Select(x => x.Individual)]
-            );
-
-            population = newPopulation;
+            population = GenerateNewPopulationFromParents(population);
         }
 
-        var bestIndividual = population.Select(ind => new
+        var bestIndividual = population.MaxBy(individual => individual.Fitness)!;
+
+        Console.WriteLine($"[GA] Best solution: count = {bestIndividual.Path.Count}, fitness = {bestIndividual.Fitness}");
+
+        if (bestIndividual.Fitness <= InvalidSolutionFitness)
         {
-            Individual = ind,
-            Fitness = EvaluateFitness(ind),
-        })
-            .OrderByDescending(x => x.Fitness)
-            .First();
+            throw new InvalidOperationException(
+                $"Genetic algorithm found no valid route across {_stationsOrder.Count} stations in {_generationsNumber} generations");
+        }
 
-        Console.WriteLine($"[GA] Best solution: count = {bestIndividual.Individual.Count}, fitness = {bestIndividual.Fitness}");
-
-        return bestIndividual.Individual;
+        return bestIndividual.Path;
     }
 
-    private List<List<PathPoint>> GenerateNewPopulationFromParents(List<List<PathPoint>> sortedParents)
+    private List<Individual> GenerateNewPopulationFromParents(List<Individual> sortedParents)
     {
-        List<List<PathPoint>> newPopulation = [];
+        List<Individual> newPopulation = [];
 
         newPopulation.AddRange(sortedParents.Take((int)(PopulationSize * ElitismRate)));
 
         while (newPopulation.Count < PopulationSize)
         {
-            List<PathPoint> parent1 = TournamentSelection(sortedParents);
-            List<PathPoint> parent2 = TournamentSelection(sortedParents);
+            List<PathPoint> parent1 = TournamentSelection(sortedParents).Path;
+            List<PathPoint> parent2 = TournamentSelection(sortedParents).Path;
 
             List<PathPoint> child;
 
@@ -116,12 +126,12 @@ public class GeneticAlgorithmSolver
                 child = _random.NextDouble() < 0.5 ? parent1 : parent2;
             }
 
-            if (_random.NextDouble() > MutationRate)
+            if (_random.NextDouble() < MutationRate)
             {
                 child = Mutate(child);
             }
 
-            newPopulation.Add(child);
+            newPopulation.Add(CreateIndividual(child));
         }
 
         return newPopulation;
@@ -168,42 +178,53 @@ public class GeneticAlgorithmSolver
         return [.. child.Take(startIdx), .. subPath, .. child.Skip(endIdx + 1)];
     }
 
-    private List<PathPoint> TournamentSelection(List<List<PathPoint>> population)
+    private Individual TournamentSelection(List<Individual> population)
     {
-        return population.OrderBy(x => _random.Next())
-        .Take(TournamentSize)
-        .OrderByDescending(EvaluateFitness)
-        .First();
+        var best = population[_random.Next(population.Count)];
+
+        for (int i = 1; i < TournamentSize; i++)
+        {
+            var challenger = population[_random.Next(population.Count)];
+
+            if (challenger.Fitness > best.Fitness)
+            {
+                best = challenger;
+            }
+        }
+
+        return best;
     }
 
-    private List<PathPoint> GenerateIndividual()
+    private List<PathPoint> GenerateRandomWalkPath()
     {
-        var start = _stationsOrder[0];
-        var goal = _stationsOrder.Last();
+        List<PathPoint> route = [_stationsOrder[0]];
 
-        List<PathPoint> route = [start];
-        int currentLength = 1;
-
-        while (currentLength < ChromosomeLength)
+        for (int targetIdx = 1; targetIdx < _stationsOrder.Count; targetIdx++)
         {
-            var last = route.Last();
+            var goal = _stationsOrder[targetIdx];
 
-            if (last == goal)
+            var visited = new HashSet<PathPoint> { route[^1] };
+
+            while (route.Count < ChromosomeLength && route[^1] != goal)
+            {
+                var neighbors = GetValidNeighbors(route[^1])
+                    .Where(neighbor => neighbor is not Obstacle && !visited.Contains(neighbor))
+                    .ToList();
+
+                if (neighbors.Count == 0)
+                {
+                    break;
+                }
+
+                var next = neighbors[_random.Next(neighbors.Count)];
+                route.Add(next);
+                visited.Add(next);
+            }
+
+            if (route[^1] != goal)
             {
                 break;
             }
-
-            var neighbors = GetValidNeighbors(last)
-                .Where(n => !route.Contains(n))
-                .ToList();
-
-            if (neighbors.Count == 0)
-            {
-                break;
-            }
-
-            route.Add(neighbors[_random.Next(neighbors.Count)]);
-            currentLength++;
         }
 
         return route;
@@ -227,23 +248,25 @@ public class GeneticAlgorithmSolver
 
     private double EvaluateFitness(List<PathPoint> solution)
     {
-        // Invalid solutions are disqualified via a minimum fitness so ranking never selects them.
-        if (!IsOrderCorrect(solution)
-            || !IsPathConnected(solution)
-            || IsPathUsingObstacles(solution))
+        if (!IsPathConnected(solution)
+            || IsPathUsingObstacles(solution)
+            || !IsOrderCorrect(solution))
         {
-            return int.MinValue;
+            return InvalidSolutionFitness;
         }
 
         int length = Math.Max(1, solution.Count);
         double duplicateRate = (double)CountDuplicates(solution) / length;
         double turnRate = (double)CountPathTurns(solution) / length;
-        double conflictRate = CountConflictingDirectionRate(solution);
+        int foreignStationVisits = CountForeignStationVisits(solution);
+        var (conflictRate, alignmentRate) = EvaluateRouteOverlap(solution);
 
-        return RouteEvaluator.GetSolutionScores(solution, _grid, _stationsOrder).optimality
+        return RouteEvaluator.GetSolutionScores(solution, _routeMetrics, _fitnessWeights).optimality
             - DuplicateRoutePenaltyRate * duplicateRate
             - TurnPenaltyRate * turnRate
-            - ConflictPenaltyRate * conflictRate;
+            - ConflictPenaltyRate * conflictRate
+            - ForeignStationPenalty * foreignStationVisits
+            + _fitnessWeights.AlignmentRewardRate * alignmentRate;
     }
 
     private bool IsOrderCorrect(List<PathPoint> solution)
@@ -254,7 +277,7 @@ public class GeneticAlgorithmSolver
 
         foreach (var point in solution)
         {
-            if (point == _stationsOrder.Last())
+            if (point == _goalStation)
             {
                 goalVisitedCount++;
             }
@@ -275,7 +298,7 @@ public class GeneticAlgorithmSolver
             return false;
         }
 
-        if (valid && _stationsOrder.Last() != solution.Last())
+        if (valid && _goalStation != solution[^1])
         {
             valid = false;
         }
@@ -315,10 +338,59 @@ public class GeneticAlgorithmSolver
         return false;
     }
 
-    private static int CountDuplicates(List<PathPoint> solution)
+    private static HashSet<Cell> GetForeignStations(Grid grid, List<PathPoint> stationsOrder)
     {
-        var hashset = solution.ToHashSet();
-        return solution.Count - 1 - hashset.Count; // excluding the start which is visited twice (cycle)
+        HashSet<Cell> segmentStations = [.. stationsOrder.Select(point => new Cell(point.RowPos, point.ColPos))];
+        HashSet<Cell> foreignStations = [];
+
+        for (int row = 0; row < grid.RowDim; row++)
+        {
+            for (int col = 0; col < grid.ColDim; col++)
+            {
+                var cell = new Cell(row, col);
+
+                if (grid.MapMatrix[row, col] is Station && !segmentStations.Contains(cell))
+                {
+                    foreignStations.Add(cell);
+                }
+            }
+        }
+
+        return foreignStations;
+    }
+
+    private int CountForeignStationVisits(List<PathPoint> solution)
+    {
+        if (_foreignStations.Count == 0)
+        {
+            return 0;
+        }
+
+        int visits = 0;
+
+        foreach (var point in solution)
+        {
+            if (point is Station && _foreignStations.Contains(new Cell(point.RowPos, point.ColPos)))
+            {
+                visits++;
+            }
+        }
+
+        return visits;
+    }
+
+    private int CountDuplicates(List<PathPoint> solution)
+    {
+        HashSet<Cell> distinctCells = [];
+
+        foreach (var point in solution)
+        {
+            distinctCells.Add(new Cell(point.RowPos, point.ColPos));
+        }
+
+        int expectedRevisits = _isClosedLoop ? 1 : 0;
+
+        return Math.Max(0, solution.Count - expectedRevisits - distinctCells.Count);
     }
 
     private static int CountPathTurns(List<PathPoint> solution)
@@ -341,43 +413,63 @@ public class GeneticAlgorithmSolver
         return turns;
     }
 
-    private double CountConflictingDirectionRate(List<PathPoint> solution)
+    // Direction only exists between two consecutive cells, so overlap is compared step by step
+    // rather than cell by cell: a step the solution shares with an already-solved route is a
+    // head-on conflict if that route walks it the other way, and an alignment if it walks it the
+    // same way. Conflict wins when a looping route traverses the same step in both directions.
+    private (double conflictRate, double alignmentRate) EvaluateRouteOverlap(List<PathPoint> solution)
     {
-        double totalRate = 0;
-        var reversedSolution = solution.AsEnumerable().Reverse().ToList();
+        double conflictTotal = 0;
+        double alignmentTotal = 0;
 
-        foreach (var route in _currentRoutes)
+        foreach (var route in _solvedRoutes)
         {
-            int lcsLength = LongestCommonSubsequence(reversedSolution, route);
-            int normalizingLength = Math.Max(1, Math.Min(reversedSolution.Count, route.Count));
-            totalRate += (double)lcsLength / normalizingLength;
-        }
+            int normalizingLength = Math.Max(1, Math.Min(solution.Count, route.Length));
+            int conflicts = 0;
+            int alignments = 0;
 
-        return totalRate;
-    }
-
-    private static int LongestCommonSubsequence(List<PathPoint> solution1, List<PathPoint> solution2)
-    {
-        int m = solution1.Count;
-        int n = solution2.Count;
-
-        int[,] dp = new int[m + 1, n + 1];
-
-        for (int i = 1; i <= m; i++)
-        {
-            for (int j = 1; j <= n; j++)
+            for (int i = 1; i < solution.Count; i++)
             {
-                if (solution1[i - 1] == solution2[j - 1])
+                var step = ToStep(solution[i - 1], solution[i]);
+
+                if (route.Steps.Contains(step.Reversed))
                 {
-                    dp[i, j] = 1 + dp[i - 1, j - 1];
+                    conflicts++;
                 }
-                else
+                else if (route.Steps.Contains(step))
                 {
-                    dp[i, j] = Math.Max(dp[i - 1, j], dp[i, j - 1]);
+                    alignments++;
                 }
             }
+
+            conflictTotal += (double)conflicts / normalizingLength;
+            alignmentTotal += (double)alignments / normalizingLength;
         }
 
-        return dp[m, n];
+        return (conflictTotal, alignmentTotal);
     }
+
+    private static Step ToStep(PathPoint from, PathPoint to) =>
+        new(from.RowPos, from.ColPos, to.RowPos, to.ColPos);
+
+    private static SolvedRoute ToSolvedRoute(List<PathPoint> route)
+    {
+        HashSet<Step> steps = [];
+
+        for (int i = 1; i < route.Count; i++)
+        {
+            steps.Add(ToStep(route[i - 1], route[i]));
+        }
+
+        return new SolvedRoute(steps, route.Count);
+    }
+
+    private readonly record struct Cell(int Row, int Col);
+
+    private readonly record struct Step(int FromRow, int FromCol, int ToRow, int ToCol)
+    {
+        public Step Reversed => new(ToRow, ToCol, FromRow, FromCol);
+    }
+
+    private sealed record SolvedRoute(HashSet<Step> Steps, int Length);
 }

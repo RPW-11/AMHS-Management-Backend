@@ -10,9 +10,11 @@ public interface IRoutePlanningResultStore
         Grid grid,
         List<(List<PathPoint> Solution, string ArrowColor)> routes);
 
-    string WriteImage(byte[] imageBytes, string fileName);
+    string WriteImage(byte[] imageBytes, string missionId, string fileName);
 
     string GetResultImageUrl(string missionId);
+
+    string GetResultJsonUrl(string missionId);
 
     void SaveRoutePlanningDetail(RoutePlanningDetailDto routePlanningDetail);
 

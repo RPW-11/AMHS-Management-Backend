@@ -43,7 +43,7 @@ public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> route
         }
     }
 
-    public string WriteImage(byte[] imageBytes, string fileName)
+    public string WriteImage(byte[] imageBytes, string missionId, string fileName)
     {
         string outputPath = System.IO.Path.Combine(_localRoutePlanningDirectory, fileName + ".png");
 
@@ -54,6 +54,11 @@ public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> route
     }
 
     public string GetResultImageUrl(string missionId)
+    {
+        throw new NotImplementedException("Downloading via a URL is not supported by the local route planning result store");
+    }
+
+    public string GetResultJsonUrl(string missionId)
     {
         throw new NotImplementedException("Downloading via a URL is not supported by the local route planning result store");
     }

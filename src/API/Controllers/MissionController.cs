@@ -273,6 +273,29 @@ namespace API.Controllers
         }
 
         /// <summary>
+        /// Get a downloadable URL for the result detail JSON of a finished route planning task
+        /// </summary>
+        /// <remarks>
+        /// Only supported when the server is configured with the S3 route planning result store —
+        /// the returned URL is a presigned S3 GET URL (valid for 1 hour) with a
+        /// Content-Disposition: attachment override, so opening it downloads rather than renders
+        /// the JSON. Not available when the local disk result store is configured.
+        /// </remarks>
+        /// <param name="id">The mission id.</param>
+        /// <returns>A JSON object containing the downloadable detail JSON URL.</returns>
+        [HttpGet("{id}/route-planning/json")]
+        public async Task<ActionResult<RouteJsonUrlDto>> DownloadRouteJson(string id)
+        {
+            var jsonUrlResult = await _missionService.DownloadRouteJson(id);
+            if (jsonUrlResult.IsFailed)
+            {
+                return HandleResult(jsonUrlResult);
+            }
+
+            return Ok(new RouteJsonUrlDto(jsonUrlResult.Value));
+        }
+
+        /// <summary>
         /// Enqueue a route planning solve for a mission
         /// </summary>
         /// <remarks>
