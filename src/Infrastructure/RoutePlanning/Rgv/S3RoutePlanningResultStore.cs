@@ -41,7 +41,7 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
         {
             for (int col = 0; col < grid.ColDim; col++)
             {
-                if (grid.MapMatrix[row, col] is Station station)
+                if (grid[row, col] is Station station)
                 {
                     yield return station;
                 }

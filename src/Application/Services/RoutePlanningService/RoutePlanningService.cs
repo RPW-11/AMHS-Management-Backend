@@ -75,6 +75,12 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Validation("The selected mission is not a route-planning mission"));
         }
 
+        if (missionResult.Value.Status == MissionStatus.Processing)
+        {
+            _logger.LogWarning("Route planning is already in progress for this mission");
+            return Result.Fail(ApplicationError.Duplicated("Route planning is already in progress for this mission"));
+        }
+
         _logger.LogDebug("Mission validated | Category: {Category} | Name: {Name}",
             missionResult.Value.Category, missionResult.Value.Name ?? "(no name)");
 
@@ -353,7 +359,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             List<PathPointDto> rowPoints = [];
             for (int col = 0; col < grid.ColDim; col++)
             {
-                rowPoints.Add(ToPathPointDto(grid.MapMatrix[row, col]));
+                rowPoints.Add(ToPathPointDto(grid[row, col]));
             }
             mapMatrix.Add(rowPoints);
         }

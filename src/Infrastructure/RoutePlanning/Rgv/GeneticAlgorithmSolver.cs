@@ -1,4 +1,5 @@
 using Domain.Missions.ValueObjects;
+using Microsoft.Extensions.Logging;
 using static Domain.Missions.ValueObjects.Grid;
 
 namespace Infrastructure.RoutePlanning.Rgv;
@@ -31,9 +32,11 @@ public class GeneticAlgorithmSolver
     private readonly HashSet<Cell> _foreignStations;
     private readonly RouteEvaluator.RouteMetrics _routeMetrics;
     private readonly RouteFitnessWeights _fitnessWeights;
+    private readonly ILogger<GeneticAlgorithmSolver> _logger;
 
-    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights)
+    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights, ILogger<GeneticAlgorithmSolver> logger)
     {
+        _logger = logger;
         _random = new Random();
         _grid = grid;
         _stationsOrder = stationsOrder;
@@ -57,7 +60,7 @@ public class GeneticAlgorithmSolver
 
     public List<PathPoint> Solve()
     {
-        Console.WriteLine($"[GA] Seeding A* and RRT");
+        _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations", _stationsOrder.Count);
         List<Individual> population = [
             .. ModifiedAStar.GetValidSolutions(_grid, _stationsOrder).Select(CreateIndividual),
             .. RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder).Select(CreateIndividual)
@@ -75,7 +78,8 @@ public class GeneticAlgorithmSolver
         {
             population.Sort((left, right) => right.Fitness.CompareTo(left.Fitness));
 
-            Console.WriteLine($"[GA] Generation {i}: best solution count = {population[0].Path.Count}, fitness = {population[0].Fitness}");
+            _logger.LogTrace("Generation {Generation}: best solution length {Length}, fitness {Fitness}",
+                i, population[0].Path.Count, population[0].Fitness);
 
             if (population[0].Fitness > bestFitnessSoFar)
             {
@@ -84,7 +88,8 @@ public class GeneticAlgorithmSolver
             }
             else if (++generationsSinceImprovement >= EarlyStoppingPatience)
             {
-                Console.WriteLine($"[GA] Early stopping at generation {i}: no improvement for {EarlyStoppingPatience} generations");
+                _logger.LogDebug("Early stopping at generation {Generation}: no improvement for {Patience} generations",
+                    i, EarlyStoppingPatience);
                 break;
             }
 
@@ -93,7 +98,8 @@ public class GeneticAlgorithmSolver
 
         var bestIndividual = population.MaxBy(individual => individual.Fitness)!;
 
-        Console.WriteLine($"[GA] Best solution: count = {bestIndividual.Path.Count}, fitness = {bestIndividual.Fitness}");
+        _logger.LogDebug("Best solution: length {Length}, fitness {Fitness}",
+            bestIndividual.Path.Count, bestIndividual.Fitness);
 
         if (bestIndividual.Fitness <= InvalidSolutionFitness)
         {
@@ -349,7 +355,7 @@ public class GeneticAlgorithmSolver
             {
                 var cell = new Cell(row, col);
 
-                if (grid.MapMatrix[row, col] is Station && !segmentStations.Contains(cell))
+                if (grid[row, col] is Station && !segmentStations.Contains(cell))
                 {
                     foreignStations.Add(cell);
                 }

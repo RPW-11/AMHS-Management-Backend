@@ -1,12 +1,17 @@
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.RoutePlanning;
 using Domain.Missions.ValueObjects;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
-public class RouteSolver : IRouteSolver
+// Resolves the logger for the solver it constructs, since the solver is created per solve rather
+// than through the container.
+public class RouteSolver(ILogger<GeneticAlgorithmSolver> geneticAlgorithmLogger) : IRouteSolver
 {
     private const int MaxGenerationsNumber = 400;
+
+    private readonly ILogger<GeneticAlgorithmSolver> _geneticAlgorithmLogger = geneticAlgorithmLogger;
 
     public IEnumerable<PathPoint> Solve(
         Grid grid,
@@ -30,7 +35,7 @@ public class RouteSolver : IRouteSolver
             throw new NotImplementedException("Reinforcement learning route planning is not implemented yet");
         }
 
-        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber, RouteFitnessWeights.For(purpose));
+        var gaSolver = new GeneticAlgorithmSolver(grid, stationsOrder, currentRoutePoints, generationsNumber, RouteFitnessWeights.For(purpose), _geneticAlgorithmLogger);
         return gaSolver.Solve();
     }
 

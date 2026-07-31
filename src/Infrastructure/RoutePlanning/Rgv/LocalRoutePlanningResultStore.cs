@@ -35,7 +35,7 @@ public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> route
         {
             for (int col = 0; col < grid.ColDim; col++)
             {
-                if (grid.MapMatrix[row, col] is Station station)
+                if (grid[row, col] is Station station)
                 {
                     yield return station;
                 }

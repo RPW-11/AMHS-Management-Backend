@@ -7,15 +7,15 @@ namespace Domain.Missions.ValueObjects;
 public sealed class RgvMap : ValueObject
 {
     public Grid Grid { get; }
-    public List<ClusterFlow> ClusterFlows { get; }
+    public IReadOnlyList<ClusterFlow> ClusterFlows { get; }
 
-    private RgvMap(Grid grid, List<ClusterFlow> clusterFlows)
+    private RgvMap(Grid grid, IReadOnlyList<ClusterFlow> clusterFlows)
     {
         Grid = grid;
         ClusterFlows = clusterFlows;
     }
 
-    public static Result<RgvMap> Create(Grid grid, List<ClusterFlow> clusterFlows)
+    public static Result<RgvMap> Create(Grid grid, IReadOnlyList<ClusterFlow> clusterFlows)
     {
         var clusterFlowsResult = ValidateClusterFlows(grid, clusterFlows);
         if (clusterFlowsResult.IsFailed)
@@ -32,7 +32,7 @@ public sealed class RgvMap : ValueObject
         return new RgvMap(grid, clusterFlows);
     }
 
-    private static Result ValidateUniqueClusterNames(List<ClusterFlow> clusterFlows)
+    private static Result ValidateUniqueClusterNames(IReadOnlyList<ClusterFlow> clusterFlows)
     {
         Dictionary<string, Cluster> clustersByName = [];
 
@@ -74,7 +74,7 @@ public sealed class RgvMap : ValueObject
         return true;
     }
 
-    private static Result ValidateClusterFlows(Grid grid, List<ClusterFlow> clusterFlows)
+    private static Result ValidateClusterFlows(Grid grid, IReadOnlyList<ClusterFlow> clusterFlows)
     {
         foreach (var clusterFlow in clusterFlows)
         {
@@ -91,7 +91,7 @@ public sealed class RgvMap : ValueObject
                         return Result.Fail(new InvalidColPosValueError(station.ColPos, grid.ColDim));
                     }
 
-                    if (grid.MapMatrix[station.RowPos, station.ColPos] is not Station matrixStation || matrixStation.Name != station.Name)
+                    if (grid[station.RowPos, station.ColPos] is not Station matrixStation || matrixStation.Name != station.Name)
                     {
                         return Result.Fail(new InvalidStationName(station.Name));
                     }

@@ -27,7 +27,7 @@ public sealed class Grid : ValueObject
     public int ColDim { get; }
     public int WidthLength { get; }
     public int HeightLength { get; }
-    public readonly PathPoint[,] MapMatrix;
+    private readonly PathPoint[,] _mapMatrix;
 
     private Grid(int rowDim, int colDim, int widthLength, int heightLength, PathPoint[,] mapMatrix)
     {
@@ -35,7 +35,7 @@ public sealed class Grid : ValueObject
         ColDim = colDim;
         WidthLength = widthLength;
         HeightLength = heightLength;
-        MapMatrix = mapMatrix;
+        _mapMatrix = mapMatrix;
     }
 
     public static Result<Grid> Create(
@@ -101,8 +101,14 @@ public sealed class Grid : ValueObject
             return null;
         }
 
-        return MapMatrix[rowPos, colPos];
+        return _mapMatrix[rowPos, colPos];
     }
+
+    /// <summary>
+    /// The point at a position known to be on the grid, for callers walking it by its own
+    /// dimensions. Use <see cref="GetPointAt"/> instead when the position may be off the grid.
+    /// </summary>
+    public PathPoint this[int rowPos, int colPos] => _mapMatrix[rowPos, colPos];
 
     public double GetSquareLength()
     {
@@ -114,6 +120,6 @@ public sealed class Grid : ValueObject
     {
         yield return RowDim;
         yield return ColDim;
-        yield return MapMatrix;
+        yield return _mapMatrix;
     }
 }
