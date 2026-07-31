@@ -23,7 +23,55 @@ public sealed class RgvMap : ValueObject
             return Result.Fail(clusterFlowsResult.Errors);
         }
 
+        var clusterNamesResult = ValidateUniqueClusterNames(clusterFlows);
+        if (clusterNamesResult.IsFailed)
+        {
+            return Result.Fail(clusterNamesResult.Errors);
+        }
+
         return new RgvMap(grid, clusterFlows);
+    }
+
+    private static Result ValidateUniqueClusterNames(List<ClusterFlow> clusterFlows)
+    {
+        Dictionary<string, Cluster> clustersByName = [];
+
+        foreach (var clusterFlow in clusterFlows)
+        {
+            foreach (var cluster in clusterFlow.Clusters)
+            {
+                if (!clustersByName.TryGetValue(cluster.Name, out var namedCluster))
+                {
+                    clustersByName[cluster.Name] = cluster;
+                    continue;
+                }
+
+                if (!IsSameCluster(namedCluster, cluster))
+                {
+                    return Result.Fail(new DuplicateClusterNameError(cluster.Name));
+                }
+            }
+        }
+
+        return Result.Ok();
+    }
+
+    private static bool IsSameCluster(Cluster left, Cluster right)
+    {
+        if (left.PathColor != right.PathColor || left.Stations.Count != right.Stations.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Stations.Count; i++)
+        {
+            if (left.Stations[i] != right.Stations[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static Result ValidateClusterFlows(Grid grid, List<ClusterFlow> clusterFlows)

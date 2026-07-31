@@ -17,14 +17,15 @@ namespace API.Controllers
     [Authorize]
     public class MissionController : ApiBaseController
     {
+        private static readonly JsonSerializerOptions JsonSerializerOptions = new() { PropertyNameCaseInsensitive = true };
+
         private readonly IMissionService _missionService;
         private readonly IRoutePlanningService _routePlanningService;
-        private readonly JsonSerializerOptions _jsonSerializerOptions;
+
         public MissionController(IRoutePlanningService routePlanningService, IMissionService missionService)
         {
             _missionService = missionService;
             _routePlanningService = routePlanningService;
-            _jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
         /// <summary>
@@ -316,11 +317,33 @@ namespace API.Controllers
             [FromForm] CreateRoutePlanningRequest createRoutePlanningRequest
         )
         {
-            RouteMetadata? routeMetadata = JsonSerializer.Deserialize<RouteMetadata>(createRoutePlanningRequest.RouteMetadata, _jsonSerializerOptions);
-
-            if (routeMetadata == null)
+            if (createRoutePlanningRequest.Image is null)
             {
-                return BadRequest();
+                return Problem(
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    title: "Missing image",
+                    detail: "A source factory layout image is required");
+            }
+
+            RouteMetadata? routeMetadata;
+            try
+            {
+                routeMetadata = JsonSerializer.Deserialize<RouteMetadata>(createRoutePlanningRequest.RouteMetadata, JsonSerializerOptions);
+            }
+            catch (JsonException ex)
+            {
+                return Problem(
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    title: "Malformed route metadata",
+                    detail: ex.Message);
+            }
+
+            if (routeMetadata is null)
+            {
+                return Problem(
+                    statusCode: (int)HttpStatusCode.BadRequest,
+                    title: "Missing route metadata",
+                    detail: "Route metadata is required");
             }
 
             var points = routeMetadata.Points;
@@ -349,12 +372,7 @@ namespace API.Controllers
 
             if (routeResult.IsFailed)
             {
-                var error = routeResult.Errors[0];
-                return Problem(
-                    title: error.Message,
-                    statusCode: (int)HttpStatusCode.BadRequest,
-                    detail: (string)error.Metadata["detail"]
-                );
+                return HandleError(routeResult);
             }
 
             return Created();

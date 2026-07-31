@@ -12,6 +12,15 @@ public class ApiBaseController : ControllerBase
             return Ok(result.ValueOrDefault);
         }
 
+        return HandleError(result);
+    }
+
+    /// <summary>
+    /// Maps a failed result to a response for endpoints that build their own success response,
+    /// so an error reports the same status here as it would through <see cref="HandleResult{T}"/>.
+    /// </summary>
+    protected ActionResult HandleError(ResultBase result)
+    {
         var firstError = result.Errors[0];
         return firstError switch
         {
@@ -23,7 +32,8 @@ public class ApiBaseController : ControllerBase
     private ActionResult HandleErrorWithMetadata(IError error)
     {
         var errorType = error.Metadata["code"].ToString();
-        var errorDetail = error.Metadata["detail"].ToString();
+
+        var errorDetail = error.Metadata.TryGetValue("detail", out var detail) ? detail?.ToString() : null;
         return errorType switch
         {
             "Validation" => Problem(statusCode: 400, title: error.Message, detail: errorDetail),
