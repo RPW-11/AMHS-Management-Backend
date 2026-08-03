@@ -33,29 +33,21 @@ public static class ModifiedAStar
         }
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
+        var random = new Random();
 
         for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
-            List<List<PathPoint>> tempPaths = [];
-            List<PathPoint> completePath;
+            var sampler = new ReservoirSampler<List<PathPoint>>(MaxSolutions, random);
 
             foreach (var path in allPaths)
             {
                 foreach (var nextPath in segmentPaths[i])
                 {
-                    completePath = [.. path, .. nextPath.Skip(1)];
-                    tempPaths.Add(completePath);
-                }
-
-                if (tempPaths.Count > MaxSolutions)
-                {
-                    Random random = new();
-
-                    tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+                    sampler.Add(() => [.. path, .. nextPath.Skip(1)]);
                 }
             }
 
-            allPaths = tempPaths;
+            allPaths = sampler.ToList();
         }
 
         return allPaths;
@@ -67,12 +59,13 @@ public static class ModifiedAStar
         int desiredSolutionsPerSegment = Math.Max(1, BaseDesiredSolutions / numSegments);
 
         List<List<PathPoint>> possiblePaths = SolveMultipleTimes(grid, stationsOrder[0], stationsOrder[1], [], desiredSolutionsPerSegment);
+        var random = new Random();
 
         for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
             var startPoint = stationsOrder[i];
             var goalPoint = stationsOrder[(i + 1) % stationsOrder.Count];
-            List<List<PathPoint>> tempPaths = [];
+            var sampler = new ReservoirSampler<List<PathPoint>>(MaxSolutions, random);
 
             foreach (var path in possiblePaths)
             {
@@ -82,18 +75,11 @@ public static class ModifiedAStar
 
                 foreach (var sol in solutions)
                 {
-                    tempPaths.Add([.. path, .. sol.Skip(1)]);
-                }
-
-                if (tempPaths.Count > MaxSolutions)
-                {
-                    Random random = new();
-
-                    tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+                    sampler.Add(() => [.. path, .. sol.Skip(1)]);
                 }
             }
 
-            possiblePaths = tempPaths;
+            possiblePaths = sampler.ToList();
         }
 
         return possiblePaths;

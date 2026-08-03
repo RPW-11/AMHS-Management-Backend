@@ -28,29 +28,21 @@ public static class RandomTreeStar
         }
 
         List<List<PathPoint>> allPaths = segmentPaths[0];
+        var random = new Random();
 
         for (int i = 1; i < stationsOrder.Count - 1; i++)
         {
-            List<List<PathPoint>> tempPaths = [];
-            List<PathPoint> completePath;
+            var sampler = new ReservoirSampler<List<PathPoint>>(MaxSolutions, random);
 
             foreach (var path in allPaths)
             {
                 foreach (var nextPath in segmentPaths[i])
                 {
-                    completePath = [.. path, .. nextPath.Skip(1)];
-                    tempPaths.Add(completePath);
-                }
-
-                if (tempPaths.Count > MaxSolutions)
-                {
-                    Random random = new();
-
-                    tempPaths = [.. tempPaths.OrderBy(x => random.Next()).Take(MaxSolutions)];
+                    sampler.Add(() => [.. path, .. nextPath.Skip(1)]);
                 }
             }
 
-            allPaths = tempPaths;
+            allPaths = sampler.ToList();
         }
 
         return allPaths;
