@@ -2,12 +2,14 @@ using System.Security.Claims;
 using Application.DTOs.Common;
 using Application.DTOs.Notification;
 using Application.Services.NotificationService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
     [Route("api/notifications")]
     [ApiController]
+    [Authorize]
     public class NotificationController : ApiBaseController
     {
         private readonly INotificationService _notificationService;
