@@ -25,9 +25,9 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
     {
         string missionId = mission.Id.ToString();
 
-        var inputImagePath = _routePlanningResultStore.WriteImage(imageBytes, missionId, $"{missionId}-input");
-
         var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
+
+        var inputImagePath = _routePlanningResultStore.WriteImage(imageBytes, missionId, $"{missionId}-input");
         var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, missionId, missionId);
 
         var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, inputImagePath, [imagePath], rgvMap, clusters, clusterFlows, routeSolutions, score);

@@ -76,13 +76,15 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
         var seen = new HashSet<string>();
         List<List<Station>> permutations = [];
 
-        int maxAttempts = count * MaxPermutationAttemptsMultiplier;
+        int target = Math.Min(count, CountDistinctCycles(stations.Count, count));
+
+        int maxAttempts = target * MaxPermutationAttemptsMultiplier;
         int attempts = 0;
 
-        while (permutations.Count < count && attempts < maxAttempts)
+        while (permutations.Count < target && attempts < maxAttempts)
         {
             attempts++;
-            var shuffled = stations.OrderBy(_ => random.Next()).ToList();
+            List<Station> shuffled = [stations[0], .. stations.Skip(1).OrderBy(_ => random.Next())];
             var signature = string.Join(",", shuffled.Select(s => s.Name));
 
             if (seen.Add(signature))
@@ -92,6 +94,27 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
         }
 
         return permutations;
+    }
+
+    /// <summary>
+    /// (stationCount - 1)!, stopping as soon as it reaches <paramref name="cap"/> so a cluster with
+    /// many stations neither overflows nor computes a number far larger than the sample size.
+    /// </summary>
+    private static int CountDistinctCycles(int stationCount, int cap)
+    {
+        long cycles = 1;
+
+        for (int i = 2; i < stationCount; i++)
+        {
+            cycles *= i;
+
+            if (cycles >= cap)
+            {
+                return cap;
+            }
+        }
+
+        return (int)cycles;
     }
 
     private static (Station Start, Station End) FindNearestConnector(IReadOnlyList<Station> from, IReadOnlyList<Station> to)
