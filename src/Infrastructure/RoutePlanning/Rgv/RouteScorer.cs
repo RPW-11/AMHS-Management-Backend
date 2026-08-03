@@ -8,9 +8,6 @@ public class RouteScorer : IRouteScorer
 {
     public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteSolvePurpose purpose)
     {
-        var (throughput, trackLength, numOfRgvs, optimality) =
-            RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder, RouteFitnessWeights.For(purpose));
-
-        return new(throughput, trackLength, numOfRgvs, optimality);
+        return RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder, RouteFitnessWeights.For(purpose));
     }
 }

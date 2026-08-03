@@ -267,7 +267,7 @@ public class GeneticAlgorithmSolver
         int foreignStationVisits = CountForeignStationVisits(solution);
         var (conflictRate, alignmentRate) = EvaluateRouteOverlap(solution);
 
-        return RouteEvaluator.GetSolutionScores(solution, _routeMetrics, _fitnessWeights).optimality
+        return RouteEvaluator.GetSolutionScores(solution, _routeMetrics, _fitnessWeights).Optimality
             - DuplicateRoutePenaltyRate * duplicateRate
             - TurnPenaltyRate * turnRate
             - ConflictPenaltyRate * conflictRate

@@ -1,3 +1,4 @@
+using Application.DTOs.RoutePlanning;
 using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
@@ -27,10 +28,10 @@ internal static class RouteEvaluator
         return new RouteMetrics(grid.GetSquareLength(), maxStationTime);
     }
 
-    public static (double throughput, double trackLength, int numOfRgvs, double optimality) GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteFitnessWeights weights) =>
+    public static RoutePlanningScoreDto GetSolutionScores(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteFitnessWeights weights) =>
         GetSolutionScores(solution, GetRouteMetrics(grid, stationsOrder), weights);
 
-    public static (double throughput, double trackLength, int numOfRgvs, double optimality) GetSolutionScores(List<PathPoint> solution, RouteMetrics metrics, RouteFitnessWeights weights)
+    public static RoutePlanningScoreDto GetSolutionScores(List<PathPoint> solution, RouteMetrics metrics, RouteFitnessWeights weights)
     {
         double trackLength = solution.Count * metrics.SquareLength;
         double travelTime = trackLength / RgvSpeed;
@@ -46,6 +47,6 @@ internal static class RouteEvaluator
 
         double optimality = weights.ThroughputWeight * totalThroughput + weights.LengthWeight * 1 / trackLength + weights.NumOfRgvsWeight * 1 / maxRgvs;
 
-        return (totalThroughput, trackLength, maxRgvs, optimality);
+        return new RoutePlanningScoreDto(totalThroughput, trackLength, maxRgvs, optimality);
     }
 }
