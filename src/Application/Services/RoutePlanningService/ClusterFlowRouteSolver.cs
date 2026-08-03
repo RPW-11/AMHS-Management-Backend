@@ -5,17 +5,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
 
-public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlowRouteSolver> logger) : IClusterFlowRouteSolver
+public class ClusterFlowRouteSolver(IRouteScorer routeScorer, ILogger<ClusterFlowRouteSolver> logger) : IClusterFlowRouteSolver
 {
-    private const int ClusterGenerationsNumber = 100;
-    private const int ConnectorGenerationsNumber = 300;
     private const int ClusterPermutationSampleSize = 6;
     private const int MaxPermutationAttemptsMultiplier = 20;
 
-    private readonly IRouteSolver _routeSolver = routeSolver;
+    private readonly IRouteScorer _routeScorer = routeScorer;
     private readonly ILogger<ClusterFlowRouteSolver> _logger = logger;
 
-    public List<PathPoint> SolveClusterRoute(Grid grid, Cluster cluster, RoutePlanningAlgorithm algorithm, List<List<PathPoint>> currentRoutes)
+    public List<PathPoint> SolveClusterRoute(Grid grid, Cluster cluster, IPathfindingStrategy strategy, List<List<PathPoint>> currentRoutes)
     {
         _logger.LogInformation("Solving cluster {ClusterName}", cluster.Name);
 
@@ -32,16 +30,14 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
             // Close the loop by returning to the first station of this permutation.
             List<PathPoint> loopStationsOrder = [.. permutation.Cast<PathPoint>(), permutation[0]];
 
-            var solveResult = _routeSolver.Solve(
+            var solveResult = strategy.Solve(
                 grid,
                 loopStationsOrder,
                 currentRoutes,
-                algorithm,
-                ClusterGenerationsNumber,
                 RouteSolvePurpose.ClusterLoop);
 
             List<PathPoint> candidateResult = [.. solveResult];
-            var score = _routeSolver.GetRouteScore(candidateResult, grid, loopStationsOrder, RouteSolvePurpose.ClusterLoop);
+            var score = _routeScorer.GetRouteScore(candidateResult, grid, loopStationsOrder, RouteSolvePurpose.ClusterLoop);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
             {
@@ -53,18 +49,16 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
         return bestResult!;
     }
 
-    public List<PathPoint> SolveConnectorRoute(Grid grid, Cluster from, Cluster to, RoutePlanningAlgorithm algorithm, List<List<PathPoint>> currentRoutes)
+    public List<PathPoint> SolveConnectorRoute(Grid grid, Cluster from, Cluster to, IPathfindingStrategy strategy, List<List<PathPoint>> currentRoutes)
     {
         _logger.LogInformation("Solving connector for cluster {SrcClusterName} to {DstClusterName}", from.Name, to.Name);
 
         var (start, end) = FindNearestConnector(from.Stations, to.Stations);
 
-        var solveResult = _routeSolver.Solve(
+        var solveResult = strategy.Solve(
             grid,
             [start, end],
             currentRoutes,
-            algorithm,
-            ConnectorGenerationsNumber,
             RouteSolvePurpose.Connector);
 
         return [.. solveResult];
@@ -96,10 +90,6 @@ public class ClusterFlowRouteSolver(IRouteSolver routeSolver, ILogger<ClusterFlo
         return permutations;
     }
 
-    /// <summary>
-    /// (stationCount - 1)!, stopping as soon as it reaches <paramref name="cap"/> so a cluster with
-    /// many stations neither overflows nor computes a number far larger than the sample size.
-    /// </summary>
     private static int CountDistinctCycles(int stationCount, int cap)
     {
         long cycles = 1;

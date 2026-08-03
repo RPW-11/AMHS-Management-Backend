@@ -61,7 +61,11 @@ public static class DependencyInjection
         // Register dependencies
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
-        services.AddSingleton<IRouteSolver, RouteSolver>();
+        // Register a strategy per supported algorithm; the provider keys them by Algorithm.
+        services.AddSingleton<IPathfindingStrategy, GeneticAlgorithmStrategy>();
+        services.AddSingleton<IPathfindingStrategyProvider, PathfindingStrategyProvider>();
+        
+        services.AddSingleton<IRouteScorer, RouteScorer>();
         services.AddSingleton<ISourceImageValidator, SkiaSourceImageValidator>();
         services.AddSingleton<IRoutePlanningResultStore, S3RoutePlanningResultStore>();
         services.AddSingleton<INotificationHub, NotificationHub>();

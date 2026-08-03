@@ -14,7 +14,8 @@ namespace Application.Services.RoutePlanningService;
 
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
-    private readonly IRouteSolver _routeSolver;
+    private readonly IPathfindingStrategyProvider _strategyProvider;
+    private readonly IRouteScorer _routeScorer;
     private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
     private readonly IRouteResultPersister _routeResultPersister;
     private readonly ISourceImageValidator _sourceImageValidator;
@@ -23,7 +24,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private readonly IDomainDispatcher _domainDispatcher;
     private readonly ILogger<RoutePlanningService> _logger;
 
-    public RoutePlanningService(IRouteSolver routeSolver,
+    public RoutePlanningService(IPathfindingStrategyProvider strategyProvider,
+                                IRouteScorer routeScorer,
                                 IClusterFlowRouteSolver clusterFlowRouteSolver,
                                 IRouteResultPersister routeResultPersister,
                                 ISourceImageValidator sourceImageValidator,
@@ -34,7 +36,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 ILogger<RoutePlanningService> logger)
                                 : base(unitOfWork)
     {
-        _routeSolver = routeSolver;
+        _strategyProvider = strategyProvider;
+        _routeScorer = routeScorer;
         _clusterFlowRouteSolver = clusterFlowRouteSolver;
         _routeResultPersister = routeResultPersister;
         _sourceImageValidator = sourceImageValidator;
@@ -100,89 +103,29 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(imageResult.Errors);
         }
 
-        var pathPointsResult = RequireValid(ToPathPoints(points), "Invalid path points");
-        if (pathPointsResult.IsFailed)
-        {
-            return Result.Fail(pathPointsResult.Errors);
-        }
-
-        List<PathPoint> pathPoints = pathPointsResult.Value;
-
         var algorithmResult = RequireValid(RoutePlanningAlgorithm.FromString(algorithm), $"Unsupported or invalid algorithm '{algorithm}'");
         if (algorithmResult.IsFailed)
         {
             return Result.Fail(algorithmResult.Errors);
         }
 
-        var pointLookup = pathPoints.ToDictionary(p => (p.RowPos, p.ColPos), p => p);
-
-        List<Cluster> resolvedClusters = [];
-        foreach (var clusterDto in clusters)
+        var strategyResult = _strategyProvider.GetStrategy(algorithmResult.Value);
+        if (strategyResult.IsFailed)
         {
-            List<Station> stations = [];
-            foreach (var position in clusterDto.Stations)
-            {
-                if (!pointLookup.TryGetValue((position.RowPos, position.ColPos), out var point))
-                {
-                    _logger.LogWarning("Cluster station at ({Row},{Col}) does not match any known point",
-                        position.RowPos, position.ColPos);
-                    return Result.Fail(ApplicationError.Validation(
-                        $"Cluster station at ({position.RowPos},{position.ColPos}) does not match any known point"));
-                }
-
-                if (point is not Station station)
-                {
-                    _logger.LogWarning("Point at ({Row},{Col}) is not a station", position.RowPos, position.ColPos);
-                    return Result.Fail(ApplicationError.Validation(
-                        $"Point at ({position.RowPos},{position.ColPos}) is not a station"));
-                }
-
-                stations.Add(station);
-            }
-
-            var clusterResult = RequireValid(Cluster.Create(clusterDto.Name, clusterDto.ArrowColor, stations, []), "Failed to create cluster");
-            if (clusterResult.IsFailed)
-            {
-                return Result.Fail(clusterResult.Errors);
-            }
-
-            resolvedClusters.Add(clusterResult.Value);
+            _logger.LogWarning("Algorithm '{Algorithm}' has no registered strategy", algorithm);
+            return Result.Fail(strategyResult.Errors);
         }
 
-        List<ClusterFlow> resolvedClusterFlows = [];
-        foreach (var clusterFlowDto in clusterFlows)
-        {
-            List<Cluster> orderedClusters = [];
-            foreach (var clusterIdx in clusterFlowDto.ClusterOrder)
-            {
-                if (clusterIdx < 0 || clusterIdx >= resolvedClusters.Count)
-                {
-                    _logger.LogWarning("Cluster flow references an out-of-range cluster index: {ClusterIdx}", clusterIdx);
-                    return Result.Fail(ApplicationError.Validation(
-                        $"A cluster flow references an out-of-range cluster index: {clusterIdx}"));
-                }
+        var rgvMapResult = new RgvMapBuilder()
+            .WithGrid(rowDim, colDim, widthLength, heightLength)
+            .WithPoints(points)
+            .WithClusters(clusters)
+            .WithClusterFlows(clusterFlows)
+            .Build();
 
-                orderedClusters.Add(resolvedClusters[clusterIdx]);
-            }
-
-            var clusterFlowResult = RequireValid(ClusterFlow.Create(clusterFlowDto.ArrowColor, orderedClusters, []), "Failed to create cluster flow");
-            if (clusterFlowResult.IsFailed)
-            {
-                return Result.Fail(clusterFlowResult.Errors);
-            }
-
-            resolvedClusterFlows.Add(clusterFlowResult.Value);
-        }
-
-        var gridResult = RequireValid(Grid.Create(rowDim, colDim, widthLength, heightLength, pathPoints), "Failed to create grid");
-        if (gridResult.IsFailed)
-        {
-            return Result.Fail(gridResult.Errors);
-        }
-
-        var rgvMapResult = RequireValid(RgvMap.Create(gridResult.Value, resolvedClusterFlows), "Failed to create RGV map");
         if (rgvMapResult.IsFailed)
         {
+            _logger.LogWarning("Failed to build the RGV map: {ErrorMessage}", rgvMapResult.Errors[0].Message);
             return Result.Fail(rgvMapResult.Errors);
         }
 
@@ -240,7 +183,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
             await ExecuteRoutePlanning(
                 domainDispatcher, unitOfWork, missionRepository, jobMissionResult.Value,
-                rgvMap, algorithmResult.Value, imageBytes);
+                rgvMap, strategyResult.Value, imageBytes);
         }, out _);
 
         if (!enqueued)
@@ -282,17 +225,13 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         IMissionRepository missionRepository,
         MissionBase mission,
         RgvMap rgvMap,
-        RoutePlanningAlgorithm algorithm,
+        IPathfindingStrategy strategy,
         byte[] imageBytes)
     {
         try
         {
-            // Solve each cluster's own route once and reuse it wherever the same cluster
-            // reappears (e.g. a looping flow like C1 -> C2 -> C1).
             var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
 
-            // Every already-solved segment (cluster loops + connectors) is fed into subsequent
-            // solves so the GA can penalize new routes that traverse an existing one in reverse.
             List<List<PathPoint>> solvedRouteSegments = [];
 
             List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
@@ -309,7 +248,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                 {
                     if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
                     {
-                        clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, algorithm, solvedRouteSegments);
+                        clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, strategy, solvedRouteSegments);
                         clusterSolutionCache[cluster] = clusterSolution;
                         solvedRouteSegments.Add(clusterSolution);
                     }
@@ -326,13 +265,11 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
                 for (int i = 0; i < solvedClusters.Count - 1; i++)
                 {
-                    var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], algorithm, solvedRouteSegments);
+                    var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], strategy, solvedRouteSegments);
                     solvedRouteSegments.Add(connectorSolution);
                     connectorSolutions.Add(connectorSolution);
                     combinedSolution.AddRange(connectorSolution);
 
-                    // Draw each connector as its own polyline so unrelated connectors in a
-                    // multi-hop flow don't get joined by an unsolved straight line.
                     routes.Add((connectorSolution, clusterFlow.PathColor));
                 }
 
@@ -345,10 +282,10 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             var solvedRgvMap = RequireSolved(
                 RgvMap.Create(rgvMap.Grid, solvedClusterFlows),
                 "Failed to rebuild solved RGV map");
-            var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
+            var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
 
             _routeResultPersister.Persist(
-                mission, rgvMap.Grid, algorithm, imageBytes, routes,
+                mission, rgvMap.Grid, strategy.Algorithm, imageBytes, routes,
                 ToRgvMapDetailDto(solvedRgvMap.Grid),
                 ToClusterDefinitionDtos(rgvMap),
                 ToClusterFlowDefinitionDtos(rgvMap),
@@ -433,36 +370,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             _ => new PathPointDto("", "path", new(point.RowPos, point.ColPos), 0)
         };
 
-    private static Result<List<PathPoint>> ToPathPoints(IEnumerable<PathPointDto> points)
-    {
-        List<PathPoint> pathPoints = [];
-        foreach (var point in points)
-        {
-            var pointResult = PointFactory.Create(
-                GetPointCategoryFromString(point.Category),
-                point.Position.RowPos,
-                point.Position.ColPos,
-                point.Name,
-                point.Time
-            );
-
-            if (pointResult.IsFailed)
-            {
-                return Result.Fail(pointResult.Errors);
-            }
-
-            pathPoints.Add(pointResult.Value);
-        }
-
-        return Result.Ok(pathPoints);
-    }
-
-    /// <summary>
-    /// Unwraps a factory result whose inputs have already been validated during enqueueing, so a
-    /// failure here means a domain invariant broke while solving rather than bad user input.
-    /// Throws so <see cref="ExecuteRoutePlanning"/>'s catch marks the mission Failed, with the
-    /// rejected factory named instead of an opaque FluentResults exception.
-    /// </summary>
     private static T RequireSolved<T>(Result<T> result, string context)
     {
         if (result.IsFailed)
@@ -477,19 +384,14 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     {
         if (result.IsFailed)
         {
-            _logger.LogWarning("{Context}: {ErrorMessage}", context, result.Errors[0].Message);
-            return Result.Fail<T>(ApplicationError.Validation(result.Errors[0].Message));
+            var error = result.Errors[0];
+            _logger.LogWarning("{Context}: {ErrorMessage}", context, error.Message);
+
+            string detail = error.Metadata.TryGetValue("detail", out var value) ? value?.ToString() ?? "" : "";
+
+            return Result.Fail<T>(new ApplicationError(error.Message, "Validation", detail));
         }
 
         return result;
     }
-
-    private static PointCategory GetPointCategoryFromString(string category) =>
-        category.ToLower() switch
-        {
-            "obs" => PointCategory.Obstacle,
-            "st" => PointCategory.Station,
-            _ => PointCategory.Path
-        };
-
 }
