@@ -21,9 +21,18 @@ public class ClusterFlow : ValueObject
     {
         for (int i = 0; i < clusters.Count - 1; i++)
         {
-            if (clusters[i].Name == clusters[i + 1].Name)
+            var from = clusters[i];
+            var to = clusters[i + 1];
+
+            if (from.Name == to.Name)
             {
-                return Result.Fail(new AdjacentDuplicateClusterError(clusters[i].Name));
+                return Result.Fail(new AdjacentDuplicateClusterError(from.Name));
+            }
+
+            var sharedStation = from.Stations.FirstOrDefault(to.Stations.Contains);
+            if (sharedStation is not null)
+            {
+                return Result.Fail(new SharedStationBetweenAdjacentClustersError(from.Name, to.Name, sharedStation.Name));
             }
         }
 
