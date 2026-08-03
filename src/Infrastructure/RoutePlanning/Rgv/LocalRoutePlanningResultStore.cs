@@ -43,9 +43,9 @@ public class LocalRoutePlanningResultStore(IOptions<RoutePlanningSettings> route
         }
     }
 
-    public string WriteImage(byte[] imageBytes, string missionId, string fileName)
+    public string WriteImage(byte[] imageBytes, string missionId, RouteImageKind kind)
     {
-        string outputPath = System.IO.Path.Combine(_localRoutePlanningDirectory, fileName + ".png");
+        string outputPath = System.IO.Path.Combine(_localRoutePlanningDirectory, kind.ToFileStem(missionId) + ".png");
 
         Directory.CreateDirectory(_localRoutePlanningDirectory);
         File.WriteAllBytes(outputPath, imageBytes);

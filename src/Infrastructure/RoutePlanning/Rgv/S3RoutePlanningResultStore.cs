@@ -49,9 +49,9 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
         }
     }
 
-    public string WriteImage(byte[] imageBytes, string missionId, string fileName)
+    public string WriteImage(byte[] imageBytes, string missionId, RouteImageKind kind)
     {
-        string key = $"{missionId}/{fileName}.png";
+        string key = $"{missionId}/{kind.ToFileStem(missionId)}.png";
 
         UploadAsync(key, imageBytes, "image/png").GetAwaiter().GetResult();
 
@@ -60,7 +60,9 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
 
     public string GetResultImageUrl(string missionId)
     {
-        return GetPresignedUrl($"{missionId}/{missionId}.png", $"attachment; filename=\"{missionId}.png\"");
+        string stem = RouteImageKind.Solved.ToFileStem(missionId);
+
+        return GetPresignedUrl($"{missionId}/{stem}.png", $"attachment; filename=\"{stem}.png\"");
     }
 
     public string GetResultJsonUrl(string missionId)

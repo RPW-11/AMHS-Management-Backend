@@ -10,7 +10,7 @@ public interface IRoutePlanningResultStore
         Grid grid,
         List<(List<PathPoint> Solution, string ArrowColor)> routes);
 
-    string WriteImage(byte[] imageBytes, string missionId, string fileName);
+    string WriteImage(byte[] imageBytes, string missionId, RouteImageKind kind);
 
     string GetResultImageUrl(string missionId);
 
