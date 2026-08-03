@@ -350,16 +350,16 @@ namespace API.Controllers
             var clusters = routeMetadata.Clusters;
             var clusterFlows = routeMetadata.ClusterFlows;
 
-            byte[] imageBytes;
-            using (var imageStream = new MemoryStream())
+            byte[] imageBytes = new byte[createRoutePlanningRequest.Image.Length];
+            using (var imageStream = createRoutePlanningRequest.Image.OpenReadStream())
             {
-                createRoutePlanningRequest.Image.CopyTo(imageStream);
-                imageBytes = imageStream.ToArray();
+                await imageStream.ReadExactlyAsync(imageBytes);
             }
 
             var routeResult = await _routePlanningService.EnqueueRoutePlanning(new RoutePlanningRequest(
                 id,
                 imageBytes,
+                createRoutePlanningRequest.Image.ContentType,
                 routeMetadata.Algorithm,
                 routeMetadata.RowDim,
                 routeMetadata.ColDim,

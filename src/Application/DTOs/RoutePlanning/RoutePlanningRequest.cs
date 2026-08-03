@@ -3,6 +3,7 @@ namespace Application.DTOs.RoutePlanning;
 public record RoutePlanningRequest(
     string MissionId,
     byte[] ImageBytes,
+    string? ImageContentType,
     string Algorithm,
     int RowDim,
     int ColDim,

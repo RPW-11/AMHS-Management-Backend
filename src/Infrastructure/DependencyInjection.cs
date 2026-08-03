@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddAuth(configuration);
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IRouteSolver, RouteSolver>();
+        services.AddSingleton<ISourceImageValidator, SkiaSourceImageValidator>();
         services.AddSingleton<IRoutePlanningResultStore, S3RoutePlanningResultStore>();
         services.AddSingleton<INotificationHub, NotificationHub>();
         services.AddSingleton<IBackgroundJobHub, BackgroundJobHub>();

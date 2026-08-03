@@ -17,6 +17,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private readonly IRouteSolver _routeSolver;
     private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
     private readonly IRouteResultPersister _routeResultPersister;
+    private readonly ISourceImageValidator _sourceImageValidator;
     private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
     private readonly IDomainDispatcher _domainDispatcher;
@@ -25,6 +26,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     public RoutePlanningService(IRouteSolver routeSolver,
                                 IClusterFlowRouteSolver clusterFlowRouteSolver,
                                 IRouteResultPersister routeResultPersister,
+                                ISourceImageValidator sourceImageValidator,
                                 IBackgroundJobHub backgroundJobHub,
                                 IMissionRepository missionRepository,
                                 IDomainDispatcher domainDispatcher,
@@ -35,6 +37,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         _routeSolver = routeSolver;
         _clusterFlowRouteSolver = clusterFlowRouteSolver;
         _routeResultPersister = routeResultPersister;
+        _sourceImageValidator = sourceImageValidator;
         _backgroundJobHub = backgroundJobHub;
         _missionRepository = missionRepository;
         _domainDispatcher = domainDispatcher;
@@ -43,7 +46,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
     public async Task<Result> EnqueueRoutePlanning(RoutePlanningRequest request)
     {
-        var (missionId, imageBytes, algorithm, rowDim, colDim, widthLength, heightLength, points, clusters, clusterFlows) = request;
+        var (missionId, imageBytes, imageContentType, algorithm, rowDim, colDim, widthLength, heightLength, points, clusters, clusterFlows) = request;
 
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
@@ -89,6 +92,13 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
 
         _logger.LogDebug("Mission validated | Category: {Category} | Name: {Name}",
             missionResult.Value.Category, missionResult.Value.Name ?? "(no name)");
+
+        var imageResult = _sourceImageValidator.Validate(imageBytes, imageContentType);
+        if (imageResult.IsFailed)
+        {
+            _logger.LogWarning("Rejected source layout image: {ErrorMessage}", imageResult.Errors[0].Message);
+            return Result.Fail(imageResult.Errors);
+        }
 
         var pathPointsResult = RequireValid(ToPathPoints(points), "Invalid path points");
         if (pathPointsResult.IsFailed)
