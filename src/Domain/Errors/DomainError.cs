@@ -8,12 +8,12 @@ public class DomainError : IError
     public string Message { get; }
     public Dictionary<string, object> Metadata { get; }
 
-    public DomainError(string message, string statusCode, string detail = "")
+    public DomainError(string message, string domainCode, string detail = "")
     {
         Reasons = [];
         Message = message;
         Metadata = new Dictionary<string, object> {
-            { "statusCode", statusCode },
+            { "domainCode", domainCode },
             { "detail", detail }
         };
     }
