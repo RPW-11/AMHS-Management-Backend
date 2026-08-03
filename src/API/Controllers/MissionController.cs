@@ -95,7 +95,7 @@ namespace API.Controllers
         /// </summary>
         /// <param name="id">The mission id.</param>
         [HttpGet("{id}/members")]
-        public async Task<ActionResult<IEnumerable<MissionDto>>> GetMissionMembers(string id)
+        public async Task<ActionResult<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string id)
         {
             var missionMembersResult = await _missionService.GetMissionMembers(id);
 
@@ -187,7 +187,7 @@ namespace API.Controllers
         /// <param name="id">The mission id.</param>
         /// <param name="memberId">The employee id to add.</param>
         [HttpPatch("{id}/members/add/{memberId}")]
-        public async Task<ActionResult> AddMemberToMissionHandler(string id, string memberId)
+        public async Task<ActionResult> AddMemberToMission(string id, string memberId)
         {
             var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -210,7 +210,7 @@ namespace API.Controllers
         /// <param name="id">The mission id.</param>
         /// <param name="memberId">The employee id to remove.</param>
         [HttpPatch("{id}/members/delete/{memberId}")]
-        public async Task<ActionResult> DeleteMemberToMissionHandler(string id, string memberId)
+        public async Task<ActionResult> DeleteMemberFromMission(string id, string memberId)
         {
             var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -235,7 +235,7 @@ namespace API.Controllers
         /// <param name="memberId">The employee id whose role is being changed.</param>
         /// <param name="changeMemberRoleRequest">The new role to assign.</param>
         [HttpPatch("{id}/members/changeRole/{memberId}")]
-        public async Task<ActionResult> ChangeRoleMemberHandler(string id, string memberId, ChangeMemberRoleRequest changeMemberRoleRequest)
+        public async Task<ActionResult> ChangeMemberRole(string id, string memberId, ChangeMemberRoleRequest changeMemberRoleRequest)
         {
             var employeeId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
