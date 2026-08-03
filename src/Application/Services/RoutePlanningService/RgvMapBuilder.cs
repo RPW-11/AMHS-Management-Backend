@@ -156,7 +156,7 @@ public sealed class RgvMapBuilder
         foreach (var point in points)
         {
             var pointResult = PointFactory.Create(
-                GetPointCategoryFromString(point.Category),
+                PointCategory.FromString(point.Category),
                 point.Position.RowPos,
                 point.Position.ColPos,
                 point.Name,
@@ -172,14 +172,6 @@ public sealed class RgvMapBuilder
 
         return Result.Ok(pathPoints);
     }
-
-    private static PointCategory GetPointCategoryFromString(string category) =>
-        category.ToLower() switch
-        {
-            "obs" => PointCategory.Obstacle,
-            "st" => PointCategory.Station,
-            _ => PointCategory.Path
-        };
 
     private static Result<T> AsValidation<T>(ResultBase failed)
     {

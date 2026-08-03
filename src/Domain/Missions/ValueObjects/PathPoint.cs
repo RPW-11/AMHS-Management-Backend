@@ -30,12 +30,12 @@ public abstract class PathPoint : ValueObject
     public int RowPos { get; }
     public int ColPos { get; }
 
+    public abstract PointCategory Category { get; }
+
     public override int GetHashCode() => _hashCode;
 
     public override bool Equals(object? obj)
     {
-        // The grid holds one instance per cell and every solver point comes from it, so almost
-        // every comparison is between the same instance and stops here.
         if (ReferenceEquals(this, obj))
         {
             return true;
@@ -59,6 +59,8 @@ public class Station(int rowPos, int colPos, string name, double processingTime)
     public string Name { get; } = name;
     public double ProcessingTime { get; } = processingTime;
 
+    public override PointCategory Category => PointCategory.Station;
+
     protected override bool HasSameDetails(PathPoint other) =>
         other is Station station
             && Name == station.Name
@@ -75,6 +77,8 @@ public class Station(int rowPos, int colPos, string name, double processingTime)
 
 public class Obstacle(int rowPos, int colPos) : PathPoint(rowPos, colPos)
 {
+    public override PointCategory Category => PointCategory.Obstacle;
+
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return RowPos;
@@ -84,6 +88,8 @@ public class Obstacle(int rowPos, int colPos) : PathPoint(rowPos, colPos)
 
 public class Path(int rowPos, int colPos) : PathPoint(rowPos, colPos)
 {
+    public override PointCategory Category => PointCategory.Path;
+
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return RowPos;
@@ -91,40 +97,35 @@ public class Path(int rowPos, int colPos) : PathPoint(rowPos, colPos)
     }
 }
 
-public enum PointCategory
-{
-    Station,
-    Obstacle,
-    Path
-}
-
 public static class PointFactory
 {
     public static Result<PathPoint> Create(PointCategory pointCategory, int rowPos, int colPos, string? name, double? processingTime)
     {
-        switch (pointCategory)
+        if (pointCategory == PointCategory.Station)
         {
-            case PointCategory.Station:
-                if (name is null)
-                {
-                    return Result.Fail<PathPoint>("Station requires a name.");
-                }
+            if (name is null)
+            {
+                return Result.Fail<PathPoint>("Station requires a name.");
+            }
 
-                if (processingTime is null)
-                {
-                    return Result.Fail<PathPoint>("Station requires a processing time.");
-                }
+            if (processingTime is null)
+            {
+                return Result.Fail<PathPoint>("Station requires a processing time.");
+            }
 
-                return Result.Ok<PathPoint>(new Station(rowPos, colPos, name, processingTime.Value));
-
-            case PointCategory.Obstacle:
-                return Result.Ok<PathPoint>(new Obstacle(rowPos, colPos));
-
-            case PointCategory.Path:
-                return Result.Ok<PathPoint>(new Path(rowPos, colPos));
-
-            default:
-                return Result.Fail<PathPoint>($"Unknown path point category: {pointCategory}");
+            return Result.Ok<PathPoint>(new Station(rowPos, colPos, name, processingTime.Value));
         }
+
+        if (pointCategory == PointCategory.Obstacle)
+        {
+            return Result.Ok<PathPoint>(new Obstacle(rowPos, colPos));
+        }
+
+        if (pointCategory == PointCategory.Path)
+        {
+            return Result.Ok<PathPoint>(new Path(rowPos, colPos));
+        }
+
+        return Result.Fail<PathPoint>($"Unknown path point category: {pointCategory}");
     }
 }
