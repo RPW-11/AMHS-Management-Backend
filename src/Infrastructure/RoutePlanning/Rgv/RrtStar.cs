@@ -2,7 +2,7 @@ using Domain.Missions.ValueObjects;
 
 namespace Infrastructure.RoutePlanning.Rgv;
 
-public static class RandomTreeStar
+public static class RrtStar
 {
     private const int MaxSolutions = 100;
     private const int NumVariationsPerSegment = 6;
@@ -15,7 +15,7 @@ public static class RandomTreeStar
     private const double DensifyPerturbation = 0.5;
     private const double DensifyDecayRate = 50.0;
 
-    public static List<List<PathPoint>> GenerateRRTSolutions(Grid grid, List<PathPoint> stationsOrder)
+    public static List<List<PathPoint>> GenerateSolutions(Grid grid, List<PathPoint> stationsOrder)
     {
         List<List<List<PathPoint>>> segmentPaths = [];
 
@@ -139,7 +139,7 @@ public static class RandomTreeStar
 
                     if (parentMap.ContainsKey(goal))
                     {
-                        var path = ReconstructRRTPath(parentMap, goal);
+                        var path = ReconstructPath(parentMap, goal);
                         var densifiedPath = DensifyPath(grid, path);
 
                         if (densifiedPath is not null)
@@ -222,7 +222,7 @@ public static class RandomTreeStar
         return nearby;
     }
 
-    // RRT tree nodes are up to StepSize cells apart, but a solution is only usable if every
+    // Tree nodes are up to StepSize cells apart, but a solution is only usable if every
     // consecutive pair of points is a single orthogonal step - otherwise it is rejected outright
     // as disconnected. Fill in the gaps with a near-deterministic A* so the tree's overall shape
     // is preserved while the result becomes a genuine cell-by-cell route.
@@ -253,7 +253,7 @@ public static class RandomTreeStar
         return densifiedPath;
     }
 
-    private static List<PathPoint> ReconstructRRTPath(Dictionary<PathPoint, PathPoint?> parentMap, PathPoint end)
+    private static List<PathPoint> ReconstructPath(Dictionary<PathPoint, PathPoint?> parentMap, PathPoint end)
     {
         var path = new List<PathPoint>();
         var current = end;

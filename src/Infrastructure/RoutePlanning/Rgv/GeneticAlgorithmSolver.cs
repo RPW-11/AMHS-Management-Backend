@@ -63,7 +63,7 @@ public class GeneticAlgorithmSolver
         _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations", _stationsOrder.Count);
         List<Individual> population = [
             .. ModifiedAStar.GetValidSolutions(_grid, _stationsOrder).Select(CreateIndividual),
-            .. RandomTreeStar.GenerateRRTSolutions(_grid, _stationsOrder).Select(CreateIndividual)
+            .. RrtStar.GenerateSolutions(_grid, _stationsOrder).Select(CreateIndividual)
         ];
 
         while (population.Count < PopulationSize)
