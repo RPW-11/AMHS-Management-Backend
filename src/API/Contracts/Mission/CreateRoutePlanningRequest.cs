@@ -15,6 +15,5 @@ public record RouteMetadata(
     string Algorithm,
     IEnumerable<ClusterDto> Clusters,
     IEnumerable<ClusterFlowDto> ClusterFlows,
-    IEnumerable<IEnumerable<PointPositionDto>> SampleSolutions,
     IEnumerable<PathPointDto> Points
 );
