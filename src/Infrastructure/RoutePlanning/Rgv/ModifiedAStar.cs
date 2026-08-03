@@ -134,7 +134,6 @@ public static class ModifiedAStar
         foreach (var config in configurations)
         {
             int runs = Math.Max(1, (int)Math.Round(desiredSolutions * config.Weight));
-            List<int> lengths = [];
 
             for (int i = 0; i < runs; i++)
             {
@@ -146,7 +145,6 @@ public static class ModifiedAStar
                 if (solution is not null)
                 {
                     allSolutions.Add(solution);
-                    lengths.Add(solution.Count);
                 }
 
                 if (allSolutions.Count >= desiredSolutions)

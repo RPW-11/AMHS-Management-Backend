@@ -62,9 +62,15 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         var missionResult = await _missionRepository.GetMissionByIdAsync(missionIdResult.Value);
-        if (missionResult.Value is null)
+        if (missionResult.IsFailed)
         {
             _logger.LogError("Failed to load mission from repository: {ErrorMessage}", missionResult.Errors[0].Message);
+            return Result.Fail(ApplicationError.Internal);
+        }
+
+        if (missionResult.Value is null)
+        {
+            _logger.LogWarning("Mission not found");
             return Result.Fail(ApplicationError.NotFound("Mission is not found"));
         }
 
@@ -207,6 +213,15 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
 
             var jobMissionResult = await missionRepository.GetMissionByIdAsync(parsedMissionId);
+            if (jobMissionResult.IsFailed)
+            {
+                // Nothing to flip to Failed: the mission could not be loaded, so it stays
+                // Processing until the reconciliation sweep picks it up.
+                _logger.LogError("Failed to reload mission {MissionId} for its route planning job: {ErrorMessage}",
+                    parsedMissionId, jobMissionResult.Errors[0].Message);
+                return;
+            }
+
             if (jobMissionResult.Value is null)
             {
                 _logger.LogError("Mission {MissionId} no longer exists, abandoning its route planning job", parsedMissionId);
@@ -289,7 +304,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                         solvedRouteSegments.Add(clusterSolution);
                     }
 
-                    var solvedCluster = Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution).Value;
+                    var solvedCluster = RequireSolved(
+                        Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution),
+                        $"Failed to rebuild solved cluster '{cluster.Name}'");
                     solvedClusters.Add(solvedCluster);
 
                     routes.Add((clusterSolution, cluster.PathColor));
@@ -309,11 +326,15 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                     routes.Add((connectorSolution, clusterFlow.PathColor));
                 }
 
-                var solvedClusterFlow = ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, connectorSolutions).Value;
+                var solvedClusterFlow = RequireSolved(
+                    ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, connectorSolutions),
+                    "Failed to rebuild solved cluster flow");
                 solvedClusterFlows.Add(solvedClusterFlow);
             }
 
-            var solvedRgvMap = RgvMap.Create(rgvMap.Grid, solvedClusterFlows).Value;
+            var solvedRgvMap = RequireSolved(
+                RgvMap.Create(rgvMap.Grid, solvedClusterFlows),
+                "Failed to rebuild solved RGV map");
             var score = _routeSolver.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
 
             _routeResultPersister.Persist(
@@ -424,6 +445,22 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         }
 
         return Result.Ok(pathPoints);
+    }
+
+    /// <summary>
+    /// Unwraps a factory result whose inputs have already been validated during enqueueing, so a
+    /// failure here means a domain invariant broke while solving rather than bad user input.
+    /// Throws so <see cref="ExecuteRoutePlanning"/>'s catch marks the mission Failed, with the
+    /// rejected factory named instead of an opaque FluentResults exception.
+    /// </summary>
+    private static T RequireSolved<T>(Result<T> result, string context)
+    {
+        if (result.IsFailed)
+        {
+            throw new InvalidOperationException($"{context}: {result.Errors[0].Message}");
+        }
+
+        return result.Value;
     }
 
     private Result<T> RequireValid<T>(Result<T> result, string context)

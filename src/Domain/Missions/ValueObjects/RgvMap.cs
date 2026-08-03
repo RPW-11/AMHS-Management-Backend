@@ -102,6 +102,12 @@ public sealed class RgvMap : ValueObject
         return Result.Ok();
     }
 
+    /// <summary>
+    /// Not true value equality: ClusterFlows is compared by reference and Grid has the same
+    /// caveat, so two structurally identical maps are unequal. Compare the fields you actually
+    /// care about instead of relying on == or Equals here — see <see cref="IsSameCluster"/>,
+    /// which exists precisely because Cluster equality cannot be used for this.
+    /// </summary>
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return Grid;

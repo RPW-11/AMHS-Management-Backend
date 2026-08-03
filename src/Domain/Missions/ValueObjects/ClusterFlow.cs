@@ -30,6 +30,11 @@ public class ClusterFlow : ValueObject
         return Result.Ok(new ClusterFlow(pathColor, clusters, connectorSolutions));
     }
 
+    /// <summary>
+    /// Not true value equality: Clusters and ConnectorSolutions are compared by reference, so
+    /// two structurally identical flows are unequal. Compare the fields you actually care about
+    /// instead of relying on == or Equals here.
+    /// </summary>
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return PathColor;
@@ -73,6 +78,11 @@ public class Cluster : ValueObject
         return Result.Ok(new Cluster(name, pathColor, stations, solution));
     }
 
+    /// <summary>
+    /// Not true value equality: Stations and Solution are compared by reference, so two
+    /// structurally identical clusters are unequal. RgvMap.IsSameCluster does the structural
+    /// comparison by hand for this reason — do not replace it with == or Equals.
+    /// </summary>
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return Name;

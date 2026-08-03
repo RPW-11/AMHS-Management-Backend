@@ -116,6 +116,12 @@ public sealed class Grid : ValueObject
         return Math.Sqrt(perSquareArea);
     }
 
+    /// <summary>
+    /// Not true value equality: the matrix component is compared by reference, so two
+    /// structurally identical grids are unequal. Nothing compares grids today, and walking
+    /// RowDim x ColDim points per comparison would not pay for itself. Compare the fields you
+    /// actually care about instead of relying on == or Equals here.
+    /// </summary>
     public override IEnumerable<object> GetEqualityComponents()
     {
         yield return RowDim;
