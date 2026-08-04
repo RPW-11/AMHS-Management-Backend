@@ -66,7 +66,7 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
         try
         {
-            Solve(mission, job);
+            await SolveAsync(mission, job, cancellationToken);
             _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
         }
         catch (Exception ex)
@@ -94,7 +94,7 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
         mission.ClearDomainEvents();
     }
 
-    private void Solve(MissionBase mission, RoutePlanningJob job)
+    private async Task SolveAsync(MissionBase mission, RoutePlanningJob job, CancellationToken cancellationToken)
     {
         RgvMap rgvMap = job.RgvMap;
 
@@ -161,13 +161,13 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
             "Failed to rebuild solved RGV map");
         var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
 
-        _routeResultPersister.Persist(
+        await _routeResultPersister.PersistAsync(
             mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, routes,
             RoutePlanningDtoMapper.ToRgvMapDetailDto(solvedRgvMap.Grid),
             RoutePlanningDtoMapper.ToClusterDefinitionDtos(rgvMap),
             RoutePlanningDtoMapper.ToClusterFlowDefinitionDtos(rgvMap),
             RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(solvedClusterFlows),
-            score);
+            score, cancellationToken);
     }
 
     private static T RequireSolved<T>(Result<T> result, string context)

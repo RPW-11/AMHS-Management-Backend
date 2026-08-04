@@ -6,7 +6,7 @@ namespace Application.Services.RoutePlanningService;
 
 public interface IRouteResultPersister
 {
-    void Persist(
+    Task PersistAsync(
         MissionBase mission,
         Grid grid,
         RoutePlanningAlgorithm algorithm,
@@ -16,5 +16,6 @@ public interface IRouteResultPersister
         IEnumerable<ClusterDefinitionDto> clusters,
         IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
         IEnumerable<ClusterFlowSolutionDto> routeSolutions,
-        RoutePlanningScoreDto score);
+        RoutePlanningScoreDto score,
+        CancellationToken cancellationToken = default);
 }

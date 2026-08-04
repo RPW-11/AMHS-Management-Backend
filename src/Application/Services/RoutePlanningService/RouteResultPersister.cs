@@ -11,7 +11,7 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
     private readonly IRoutePlanningResultStore _routePlanningResultStore = routePlanningResultStore;
     private readonly ILogger<RouteResultPersister> _logger = logger;
 
-    public void Persist(
+    public async Task PersistAsync(
         MissionBase mission,
         Grid grid,
         RoutePlanningAlgorithm algorithm,
@@ -21,18 +21,19 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
         IEnumerable<ClusterDefinitionDto> clusters,
         IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
         IEnumerable<ClusterFlowSolutionDto> routeSolutions,
-        RoutePlanningScoreDto score)
+        RoutePlanningScoreDto score,
+        CancellationToken cancellationToken = default)
     {
         string missionId = mission.Id.ToString();
 
         var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
 
-        var inputImagePath = _routePlanningResultStore.WriteImage(imageBytes, missionId, RouteImageKind.Input);
-        var imagePath = _routePlanningResultStore.WriteImage(drawnImageBytes, missionId, RouteImageKind.Solved);
+        var inputImagePath = await _routePlanningResultStore.WriteImageAsync(imageBytes, missionId, RouteImageKind.Input, cancellationToken);
+        var imagePath = await _routePlanningResultStore.WriteImageAsync(drawnImageBytes, missionId, RouteImageKind.Solved, cancellationToken);
 
         var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, inputImagePath, [imagePath], rgvMap, clusters, clusterFlows, routeSolutions, score);
 
-        _routePlanningResultStore.SaveRoutePlanningDetail(routePlanningDetail);
+        await _routePlanningResultStore.SaveRoutePlanningDetailAsync(routePlanningDetail, cancellationToken);
         _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
 
         mission.Finish();

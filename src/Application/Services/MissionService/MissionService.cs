@@ -237,7 +237,7 @@ public class MissionService : BaseService, IMissionService
             RoutePlanningSummaryDto routePlanningSummary;
             try
             {
-                routePlanningSummary = _routePlanningResultStore.GetRoutePlanningSummary(mission.Id.ToString());
+                routePlanningSummary = await _routePlanningResultStore.GetRoutePlanningSummaryAsync(mission.Id.ToString());
             }
             catch (Exception ex)
             {
