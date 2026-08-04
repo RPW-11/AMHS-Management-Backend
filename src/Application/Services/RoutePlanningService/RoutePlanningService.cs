@@ -15,9 +15,6 @@ namespace Application.Services.RoutePlanningService;
 public class RoutePlanningService : BaseService, IRoutePlanningService
 {
     private readonly IPathfindingStrategyProvider _strategyProvider;
-    private readonly IRouteScorer _routeScorer;
-    private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
-    private readonly IRouteResultPersister _routeResultPersister;
     private readonly ISourceImageValidator _sourceImageValidator;
     private readonly IBackgroundJobHub _backgroundJobHub;
     private readonly IMissionRepository _missionRepository;
@@ -25,9 +22,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private readonly ILogger<RoutePlanningService> _logger;
 
     public RoutePlanningService(IPathfindingStrategyProvider strategyProvider,
-                                IRouteScorer routeScorer,
-                                IClusterFlowRouteSolver clusterFlowRouteSolver,
-                                IRouteResultPersister routeResultPersister,
                                 ISourceImageValidator sourceImageValidator,
                                 IBackgroundJobHub backgroundJobHub,
                                 IMissionRepository missionRepository,
@@ -37,9 +31,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
                                 : base(unitOfWork)
     {
         _strategyProvider = strategyProvider;
-        _routeScorer = routeScorer;
-        _clusterFlowRouteSolver = clusterFlowRouteSolver;
-        _routeResultPersister = routeResultPersister;
         _sourceImageValidator = sourceImageValidator;
         _backgroundJobHub = backgroundJobHub;
         _missionRepository = missionRepository;
@@ -109,6 +100,7 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(algorithmResult.Errors);
         }
 
+        // Algorithm check
         var strategyResult = _strategyProvider.GetStrategy(algorithmResult.Value);
         if (strategyResult.IsFailed)
         {
@@ -156,35 +148,11 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             return Result.Fail(ApplicationError.Internal);
         }
 
-        await _domainDispatcher.DispatchAsync(mission.DomainEvents);
-        mission.ClearDomainEvents();
+        var job = new RoutePlanningJob(parsedMissionId, rgvMap, algorithmResult.Value, imageBytes);
 
-        bool enqueued = _backgroundJobHub.TryEnqueue(async (sp, ct) =>
-        {
-            var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-            var missionRepository = sp.GetRequiredService<IMissionRepository>();
-            var domainDispatcher = sp.GetRequiredService<IDomainDispatcher>();
-
-            var jobMissionResult = await missionRepository.GetMissionByIdAsync(parsedMissionId);
-            if (jobMissionResult.IsFailed)
-            {
-                // Nothing to flip to Failed: the mission could not be loaded, so it stays
-                // Processing until the reconciliation sweep picks it up.
-                _logger.LogError("Failed to reload mission {MissionId} for its route planning job: {ErrorMessage}",
-                    parsedMissionId, jobMissionResult.Errors[0].Message);
-                return;
-            }
-
-            if (jobMissionResult.Value is null)
-            {
-                _logger.LogError("Mission {MissionId} no longer exists, abandoning its route planning job", parsedMissionId);
-                return;
-            }
-
-            await ExecuteRoutePlanning(
-                domainDispatcher, unitOfWork, missionRepository, jobMissionResult.Value,
-                rgvMap, strategyResult.Value, imageBytes);
-        }, out _);
+        bool enqueued = _backgroundJobHub.TryEnqueue(
+            (sp, ct) => sp.GetRequiredService<IRoutePlanningJobHandler>().HandleAsync(job, ct),
+            out _);
 
         if (!enqueued)
         {
@@ -192,6 +160,9 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
             await RevertProcessingStatus(mission);
             return Result.Fail(ApplicationError.Validation("The route planning queue is full, please try again later"));
         }
+
+        await _domainDispatcher.DispatchAsync(mission.DomainEvents);
+        mission.ClearDomainEvents();
 
         _logger.LogInformation("Route planning is being processed | Mission status updated to Processing");
 
@@ -201,6 +172,8 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
     private async Task RevertProcessingStatus(MissionBase mission)
     {
         mission.SetMissionStatus(MissionStatus.Failed);
+
+        mission.ClearDomainEvents();
 
         var revertResult = _missionRepository.UpdateMission(mission);
         if (revertResult.IsFailed)
@@ -217,116 +190,6 @@ public class RoutePlanningService : BaseService, IRoutePlanningService
         {
             _logger.LogError(ex, "Failed to commit the reverted mission status after a rejected enqueue");
         }
-    }
-
-    private async Task ExecuteRoutePlanning(
-        IDomainDispatcher domainDispatcher,
-        IUnitOfWork unitOfWork,
-        IMissionRepository missionRepository,
-        MissionBase mission,
-        RgvMap rgvMap,
-        IPathfindingStrategy strategy,
-        byte[] imageBytes)
-    {
-        try
-        {
-            var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
-
-            List<List<PathPoint>> solvedRouteSegments = [];
-
-            List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
-            List<PathPoint> combinedSolution = [];
-            List<PathPoint> combinedStationsOrder = [];
-            List<ClusterFlow> solvedClusterFlows = [];
-
-            foreach (var clusterFlow in rgvMap.ClusterFlows)
-            {
-                List<Cluster> solvedClusters = [];
-                List<List<PathPoint>> connectorSolutions = [];
-
-                foreach (var cluster in clusterFlow.Clusters)
-                {
-                    if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
-                    {
-                        clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, strategy, solvedRouteSegments);
-                        clusterSolutionCache[cluster] = clusterSolution;
-                        solvedRouteSegments.Add(clusterSolution);
-                    }
-
-                    var solvedCluster = RequireSolved(
-                        Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution),
-                        $"Failed to rebuild solved cluster '{cluster.Name}'");
-                    solvedClusters.Add(solvedCluster);
-
-                    routes.Add((clusterSolution, cluster.PathColor));
-                    combinedSolution.AddRange(clusterSolution);
-                    combinedStationsOrder.AddRange(cluster.Stations);
-                }
-
-                for (int i = 0; i < solvedClusters.Count - 1; i++)
-                {
-                    var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], strategy, solvedRouteSegments);
-                    solvedRouteSegments.Add(connectorSolution);
-                    connectorSolutions.Add(connectorSolution);
-                    combinedSolution.AddRange(connectorSolution);
-
-                    routes.Add((connectorSolution, clusterFlow.PathColor));
-                }
-
-                var solvedClusterFlow = RequireSolved(
-                    ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, connectorSolutions),
-                    "Failed to rebuild solved cluster flow");
-                solvedClusterFlows.Add(solvedClusterFlow);
-            }
-
-            var solvedRgvMap = RequireSolved(
-                RgvMap.Create(rgvMap.Grid, solvedClusterFlows),
-                "Failed to rebuild solved RGV map");
-            var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
-
-            _routeResultPersister.Persist(
-                mission, rgvMap.Grid, strategy.Algorithm, imageBytes, routes,
-                RoutePlanningDtoMapper.ToRgvMapDetailDto(solvedRgvMap.Grid),
-                RoutePlanningDtoMapper.ToClusterDefinitionDtos(rgvMap),
-                RoutePlanningDtoMapper.ToClusterFlowDefinitionDtos(rgvMap),
-                RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(solvedClusterFlows),
-                score);
-
-            _logger.LogInformation("Route planning completed successfully | Mission status updated to Finished");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Route planning failed for mission {MissionId}", mission.Id);
-            mission.SetMissionStatus(MissionStatus.Failed);
-        }
-
-        var updateResult = missionRepository.UpdateMission(mission);
-        if (updateResult.IsFailed)
-        {
-            _logger.LogError("Failed to update mission entity: {ErrorMessage}", updateResult.Errors[0].Message);
-        }
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Database commit failed after route planning");
-        }
-
-        await domainDispatcher.DispatchAsync(mission.DomainEvents);
-        mission.ClearDomainEvents();
-    }
-
-    private static T RequireSolved<T>(Result<T> result, string context)
-    {
-        if (result.IsFailed)
-        {
-            throw new InvalidOperationException($"{context}: {result.Errors[0].Message}");
-        }
-
-        return result.Value;
     }
 
     private Result<T> RequireValid<T>(Result<T> result, string context)
