@@ -1,7 +1,6 @@
 using Domain.Common.Models;
 using Domain.Employees.ValueObjects;
 using Domain.Errors.Missions;
-using Domain.Interfaces;
 using Domain.Missions.Entities;
 using Domain.Missions.Events;
 using Domain.Missions.ValueObjects;
@@ -111,7 +110,16 @@ public class MissionBase : AggregateRoot<MissionId>
 
     public Result DeleteMember(EmployeeId memberId)
     {
+        bool removesLeader = _assignedEmployees
+            .Any(ae => ae.EmployeeId == memberId && ae.MissionRole == MissionRole.Leader);
+
+        if (removesLeader)
+        {
+            return Result.Fail(new LastLeaderRemovalError());
+        }
+
         _assignedEmployees.RemoveAll(ae => ae.EmployeeId == memberId);
+
         return Result.Ok();
     }
 
