@@ -1,6 +1,6 @@
 using Application.Common.Interfaces.RoutePlanning;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public sealed record RouteFitnessWeights(double ThroughputWeight, double LengthWeight, double NumOfRgvsWeight, double AlignmentRewardRate)
 {

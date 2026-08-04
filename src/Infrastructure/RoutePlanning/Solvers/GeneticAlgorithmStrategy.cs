@@ -2,7 +2,7 @@ using Application.Common.Interfaces.RoutePlanning;
 using Domain.Missions.ValueObjects;
 using Microsoft.Extensions.Logging;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public sealed class GeneticAlgorithmStrategy(ILogger<GeneticAlgorithmSolver> solverLogger) : IPathfindingStrategy
 {

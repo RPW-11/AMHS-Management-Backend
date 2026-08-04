@@ -3,7 +3,7 @@ using Application.Common.Interfaces.RoutePlanning;
 using FluentResults;
 using SkiaSharp;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Imaging;
 
 /// <summary>
 /// Validates uploaded layout images with the same library that later draws on them, so anything

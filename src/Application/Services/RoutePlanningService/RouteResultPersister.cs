@@ -6,9 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
 
-public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultStore, ILogger<RouteResultPersister> logger) : IRouteResultPersister
+public class RouteResultPersister(
+    IRoutePlanningResultStore routePlanningResultStore,
+    IRouteImageRenderer routeImageRenderer,
+    ILogger<RouteResultPersister> logger) : IRouteResultPersister
 {
     private readonly IRoutePlanningResultStore _routePlanningResultStore = routePlanningResultStore;
+    private readonly IRouteImageRenderer _routeImageRenderer = routeImageRenderer;
     private readonly ILogger<RouteResultPersister> _logger = logger;
 
     public async Task PersistAsync(
@@ -26,7 +30,7 @@ public class RouteResultPersister(IRoutePlanningResultStore routePlanningResultS
     {
         string missionId = mission.Id.ToString();
 
-        var drawnImageBytes = _routePlanningResultStore.DrawMultipleFlows(imageBytes, grid, routes);
+        var drawnImageBytes = _routeImageRenderer.Render(imageBytes, grid, routes);
 
         var inputImagePath = await _routePlanningResultStore.WriteImageAsync(imageBytes, missionId, RouteImageKind.Input, cancellationToken);
         var imagePath = await _routePlanningResultStore.WriteImageAsync(drawnImageBytes, missionId, RouteImageKind.Solved, cancellationToken);

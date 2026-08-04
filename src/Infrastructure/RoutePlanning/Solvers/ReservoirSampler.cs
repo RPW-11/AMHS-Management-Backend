@@ -1,4 +1,4 @@
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 internal sealed class ReservoirSampler<T>(int capacity, Random random)
 {

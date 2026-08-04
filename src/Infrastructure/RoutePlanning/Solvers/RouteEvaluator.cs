@@ -1,7 +1,7 @@
 using Application.DTOs.RoutePlanning;
 using Domain.Missions.ValueObjects;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 internal static class RouteEvaluator
 {

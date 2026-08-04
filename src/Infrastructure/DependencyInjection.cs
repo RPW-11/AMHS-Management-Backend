@@ -15,7 +15,9 @@ using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.RealTime;
 using Infrastructure.RoutePlanning;
-using Infrastructure.RoutePlanning.Rgv;
+using Infrastructure.RoutePlanning.Imaging;
+using Infrastructure.RoutePlanning.Solvers;
+using Infrastructure.RoutePlanning.Storage;
 using Infrastructure.Security;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -67,6 +69,7 @@ public static class DependencyInjection
         
         services.AddSingleton<IRouteScorer, RouteScorer>();
         services.AddSingleton<ISourceImageValidator, SkiaSourceImageValidator>();
+        services.AddSingleton<IRouteImageRenderer, SkiaRouteImageRenderer>();
         services.AddSingleton<IRoutePlanningResultStore, S3RoutePlanningResultStore>();
         services.AddSingleton<INotificationHub, NotificationHub>();
         services.AddSingleton<IBackgroundJobHub, BackgroundJobHub>();

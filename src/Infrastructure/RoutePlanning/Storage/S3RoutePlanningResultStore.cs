@@ -5,10 +5,9 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.RoutePlanning;
-using Domain.Missions.ValueObjects;
 using Microsoft.Extensions.Options;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Storage;
 
 public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanningSettings> routePlanningSettings) : IRoutePlanningResultStore
 {
@@ -18,38 +17,6 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
     private readonly IAmazonS3 _s3Client = s3Client;
     private readonly string _bucketName = routePlanningSettings.Value.S3.BucketName;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = false, PropertyNameCaseInsensitive = true };
-
-    public byte[] DrawMultipleFlows(
-        byte[] imageBytes,
-        Grid grid,
-        List<(List<PathPoint> Solution, string ArrowColor)> routes)
-    {
-        if (routes.Count == 0)
-            throw new ArgumentException("No route details provided");
-
-        using var drawer = new RouteDrawer(imageBytes, grid);
-        foreach (var (solution, arrowColor) in routes)
-        {
-            drawer.DrawSolution(solution, arrowColor);
-        }
-        drawer.DrawStations(GetStations(grid));
-
-        return drawer.Encode();
-    }
-
-    private static IEnumerable<Station> GetStations(Grid grid)
-    {
-        for (int row = 0; row < grid.RowDim; row++)
-        {
-            for (int col = 0; col < grid.ColDim; col++)
-            {
-                if (grid[row, col] is Station station)
-                {
-                    yield return station;
-                }
-            }
-        }
-    }
 
     public async Task<string> WriteImageAsync(byte[] imageBytes, string missionId, RouteImageKind kind, CancellationToken cancellationToken = default)
     {

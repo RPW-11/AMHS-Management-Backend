@@ -1,7 +1,7 @@
 using Domain.Missions.ValueObjects;
 using SkiaSharp;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Imaging;
 
 public sealed class RouteDrawer : IDisposable
 {

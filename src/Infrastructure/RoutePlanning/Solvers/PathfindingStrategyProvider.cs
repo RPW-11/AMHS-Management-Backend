@@ -3,7 +3,7 @@ using Application.Common.Interfaces.RoutePlanning;
 using Domain.Missions.ValueObjects;
 using FluentResults;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 // Keys the registered strategies by algorithm, so adding one is a registration in
 // DependencyInjection rather than a branch here.

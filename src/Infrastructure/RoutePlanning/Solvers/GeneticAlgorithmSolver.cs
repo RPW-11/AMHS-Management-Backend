@@ -2,7 +2,7 @@ using Domain.Missions.ValueObjects;
 using Microsoft.Extensions.Logging;
 using static Domain.Missions.ValueObjects.Grid;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public class GeneticAlgorithmSolver
 {

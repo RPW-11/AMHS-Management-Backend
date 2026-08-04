@@ -1,7 +1,7 @@
 using static Domain.Missions.ValueObjects.Grid;
 using Domain.Missions.ValueObjects;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public static class ModifiedAStar
 {

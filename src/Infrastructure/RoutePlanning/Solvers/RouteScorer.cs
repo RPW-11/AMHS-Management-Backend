@@ -2,7 +2,7 @@ using Application.Common.Interfaces.RoutePlanning;
 using Application.DTOs.RoutePlanning;
 using Domain.Missions.ValueObjects;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public class RouteScorer : IRouteScorer
 {

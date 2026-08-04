@@ -1,6 +1,6 @@
 using Domain.Missions.ValueObjects;
 
-namespace Infrastructure.RoutePlanning.Rgv;
+namespace Infrastructure.RoutePlanning.Solvers;
 
 public static class RrtStar
 {
