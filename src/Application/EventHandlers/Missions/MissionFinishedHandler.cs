@@ -30,6 +30,12 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
 
     public async Task Handle(MissionFinishedEvent evt)
     {
+        if (evt.AssignedEmployeeIds.Count == 0)
+        {
+            _logger.LogWarning("Mission has no assigned employees, skipping mission finished notifications | MissionId: {MissionId}", evt.MissionId);
+            return;
+        }
+
         List<Notification> notifications = [];
         foreach (var memberId in evt.AssignedEmployeeIds)
         {
@@ -60,7 +66,7 @@ public class MissionFinishedHandler : IDomainEventHandler<MissionFinishedEvent>
         }
 
         // publish
-        await _notificationPublisher.PublishToUsersAsync([.. evt.AssignedEmployeeIds], ToNotificationDto(notifications.First()));
+        await _notificationPublisher.PublishToUsersAsync([.. evt.AssignedEmployeeIds], ToNotificationDto(notifications[0]));
 
         _logger.LogInformation("Successfully added notifications for mission finished event | MissionId: {MissionId}", evt.MissionId);
     }

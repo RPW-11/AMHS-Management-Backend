@@ -30,6 +30,12 @@ public class MissionRoutePlanningStartedHandler : IDomainEventHandler<MissionRou
 
     public async Task Handle(MissionRoutePlanningStartedEvent evt)
     {
+        if (evt.AssignedEmployeeIds.Count == 0)
+        {
+            _logger.LogWarning("Mission has no assigned employees, skipping route planning started notifications | MissionId: {MissionId}", evt.MissionId);
+            return;
+        }
+
         List<Notification> notifications = [];
         foreach (var memberId in evt.AssignedEmployeeIds)
         {
@@ -61,7 +67,7 @@ public class MissionRoutePlanningStartedHandler : IDomainEventHandler<MissionRou
         }
 
         // publish
-        await _notificationPublisher.PublishToUsersAsync([.. evt.AssignedEmployeeIds], ToNotificationDto(notifications.First()));
+        await _notificationPublisher.PublishToUsersAsync([.. evt.AssignedEmployeeIds], ToNotificationDto(notifications[0]));
 
         _logger.LogInformation("Successfully added notifications for mission route planning started event | MissionId: {MissionId}", evt.MissionId);
     }
