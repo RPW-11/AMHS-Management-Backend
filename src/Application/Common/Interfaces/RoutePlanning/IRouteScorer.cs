@@ -5,5 +5,5 @@ namespace Application.Common.Interfaces.RoutePlanning;
 
 public interface IRouteScorer
 {
-    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteSolvePurpose purpose);
+    RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, IReadOnlyList<IReadOnlyList<Station>> clusterStations, RouteSolvePurpose purpose);
 }

@@ -6,8 +6,8 @@ namespace Infrastructure.RoutePlanning.Solvers;
 
 public class RouteScorer : IRouteScorer
 {
-    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, List<PathPoint> stationsOrder, RouteSolvePurpose purpose)
+    public RoutePlanningScoreDto GetRouteScore(List<PathPoint> solution, Grid grid, IReadOnlyList<IReadOnlyList<Station>> clusterStations, RouteSolvePurpose purpose)
     {
-        return RouteEvaluator.GetSolutionScores(solution, grid, stationsOrder, RouteFitnessWeights.For(purpose));
+        return RouteEvaluator.GetSolutionScores(solution, grid, clusterStations, RouteFitnessWeights.For(purpose));
     }
 }

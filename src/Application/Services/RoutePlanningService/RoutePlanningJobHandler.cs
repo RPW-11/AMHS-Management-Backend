@@ -113,7 +113,7 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
         List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
         List<PathPoint> combinedSolution = [];
-        List<PathPoint> combinedStationsOrder = [];
+        List<IReadOnlyList<Station>> clusterStations = [];
         List<ClusterFlow> solvedClusterFlows = [];
 
         foreach (var clusterFlow in rgvMap.ClusterFlows)
@@ -128,6 +128,9 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
                     clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, strategy, solvedRouteSegments);
                     clusterSolutionCache[cluster] = clusterSolution;
                     solvedRouteSegments.Add(clusterSolution);
+
+                    combinedSolution.AddRange(clusterSolution);
+                    clusterStations.Add(cluster.Stations);
                 }
 
                 var solvedCluster = RequireSolved(
@@ -136,8 +139,6 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
                 solvedClusters.Add(solvedCluster);
 
                 routes.Add((clusterSolution, cluster.PathColor));
-                combinedSolution.AddRange(clusterSolution);
-                combinedStationsOrder.AddRange(cluster.Stations);
             }
 
             for (int i = 0; i < solvedClusters.Count - 1; i++)
@@ -159,7 +160,7 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
         var solvedRgvMap = RequireSolved(
             RgvMap.Create(rgvMap.Grid, solvedClusterFlows),
             "Failed to rebuild solved RGV map");
-        var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, combinedStationsOrder, RouteSolvePurpose.Connector);
+        var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, clusterStations, RouteSolvePurpose.Connector);
 
         await _routeResultPersister.PersistAsync(
             mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, routes,
