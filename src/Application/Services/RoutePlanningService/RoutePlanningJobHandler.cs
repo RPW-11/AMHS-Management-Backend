@@ -3,17 +3,21 @@ using Application.Common.Interfaces.Persistence;
 using Application.Common.Interfaces.RoutePlanning;
 using Domain.Missions;
 using Domain.Missions.ValueObjects;
-using FluentResults;
 using Microsoft.Extensions.Logging;
 
 namespace Application.Services.RoutePlanningService;
 
 public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 {
+    /// <summary>
+    /// How many complete routings to solve. Fewer are stored when the layout admits fewer.
+    /// </summary>
+    private const int TargetSolutionCount = 5;
+
     private readonly IPathfindingStrategyProvider _strategyProvider;
     private readonly IClusterFlowRouteSolver _clusterFlowRouteSolver;
+    private readonly IRouteSolutionComposer _routeSolutionComposer;
     private readonly IRouteResultPersister _routeResultPersister;
-    private readonly IRouteScorer _routeScorer;
     private readonly IMissionRepository _missionRepository;
     private readonly IDomainDispatcher _domainDispatcher;
     private readonly IUnitOfWork _unitOfWork;
@@ -21,8 +25,8 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
     public RoutePlanningJobHandler(IPathfindingStrategyProvider strategyProvider,
                                    IClusterFlowRouteSolver clusterFlowRouteSolver,
+                                   IRouteSolutionComposer routeSolutionComposer,
                                    IRouteResultPersister routeResultPersister,
-                                   IRouteScorer routeScorer,
                                    IMissionRepository missionRepository,
                                    IDomainDispatcher domainDispatcher,
                                    IUnitOfWork unitOfWork,
@@ -30,8 +34,8 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
     {
         _strategyProvider = strategyProvider;
         _clusterFlowRouteSolver = clusterFlowRouteSolver;
+        _routeSolutionComposer = routeSolutionComposer;
         _routeResultPersister = routeResultPersister;
-        _routeScorer = routeScorer;
         _missionRepository = missionRepository;
         _domainDispatcher = domainDispatcher;
         _unitOfWork = unitOfWork;
@@ -109,58 +113,23 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
         var clusterLoops = SolveClusterLoops(rgvMap, strategy);
 
-        List<List<PathPoint>> solvedRouteSegments = [.. clusterLoops.Segments];
-        List<PathPoint> combinedSolution = [.. clusterLoops.Segments.SelectMany(segment => segment)];
-        List<IReadOnlyList<Station>> clusterStations = clusterLoops.Stations;
+        var solutions = _routeSolutionComposer.Compose(rgvMap, strategy, clusterLoops, TargetSolutionCount);
 
-        List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
-        List<ClusterFlow> solvedClusterFlows = [];
+        ComposedSolution bestSolution = solutions[0];
 
-        foreach (var clusterFlow in rgvMap.ClusterFlows)
-        {
-            List<Cluster> solvedClusters = [];
-            List<List<PathPoint>> connectorSolutions = [];
-
-            foreach (var cluster in clusterFlow.Clusters)
-            {
-                List<PathPoint> clusterSolution = clusterLoops.SolutionsByCluster[cluster];
-
-                var solvedCluster = RequireSolved(
-                    Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution),
-                    $"Failed to rebuild solved cluster '{cluster.Name}'");
-                solvedClusters.Add(solvedCluster);
-
-                routes.Add((clusterSolution, cluster.PathColor));
-            }
-
-            for (int i = 0; i < solvedClusters.Count - 1; i++)
-            {
-                var connectorSolution = _clusterFlowRouteSolver.SolveConnectorRoute(rgvMap.Grid, solvedClusters[i], solvedClusters[i + 1], strategy, solvedRouteSegments);
-                solvedRouteSegments.Add(connectorSolution);
-                connectorSolutions.Add(connectorSolution);
-                combinedSolution.AddRange(connectorSolution);
-
-                routes.Add((connectorSolution, clusterFlow.PathColor));
-            }
-
-            var solvedClusterFlow = RequireSolved(
-                ClusterFlow.Create(clusterFlow.PathColor, solvedClusters, connectorSolutions),
-                "Failed to rebuild solved cluster flow");
-            solvedClusterFlows.Add(solvedClusterFlow);
-        }
-
-        var solvedRgvMap = RequireSolved(
-            RgvMap.Create(rgvMap.Grid, solvedClusterFlows),
+        // Only the connector solutions differ between the composed routings, and RgvMap validates
+        // clusters and stations, so validating one routing validates them all.
+        var solvedRgvMap = SolvedResult.Require(
+            RgvMap.Create(rgvMap.Grid, bestSolution.ClusterFlows),
             "Failed to rebuild solved RGV map");
-        var score = _routeScorer.GetRouteScore(combinedSolution, rgvMap.Grid, clusterStations, RouteSolvePurpose.Connector);
 
         await _routeResultPersister.PersistAsync(
-            mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, routes,
+            mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, bestSolution.Routes,
             RoutePlanningDtoMapper.ToRgvMapDetailDto(solvedRgvMap.Grid),
             RoutePlanningDtoMapper.ToClusterDefinitionDtos(rgvMap),
             RoutePlanningDtoMapper.ToClusterFlowDefinitionDtos(rgvMap),
-            RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(solvedClusterFlows),
-            score, cancellationToken);
+            RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(bestSolution.ClusterFlows),
+            bestSolution.Score, cancellationToken);
     }
 
     /// <summary>
@@ -198,20 +167,5 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
         _logger.LogDebug("Solved {ClusterCount} unique cluster loops", solutionsByCluster.Count);
 
         return new ClusterLoopSolutions(solutionsByCluster, segments, stations);
-    }
-
-    private sealed record ClusterLoopSolutions(
-        Dictionary<Cluster, List<PathPoint>> SolutionsByCluster,
-        List<List<PathPoint>> Segments,
-        List<IReadOnlyList<Station>> Stations);
-
-    private static T RequireSolved<T>(Result<T> result, string context)
-    {
-        if (result.IsFailed)
-        {
-            throw new InvalidOperationException($"{context}: {result.Errors[0].Message}");
-        }
-
-        return result.Value;
     }
 }

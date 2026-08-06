@@ -32,10 +32,12 @@ public class GeneticAlgorithmSolver
     private readonly HashSet<Cell> _foreignStations;
     private readonly RouteEvaluator.RouteMetrics _routeMetrics;
     private readonly RouteFitnessWeights _fitnessWeights;
+    private readonly IReadOnlyList<List<PathPoint>> _seedPaths;
     private readonly ILogger<GeneticAlgorithmSolver> _logger;
 
-    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights, ILogger<GeneticAlgorithmSolver> logger)
+    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights, IReadOnlyList<List<PathPoint>> seedPaths, ILogger<GeneticAlgorithmSolver> logger)
     {
+        _seedPaths = seedPaths;
         _logger = logger;
         _random = new Random();
         _grid = grid;
@@ -65,8 +67,14 @@ public class GeneticAlgorithmSolver
     /// </summary>
     public IReadOnlyList<List<PathPoint>> Solve(int desiredSolutions)
     {
-        _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations", _stationsOrder.Count);
+        _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations, plus {SeedCount} given seeds",
+            _stationsOrder.Count, _seedPaths.Count);
+
+        // Given seeds are routes an earlier solve of this same segment already found. The search
+        // that produced them differed only in which routes it was avoiding, so they start the
+        // population near a good answer and the stagnation cutoff ends the run early.
         List<Individual> population = [
+            .. _seedPaths.Select(seed => CreateIndividual([.. seed])),
             .. ModifiedAStar.GetValidSolutions(_grid, _stationsOrder).Select(CreateIndividual),
             .. RrtStar.GenerateSolutions(_grid, _stationsOrder).Select(CreateIndividual)
         ];
