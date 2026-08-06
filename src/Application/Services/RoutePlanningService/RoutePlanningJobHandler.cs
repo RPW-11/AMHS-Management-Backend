@@ -107,13 +107,13 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
         IPathfindingStrategy strategy = strategyResult.Value;
 
-        var clusterSolutionCache = new Dictionary<Cluster, List<PathPoint>>();
+        var clusterLoops = SolveClusterLoops(rgvMap, strategy);
 
-        List<List<PathPoint>> solvedRouteSegments = [];
+        List<List<PathPoint>> solvedRouteSegments = [.. clusterLoops.Segments];
+        List<PathPoint> combinedSolution = [.. clusterLoops.Segments.SelectMany(segment => segment)];
+        List<IReadOnlyList<Station>> clusterStations = clusterLoops.Stations;
 
         List<(List<PathPoint> Solution, string ArrowColor)> routes = [];
-        List<PathPoint> combinedSolution = [];
-        List<IReadOnlyList<Station>> clusterStations = [];
         List<ClusterFlow> solvedClusterFlows = [];
 
         foreach (var clusterFlow in rgvMap.ClusterFlows)
@@ -123,15 +123,7 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
             foreach (var cluster in clusterFlow.Clusters)
             {
-                if (!clusterSolutionCache.TryGetValue(cluster, out var clusterSolution))
-                {
-                    clusterSolution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, strategy, solvedRouteSegments);
-                    clusterSolutionCache[cluster] = clusterSolution;
-                    solvedRouteSegments.Add(clusterSolution);
-
-                    combinedSolution.AddRange(clusterSolution);
-                    clusterStations.Add(cluster.Stations);
-                }
+                List<PathPoint> clusterSolution = clusterLoops.SolutionsByCluster[cluster];
 
                 var solvedCluster = RequireSolved(
                     Cluster.Create(cluster.Name, cluster.PathColor, cluster.Stations, clusterSolution),
@@ -170,6 +162,48 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
             RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(solvedClusterFlows),
             score, cancellationToken);
     }
+
+    /// <summary>
+    /// Solves every unique cluster's own visiting order, before any connector is solved and with
+    /// only the other loops as conflict context.
+    /// </summary>
+    /// <remarks>
+    /// A cluster is one piece of physical track, shared by every flow that visits it, so its loop
+    /// must not depend on which flow happened to reach it first or on any connector routed around
+    /// it. Solving the loops as their own phase is what lets the connector solutions branch later
+    /// while every branch keeps identical cluster track.
+    /// </remarks>
+    private ClusterLoopSolutions SolveClusterLoops(RgvMap rgvMap, IPathfindingStrategy strategy)
+    {
+        Dictionary<Cluster, List<PathPoint>> solutionsByCluster = [];
+        List<List<PathPoint>> segments = [];
+        List<IReadOnlyList<Station>> stations = [];
+
+        foreach (var cluster in rgvMap.ClusterFlows.SelectMany(clusterFlow => clusterFlow.Clusters))
+        {
+            // A cluster revisited later in a looping flow, or shared between flows, is the same
+            // track: solve it once and reuse it.
+            if (solutionsByCluster.ContainsKey(cluster))
+            {
+                continue;
+            }
+
+            var solution = _clusterFlowRouteSolver.SolveClusterRoute(rgvMap.Grid, cluster, strategy, segments);
+
+            solutionsByCluster[cluster] = solution;
+            segments.Add(solution);
+            stations.Add(cluster.Stations);
+        }
+
+        _logger.LogDebug("Solved {ClusterCount} unique cluster loops", solutionsByCluster.Count);
+
+        return new ClusterLoopSolutions(solutionsByCluster, segments, stations);
+    }
+
+    private sealed record ClusterLoopSolutions(
+        Dictionary<Cluster, List<PathPoint>> SolutionsByCluster,
+        List<List<PathPoint>> Segments,
+        List<IReadOnlyList<Station>> Stations);
 
     private static T RequireSolved<T>(Result<T> result, string context)
     {
