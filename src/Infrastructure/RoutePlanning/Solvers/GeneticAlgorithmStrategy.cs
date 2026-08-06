@@ -13,11 +13,12 @@ public sealed class GeneticAlgorithmStrategy(ILogger<GeneticAlgorithmSolver> sol
 
     public RoutePlanningAlgorithm Algorithm => RoutePlanningAlgorithm.GeneticAlgorithm;
 
-    public IEnumerable<PathPoint> Solve(
+    public IReadOnlyList<List<PathPoint>> Solve(
         Grid grid,
         List<PathPoint> stationsOrder,
         List<List<PathPoint>> currentRoutePoints,
-        RouteSolvePurpose purpose)
+        RouteSolvePurpose purpose,
+        int desiredSolutions)
     {
         var solver = new GeneticAlgorithmSolver(
             grid,
@@ -27,7 +28,7 @@ public sealed class GeneticAlgorithmStrategy(ILogger<GeneticAlgorithmSolver> sol
             RouteFitnessWeights.For(purpose),
             _solverLogger);
 
-        return solver.Solve();
+        return solver.Solve(desiredSolutions);
     }
 
     private static int GenerationsFor(RouteSolvePurpose purpose) =>

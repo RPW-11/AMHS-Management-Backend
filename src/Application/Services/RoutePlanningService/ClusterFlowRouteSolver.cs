@@ -36,9 +36,10 @@ public class ClusterFlowRouteSolver(IRouteScorer routeScorer, ILogger<ClusterFlo
                 grid,
                 loopStationsOrder,
                 currentRoutes,
-                RouteSolvePurpose.ClusterLoop);
+                RouteSolvePurpose.ClusterLoop,
+                desiredSolutions: 1);
 
-            List<PathPoint> candidateResult = [.. solveResult];
+            List<PathPoint> candidateResult = solveResult[0];
             var score = _routeScorer.GetRouteScore(candidateResult, grid, clusterStations, RouteSolvePurpose.ClusterLoop);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
@@ -61,9 +62,10 @@ public class ClusterFlowRouteSolver(IRouteScorer routeScorer, ILogger<ClusterFlo
             grid,
             [start, end],
             currentRoutes,
-            RouteSolvePurpose.Connector);
+            RouteSolvePurpose.Connector,
+            desiredSolutions: 1);
 
-        return [.. solveResult];
+        return solveResult[0];
     }
 
     private static List<List<Station>> GetStationPermutations(IReadOnlyList<Station> stations, int count)
