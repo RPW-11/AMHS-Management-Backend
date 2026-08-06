@@ -18,18 +18,18 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
     private readonly string _bucketName = routePlanningSettings.Value.S3.BucketName;
     private readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = false, PropertyNameCaseInsensitive = true };
 
-    public async Task<string> WriteImageAsync(byte[] imageBytes, string missionId, RouteImageKind kind, CancellationToken cancellationToken = default)
+    public async Task<string> WriteImageAsync(byte[] imageBytes, string missionId, RouteImageKind kind, int solutionNumber = 1, CancellationToken cancellationToken = default)
     {
-        string key = $"{missionId}/{kind.ToFileStem(missionId)}.png";
+        string key = $"{missionId}/{kind.ToFileStem(missionId, solutionNumber)}.png";
 
         await UploadAsync(key, imageBytes, "image/png", cancellationToken);
 
         return key;
     }
 
-    public string GetResultImageUrl(string missionId)
+    public string GetResultImageUrl(string missionId, int solutionNumber = 1)
     {
-        string stem = RouteImageKind.Solved.ToFileStem(missionId);
+        string stem = RouteImageKind.Solved.ToFileStem(missionId, solutionNumber);
 
         return GetPresignedUrl($"{missionId}/{stem}.png", $"attachment; filename=\"{stem}.png\"");
     }
@@ -58,7 +58,13 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
 
         var presignedImageUrls = stored.ImageUrls.Select(key => GetPresignedUrl(key)).ToList();
 
-        return stored with { ImageUrls = presignedImageUrls };
+        // Normalise the single-routing shape away here rather than leaving callers to handle both.
+        return stored with
+        {
+            ImageUrls = presignedImageUrls,
+            Scores = stored.ReadScores(),
+            LegacyScore = null
+        };
     }
 
     private async Task<RoutePlanningSummaryDto?> TryReadStoredSummaryAsync(string missionId, CancellationToken cancellationToken)
@@ -86,11 +92,16 @@ public class S3RoutePlanningResultStore(IAmazonS3 s3Client, IOptions<RoutePlanni
         return ToStoredSummary(detail);
     }
 
-    private static RoutePlanningSummaryDto ToStoredSummary(RoutePlanningDetailDto detail) =>
-        new(detail.Algorithm,
-            [.. detail.ImageUrls],
+    private static RoutePlanningSummaryDto ToStoredSummary(RoutePlanningDetailDto detail)
+    {
+        var solutions = detail.ReadSolutions();
+
+        return new RoutePlanningSummaryDto(
+            detail.Algorithm,
+            [.. solutions.Select(solution => solution.ImageUrl)],
             new RgvMapSummaryDto(detail.RgvMap.RowDim, detail.RgvMap.ColDim, detail.RgvMap.WidthLength, detail.RgvMap.HeightLength),
-            detail.Score);
+            [.. solutions.Select(solution => solution.Score)]);
+    }
 
     private static string DetailKey(string missionId) => $"{missionId}/{missionId}.json";
 

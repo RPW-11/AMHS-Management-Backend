@@ -115,21 +115,18 @@ public class RoutePlanningJobHandler : IRoutePlanningJobHandler
 
         var solutions = _routeSolutionComposer.Compose(rgvMap, strategy, clusterLoops, TargetSolutionCount);
 
-        ComposedSolution bestSolution = solutions[0];
-
         // Only the connector solutions differ between the composed routings, and RgvMap validates
         // clusters and stations, so validating one routing validates them all.
         var solvedRgvMap = SolvedResult.Require(
-            RgvMap.Create(rgvMap.Grid, bestSolution.ClusterFlows),
+            RgvMap.Create(rgvMap.Grid, solutions[0].ClusterFlows),
             "Failed to rebuild solved RGV map");
 
         await _routeResultPersister.PersistAsync(
-            mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, bestSolution.Routes,
+            mission, rgvMap.Grid, strategy.Algorithm, job.ImageBytes, solutions,
             RoutePlanningDtoMapper.ToRgvMapDetailDto(solvedRgvMap.Grid),
             RoutePlanningDtoMapper.ToClusterDefinitionDtos(rgvMap),
             RoutePlanningDtoMapper.ToClusterFlowDefinitionDtos(rgvMap),
-            RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(bestSolution.ClusterFlows),
-            bestSolution.Score, cancellationToken);
+            cancellationToken);
     }
 
     /// <summary>

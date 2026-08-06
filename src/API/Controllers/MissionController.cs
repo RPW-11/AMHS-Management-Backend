@@ -260,11 +260,15 @@ namespace API.Controllers
         /// the image. Not available when the local disk result store is configured.
         /// </remarks>
         /// <param name="id">The mission id.</param>
+        /// <param name="solution">
+        /// Which routing to download, 1-based, defaulting to the best-scoring one. A solve stores
+        /// several; the mission detail's route planning summary lists how many.
+        /// </param>
         /// <returns>A JSON object containing the downloadable image URL.</returns>
         [HttpGet("{id}/route-planning/image")]
-        public async Task<ActionResult<RouteImageUrlDto>> DownloadRouteImage(string id)
+        public async Task<ActionResult<RouteImageUrlDto>> DownloadRouteImage(string id, [FromQuery] int solution = 1)
         {
-            var imageUrlResult = await _missionService.DownloadRouteImage(id);
+            var imageUrlResult = await _missionService.DownloadRouteImage(id, solution);
             if (imageUrlResult.IsFailed)
             {
                 return HandleResult(imageUrlResult);
