@@ -32,10 +32,12 @@ public class GeneticAlgorithmSolver
     private readonly HashSet<Cell> _foreignStations;
     private readonly RouteEvaluator.RouteMetrics _routeMetrics;
     private readonly RouteFitnessWeights _fitnessWeights;
+    private readonly IReadOnlyList<List<PathPoint>> _seedPaths;
     private readonly ILogger<GeneticAlgorithmSolver> _logger;
 
-    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights, ILogger<GeneticAlgorithmSolver> logger)
+    public GeneticAlgorithmSolver(Grid grid, List<PathPoint> stationsOrder, List<List<PathPoint>> currentRoutes, int generationsNumber, RouteFitnessWeights fitnessWeights, IReadOnlyList<List<PathPoint>> seedPaths, ILogger<GeneticAlgorithmSolver> logger)
     {
+        _seedPaths = seedPaths;
         _logger = logger;
         _random = new Random();
         _grid = grid;
@@ -58,10 +60,21 @@ public class GeneticAlgorithmSolver
 
     private Individual CreateIndividual(List<PathPoint> path) => new(path, EvaluateFitness(path));
 
-    public List<PathPoint> Solve()
+    /// <summary>
+    /// Runs the search and returns up to <paramref name="desiredSolutions"/> distinct routes,
+    /// best fitness first. Fewer are returned when the population holds fewer distinct valid
+    /// routes than were asked for.
+    /// </summary>
+    public IReadOnlyList<List<PathPoint>> Solve(int desiredSolutions)
     {
-        _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations", _stationsOrder.Count);
+        _logger.LogDebug("Seeding A* and RRT solutions for {StationCount} stations, plus {SeedCount} given seeds",
+            _stationsOrder.Count, _seedPaths.Count);
+
+        // Given seeds are routes an earlier solve of this same segment already found. The search
+        // that produced them differed only in which routes it was avoiding, so they start the
+        // population near a good answer and the stagnation cutoff ends the run early.
         List<Individual> population = [
+            .. _seedPaths.Select(seed => CreateIndividual([.. seed])),
             .. ModifiedAStar.GetValidSolutions(_grid, _stationsOrder).Select(CreateIndividual),
             .. RrtStar.GenerateSolutions(_grid, _stationsOrder).Select(CreateIndividual)
         ];
@@ -96,7 +109,11 @@ public class GeneticAlgorithmSolver
             population = GenerateNewPopulationFromParents(population);
         }
 
-        var bestIndividual = population.MaxBy(individual => individual.Fitness)!;
+        // The final population comes straight out of GenerateNewPopulationFromParents, so unlike
+        // the one each generation starts with it has not been sorted yet.
+        population.Sort((left, right) => right.Fitness.CompareTo(left.Fitness));
+
+        var bestIndividual = population[0];
 
         _logger.LogDebug("Best solution: length {Length}, fitness {Fitness}",
             bestIndividual.Path.Count, bestIndividual.Fitness);
@@ -107,7 +124,46 @@ public class GeneticAlgorithmSolver
                 $"Genetic algorithm found no valid route across {_stationsOrder.Count} stations in {_generationsNumber} generations");
         }
 
-        return bestIndividual.Path;
+        var solutions = TakeDistinctSolutions(population, Math.Max(1, desiredSolutions));
+
+        _logger.LogDebug("Returning {SolutionCount} distinct solutions of {Requested} requested",
+            solutions.Count, desiredSolutions);
+
+        return solutions;
+    }
+
+    /// <summary>
+    /// Walks the sorted population best-first, collecting routes that differ from the ones already
+    /// taken. Deduplication is not optional: elitism carries the top individuals into the next
+    /// population by reference, so the best route appears many times over.
+    /// </summary>
+    private static List<List<PathPoint>> TakeDistinctSolutions(List<Individual> sortedPopulation, int desiredSolutions)
+    {
+        List<List<PathPoint>> solutions = [];
+        HashSet<List<PathPoint>> seen = new(PathComparer.Instance);
+
+        foreach (var individual in sortedPopulation)
+        {
+            // Sorted by descending fitness, so the first invalid individual means the rest are too.
+            if (individual.Fitness <= InvalidSolutionFitness)
+            {
+                break;
+            }
+
+            if (!seen.Add(individual.Path))
+            {
+                continue;
+            }
+
+            solutions.Add(individual.Path);
+
+            if (solutions.Count == desiredSolutions)
+            {
+                break;
+            }
+        }
+
+        return solutions;
     }
 
     private List<Individual> GenerateNewPopulationFromParents(List<Individual> sortedParents)
@@ -464,6 +520,52 @@ public class GeneticAlgorithmSolver
         }
 
         return new SolvedRoute(steps, route.Count);
+    }
+
+    /// <summary>
+    /// Compares routes by the cells they visit, in order. Two individuals holding separate lists
+    /// that trace the same route are the same solution as far as the caller is concerned.
+    /// </summary>
+    private sealed class PathComparer : IEqualityComparer<List<PathPoint>>
+    {
+        public static readonly PathComparer Instance = new();
+
+        public bool Equals(List<PathPoint>? left, List<PathPoint>? right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return true;
+            }
+
+            if (left is null || right is null || left.Count != right.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Count; i++)
+            {
+                if (left[i].RowPos != right[i].RowPos || left[i].ColPos != right[i].ColPos)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public int GetHashCode(List<PathPoint> path)
+        {
+            var hash = new HashCode();
+            hash.Add(path.Count);
+
+            foreach (var point in path)
+            {
+                hash.Add(point.RowPos);
+                hash.Add(point.ColPos);
+            }
+
+            return hash.ToHashCode();
+        }
     }
 
     private readonly record struct Cell(int Row, int Col);

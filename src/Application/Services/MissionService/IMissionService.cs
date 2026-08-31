@@ -20,6 +20,6 @@ public interface IMissionService
     Task<Result> DeleteMemberFromMission(string employeeId, string missionId, string memberId);
     Task<Result> ChangeMemberRole(string employeeId, string missionId, string memberId, string missionRole);
     Task<Result<IEnumerable<AssignedEmployeeDto>>> GetMissionMembers(string missionId);
-    Task<Result<string>> DownloadRouteImage(string missionId);
+    Task<Result<string>> DownloadRouteImage(string missionId, int solutionNumber = 1);
     Task<Result<string>> DownloadRouteJson(string missionId);
 }

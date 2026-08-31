@@ -257,14 +257,21 @@ public class MissionService : BaseService, IMissionService
         return MapToMissionDetailDto(mission, leaderResult.Value);
     }
 
-    public async Task<Result<string>> DownloadRouteImage(string missionId)
+    public async Task<Result<string>> DownloadRouteImage(string missionId, int solutionNumber = 1)
     {
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
-            ["MissionId"] = missionId
+            ["MissionId"] = missionId,
+            ["SolutionNumber"] = solutionNumber
         });
 
         _logger.LogInformation("Download route planning image request started");
+
+        if (solutionNumber < 1)
+        {
+            _logger.LogWarning("Rejected a solution number below one");
+            return Result.Fail<string>(ApplicationError.Validation("The solution number starts at 1"));
+        }
 
         var missionIdResult = MissionId.FromString(missionId);
         if (missionIdResult.IsFailed)
@@ -295,9 +302,32 @@ public class MissionService : BaseService, IMissionService
             return Result.Fail<string>(ApplicationError.NotFound("This mission has no route planning result image"));
         }
 
+        int storedSolutions;
+
         try
         {
-            var imageUrl = _routePlanningResultStore.GetResultImageUrl(mission.Id.ToString());
+            // Signing is local, so without this the caller would get a URL that only fails once
+            // they follow it.
+            var summary = await _routePlanningResultStore.GetRoutePlanningSummaryAsync(mission.Id.ToString());
+            storedSolutions = summary.ImageUrls.Count();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read route planning summary for mission {MissionId}", mission.Id);
+            return Result.Fail<string>(ApplicationError.Internal);
+        }
+
+        if (solutionNumber > storedSolutions)
+        {
+            _logger.LogInformation("Requested routing {SolutionNumber} of {StoredSolutions} stored",
+                solutionNumber, storedSolutions);
+            return Result.Fail<string>(ApplicationError.NotFound(
+                $"This mission stores {storedSolutions} route planning result image(s)"));
+        }
+
+        try
+        {
+            var imageUrl = _routePlanningResultStore.GetResultImageUrl(mission.Id.ToString(), solutionNumber);
             _logger.LogInformation("Successfully generated route planning image URL");
             return Result.Ok(imageUrl);
         }

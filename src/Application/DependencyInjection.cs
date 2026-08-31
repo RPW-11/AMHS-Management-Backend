@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IRoutePlanningService, RoutePlanningService>();
         services.AddScoped<IRoutePlanningJobHandler, RoutePlanningJobHandler>();
         services.AddScoped<IClusterFlowRouteSolver, ClusterFlowRouteSolver>();
+        services.AddScoped<IRouteSolutionComposer, RouteSolutionComposer>();
         services.AddScoped<IRouteResultPersister, RouteResultPersister>();
         services.AddScoped<IMissionService, MissionService>();
         services.AddScoped<INotificationService, NotificationService>();

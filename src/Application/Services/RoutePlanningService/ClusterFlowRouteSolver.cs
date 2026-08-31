@@ -25,19 +25,21 @@ public class ClusterFlowRouteSolver(IRouteScorer routeScorer, ILogger<ClusterFlo
         List<PathPoint>? bestResult = null;
         RoutePlanningScoreDto? bestScore = null;
 
+        IReadOnlyList<IReadOnlyList<Station>> clusterStations = [cluster.Stations];
+
         foreach (var permutation in GetStationPermutations(cluster.Stations, ClusterPermutationSampleSize))
         {
             // Close the loop by returning to the first station of this permutation.
             List<PathPoint> loopStationsOrder = [.. permutation.Cast<PathPoint>(), permutation[0]];
 
-            var solveResult = strategy.Solve(
+            var solveResult = strategy.Solve(new RouteSolveRequest(
                 grid,
                 loopStationsOrder,
                 currentRoutes,
-                RouteSolvePurpose.ClusterLoop);
+                RouteSolvePurpose.ClusterLoop));
 
-            List<PathPoint> candidateResult = [.. solveResult];
-            var score = _routeScorer.GetRouteScore(candidateResult, grid, loopStationsOrder, RouteSolvePurpose.ClusterLoop);
+            List<PathPoint> candidateResult = solveResult[0];
+            var score = _routeScorer.GetRouteScore(candidateResult, grid, clusterStations, RouteSolvePurpose.ClusterLoop);
 
             if (bestScore is null || score.Optimality > bestScore.Optimality)
             {
@@ -49,19 +51,26 @@ public class ClusterFlowRouteSolver(IRouteScorer routeScorer, ILogger<ClusterFlo
         return bestResult!;
     }
 
-    public List<PathPoint> SolveConnectorRoute(Grid grid, Cluster from, Cluster to, IPathfindingStrategy strategy, List<List<PathPoint>> currentRoutes)
+    public IReadOnlyList<List<PathPoint>> SolveConnectorRoutes(
+        Grid grid,
+        Cluster from,
+        Cluster to,
+        IPathfindingStrategy strategy,
+        List<List<PathPoint>> currentRoutes,
+        int desiredSolutions = 1,
+        IReadOnlyList<List<PathPoint>>? seedPaths = null)
     {
         _logger.LogInformation("Solving connector for cluster {SrcClusterName} to {DstClusterName}", from.Name, to.Name);
 
         var (start, end) = FindNearestConnector(from.Stations, to.Stations);
 
-        var solveResult = strategy.Solve(
+        return strategy.Solve(new RouteSolveRequest(
             grid,
             [start, end],
             currentRoutes,
-            RouteSolvePurpose.Connector);
-
-        return [.. solveResult];
+            RouteSolvePurpose.Connector,
+            desiredSolutions,
+            seedPaths));
     }
 
     private static List<List<Station>> GetStationPermutations(IReadOnlyList<Station> stations, int count)

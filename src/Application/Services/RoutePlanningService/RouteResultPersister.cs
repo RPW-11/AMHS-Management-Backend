@@ -20,50 +20,50 @@ public class RouteResultPersister(
         Grid grid,
         RoutePlanningAlgorithm algorithm,
         byte[] imageBytes,
-        List<(List<PathPoint> Solution, string ArrowColor)> routes,
+        IReadOnlyList<ComposedSolution> solutions,
         RgvMapDetailDto rgvMap,
         IEnumerable<ClusterDefinitionDto> clusters,
         IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
-        IEnumerable<ClusterFlowSolutionDto> routeSolutions,
-        RoutePlanningScoreDto score,
         CancellationToken cancellationToken = default)
     {
         string missionId = mission.Id.ToString();
 
-        var drawnImageBytes = _routeImageRenderer.Render(imageBytes, grid, routes);
+        var inputImagePath = await _routePlanningResultStore.WriteImageAsync(
+            imageBytes, missionId, RouteImageKind.Input, cancellationToken: cancellationToken);
 
-        var inputImagePath = await _routePlanningResultStore.WriteImageAsync(imageBytes, missionId, RouteImageKind.Input, cancellationToken);
-        var imagePath = await _routePlanningResultStore.WriteImageAsync(drawnImageBytes, missionId, RouteImageKind.Solved, cancellationToken);
+        List<RoutePlanningSolutionDto> solutionDtos = [];
 
-        var routePlanningDetail = ToRoutePlanningDto(mission.Id, algorithm, inputImagePath, [imagePath], rgvMap, clusters, clusterFlows, routeSolutions, score);
+        for (int i = 0; i < solutions.Count; i++)
+        {
+            ComposedSolution solution = solutions[i];
+
+            // 1-based: the first routing keeps the unsuffixed image key earlier solves used.
+            int solutionNumber = i + 1;
+
+            var drawnImageBytes = _routeImageRenderer.Render(imageBytes, grid, solution.Routes);
+
+            var imagePath = await _routePlanningResultStore.WriteImageAsync(
+                drawnImageBytes, missionId, RouteImageKind.Solved, solutionNumber, cancellationToken);
+
+            solutionDtos.Add(new RoutePlanningSolutionDto(
+                imagePath,
+                RoutePlanningDtoMapper.ToClusterFlowSolutionDtos(solution.ClusterFlows),
+                solution.Score));
+        }
+
+        var routePlanningDetail = new RoutePlanningDetailDto(
+            missionId,
+            algorithm.ToString(),
+            inputImagePath,
+            rgvMap,
+            clusters,
+            clusterFlows,
+            solutionDtos);
 
         await _routePlanningResultStore.SaveRoutePlanningDetailAsync(routePlanningDetail, cancellationToken);
-        _logger.LogInformation("Route planning data saved for mission {MissionId}", mission.Id);
+        _logger.LogInformation("Route planning data saved for mission {MissionId} with {SolutionCount} routings",
+            mission.Id, solutionDtos.Count);
 
         mission.Finish();
-    }
-
-    private static RoutePlanningDetailDto ToRoutePlanningDto(
-        MissionId missionId,
-        RoutePlanningAlgorithm routePlanningAlgorithm,
-        string inputImageUrl,
-        List<string> imageUrls,
-        RgvMapDetailDto rgvMap,
-        IEnumerable<ClusterDefinitionDto> clusters,
-        IEnumerable<ClusterFlowDefinitionDto> clusterFlows,
-        IEnumerable<ClusterFlowSolutionDto> routeSolutions,
-        RoutePlanningScoreDto score)
-    {
-        return new(
-                    missionId.ToString(),
-                    routePlanningAlgorithm.ToString(),
-                    inputImageUrl,
-                    imageUrls,
-                    rgvMap,
-                    clusters,
-                    clusterFlows,
-                    routeSolutions,
-                    score
-                );
     }
 }
